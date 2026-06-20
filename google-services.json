@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "25342891587",
+    "project_id": "amanahlife-a14b8",
+    "storage_bucket": "amanahlife-a14b8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:25342891587:android:f1fc32e9d213d8e5f2a6f6",
+        "android_client_info": {
+          "package_name": "com.linkoranet.amanahlife"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZ5RMETA1SJk3So0jsRX0yR4ZHvHUAmNA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
