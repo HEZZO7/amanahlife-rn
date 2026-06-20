@@ -104,8 +104,8 @@ export default function Planner() {
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* View tabs */}
-        <View style={[styles.tabs, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* View tabs — RTL reverses order */}
+        <View style={[styles.tabs, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           {(['agenda', 'weekly', 'monthly'] as ViewMode[]).map((v) => (
             <TouchableOpacity
               key={v}
@@ -224,9 +224,10 @@ export default function Planner() {
               {new Date().toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
             </Text>
             {!!hijriDate && <Text style={[styles.monthHijri, { color: colors.gold }]}>{hijriDate}</Text>}
-            <View style={styles.monthGrid}>
-              {(language === 'ar'
-                ? ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت']
+            {/* Full Arabic day names, RTL order when AR */}
+            <View style={[styles.monthGrid, { flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap' }]}>
+              {(isRTL
+                ? ['السبت', 'الجمعة', 'الخميس', 'الأربعاء', 'الثلاثاء', 'الاثنين', 'الأحد']
                 : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
               ).map((d, idx) => (
                 <View key={idx} style={styles.monthCell}>
@@ -263,7 +264,7 @@ export default function Planner() {
       <Modal visible={showAddForm} transparent animationType="fade" onRequestClose={() => setShowAddForm(false)}>
         <Pressable style={styles.overlay} onPress={() => setShowAddForm(false)}>
           <Pressable style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>{tr('Add New Event', 'إضافة موعد جديد')}</Text>
+            <Text style={[styles.modalTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{tr('Add New Event', 'إضافة موعد جديد')}</Text>
             <TextInput
               value={newItem.title}
               onChangeText={(v) => setNewItem((p) => ({ ...p, title: v }))}
@@ -271,7 +272,7 @@ export default function Planner() {
               placeholderTextColor={colors.textMuted}
               style={[styles.input, { backgroundColor: colors.bg, color: colors.text, borderColor: colors.border, textAlign: isRTL ? 'right' : 'left' }]}
             />
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8 }}>
               <TextInput
                 value={newItem.date}
                 onChangeText={(v) => setNewItem((p) => ({ ...p, date: v }))}
@@ -295,7 +296,7 @@ export default function Planner() {
               multiline
               style={[styles.input, { minHeight: 64, backgroundColor: colors.bg, color: colors.text, borderColor: colors.border, textAlign: isRTL ? 'right' : 'left', textAlignVertical: 'top' }]}
             />
-            <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12 }}>
               <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.surface }]} onPress={() => setShowAddForm(false)}>
                 <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>{tr('Cancel', 'إلغاء')}</Text>
               </TouchableOpacity>

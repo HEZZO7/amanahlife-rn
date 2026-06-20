@@ -86,9 +86,17 @@ export default function Adhkar() {
         </Text>
       </View>
 
-      {/* Category tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow} style={{ flexGrow: 0 }}>
-        {ADHKAR_DATA.map((cat) => {
+      {/* Category tabs — full Arabic names, RTL-aware scroll */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
+        contentContainerStyle={[
+          styles.catRow,
+          { flexDirection: isRTL ? 'row-reverse' : 'row' },
+        ]}
+      >
+        {(isRTL ? [...ADHKAR_DATA].reverse() : ADHKAR_DATA).map((cat) => {
           const active = selectedCategory === cat.id;
           return (
             <TouchableOpacity
@@ -96,7 +104,10 @@ export default function Adhkar() {
               style={[styles.catChip, { backgroundColor: active ? colors.teal : colors.card }]}
               onPress={() => setSelectedCategory(cat.id)}
             >
-              <Text style={{ color: active ? '#04211C' : colors.textSecondary, fontSize: 13, fontFamily: FONT_UI_MEDIUM }}>
+              <Text
+                style={{ color: active ? '#04211C' : colors.textSecondary, fontSize: 13, fontFamily: FONT_UI_MEDIUM }}
+                numberOfLines={1}
+              >
                 {cat.icon} {language === 'ar' ? cat.nameAr : cat.nameEn}
               </Text>
             </TouchableOpacity>
@@ -121,9 +132,9 @@ export default function Adhkar() {
                 borderColor: isDone ? colors.teal + '4D' : colors.border,
               }]}
             >
-              <Text style={[styles.arabic, { color: colors.text }]}>{item.arabic}</Text>
-              <Text style={[styles.translit, { color: colors.textSecondary }]}>{item.transliteration}</Text>
-              <Text style={[styles.translation, { color: colors.textSecondary }]}>{item.translation}</Text>
+              <Text style={[styles.arabic, { color: colors.text, textAlign: 'right' }]}>{item.arabic}</Text>
+              <Text style={[styles.translit, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.transliteration}</Text>
+              <Text style={[styles.translation, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.translation}</Text>
               <View style={[styles.itemFooter, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <View style={[styles.progWrap, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <View style={[styles.miniTrack, { backgroundColor: colors.surface }]}>
@@ -149,7 +160,7 @@ export default function Adhkar() {
 
 const styles = StyleSheet.create({
   catRow: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
-  catChip: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12 },
+  catChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, minWidth: 110 },
   content: { padding: 16, paddingTop: 6, paddingBottom: 32, gap: 12 },
   item: { padding: 16, borderRadius: 16, borderWidth: 1 },
   arabic: { fontSize: 19, fontFamily: FONT_ARABIC, textAlign: 'right', lineHeight: 36, marginBottom: 8 },

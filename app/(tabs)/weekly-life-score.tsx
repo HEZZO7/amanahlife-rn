@@ -127,12 +127,24 @@ export default function WeeklyLifeScore() {
           <View style={{ gap: 12 }}>
             {dimensions.map((dim) => (
               <View key={dim.name} style={{ gap: 5 }}>
+                {/* In RTL: score on left, label+icon on right */}
                 <View style={[styles.dimHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                  <Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI_MEDIUM }}>{dim.icon} {isAr ? dim.nameAr : dim.name}</Text>
-                  <Text style={{ color: scoreColor(dim.score), fontSize: 13.5, fontFamily: FONT_UI_BOLD }}>{dim.score}/100</Text>
+                  <Text style={{ color: isRTL ? scoreColor(dim.score) : colors.text, fontSize: 13.5, fontFamily: FONT_UI_MEDIUM, textAlign: isRTL ? 'right' : 'left' }}>
+                    {isRTL ? `${dim.score}/100` : `${dim.icon} ${dim.name}`}
+                  </Text>
+                  <Text style={{ color: isRTL ? colors.text : scoreColor(dim.score), fontSize: 13.5, fontFamily: FONT_UI_BOLD, textAlign: isRTL ? 'left' : 'right' }}>
+                    {isRTL ? `${dim.icon} ${dim.nameAr}` : `${dim.score}/100`}
+                  </Text>
                 </View>
+                {/* Bar grows from right in RTL */}
                 <View style={[styles.track, { backgroundColor: colors.bg }]}>
-                  <View style={{ width: `${dim.score}%`, height: 10, borderRadius: 5, backgroundColor: dim.color }} />
+                  <View style={{
+                    width: `${dim.score}%`,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: dim.color,
+                    alignSelf: isRTL ? 'flex-end' : 'flex-start',
+                  }} />
                 </View>
               </View>
             ))}

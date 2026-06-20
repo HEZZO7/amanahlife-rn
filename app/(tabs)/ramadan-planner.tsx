@@ -133,9 +133,9 @@ export default function RamadanPlanner() {
           <Card style={styles.summaryCard}><Text style={[styles.summaryNum, { color: colors.teal }]}>{data.totalCharity}</Text><Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{isAr ? 'صدقة' : 'Charity'}</Text></Card>
         </View>
 
-        {/* Tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow} style={{ flexGrow: 0, marginBottom: 14 }}>
-          {tabs.map((tab) => {
+        {/* Tabs — RTL reverses order */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.tabRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]} style={{ flexGrow: 0, marginBottom: 14 }}>
+          {(isRTL ? [...tabs].reverse() : tabs).map((tab) => {
             const active = activeTab === tab.key;
             return (
               <TouchableOpacity
@@ -153,14 +153,17 @@ export default function RamadanPlanner() {
         {activeTab === 'calendar' && (
           <Card>
             <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{isAr ? '30 يوم رمضان' : '30 Days of Ramadan'}</Text>
-            <View style={styles.dayGrid}>
+            {/* RTL: day 1 top-right, day 30 bottom-left + Arabic numerals */}
+            <View style={[styles.dayGrid, { flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap' }]}>
               {data.days.map((day) => (
                 <TouchableOpacity
                   key={day.day}
                   style={[styles.dayCell, { backgroundColor: day.fasted ? colors.teal + '4D' : colors.surface, borderColor: day.fasted ? colors.teal : colors.border }]}
                   onPress={() => toggleFast(day.day)}
                 >
-                  <Text style={{ color: day.fasted ? colors.teal : colors.textSecondary, fontSize: 12, fontFamily: FONT_UI_BOLD }}>{day.day}</Text>
+                  <Text style={{ color: day.fasted ? colors.teal : colors.textSecondary, fontSize: 12, fontFamily: FONT_UI_BOLD }}>
+                    {isRTL ? String(day.day).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[parseInt(d)]) : day.day}
+                  </Text>
                   {day.fasted && <Text style={{ color: colors.teal, fontSize: 8 }}>✓</Text>}
                 </TouchableOpacity>
               ))}

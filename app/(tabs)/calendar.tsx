@@ -183,8 +183,9 @@ export default function IslamicCalendar() {
         )}
 
         {/* Browse by month */}
-        <Text style={[styles.sectionHeader, { color: colors.text, marginTop: 24 }]}>📖 {isAr ? 'تصفح حسب الشهر' : 'Browse by Month'}</Text>
-        <View style={styles.monthGrid}>
+        <Text style={[styles.sectionHeader, { color: colors.text, marginTop: 24, textAlign: isRTL ? 'right' : 'left' }]}>📖 {isAr ? 'تصفح حسب الشهر' : 'Browse by Month'}</Text>
+        {/* RTL: row-reverse makes محرم appear top-right, months flow right→left */}
+        <View style={[styles.monthGrid, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           {hijriMonths.map((month, i) => {
             const selected = selectedMonth === i + 1;
             const isCurrent = i + 1 === hijriMonth;
@@ -205,7 +206,7 @@ export default function IslamicCalendar() {
         </View>
 
         {/* Events for selected month */}
-        <Text style={[styles.subHeader, { color: colors.textSecondary }]}>
+        <Text style={[styles.subHeader, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
           📋 {isAr ? `أحداث شهر ${HIJRI_MONTHS_AR[selectedMonth - 1]}` : `Events in ${HIJRI_MONTHS_EN[selectedMonth - 1]}`}
         </Text>
         {getEventsForMonth(selectedMonth).length > 0 ? (

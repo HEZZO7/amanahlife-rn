@@ -45,7 +45,7 @@ export default function LandingScreen() {
       >
         {/* Language toggle */}
         <View style={[styles.langRow, { flexDirection: isAr ? 'row-reverse' : 'row' }]}>
-          {(['en', 'ar'] as const).map((lang) => (
+          {(['ar', 'en'] as const).map((lang) => (
             <TouchableOpacity
               key={lang}
               style={[
