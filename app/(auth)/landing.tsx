@@ -24,14 +24,14 @@ const FEATURES = [
 
 export default function LandingScreen() {
   const { colors } = useTheme();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, isRTL } = useLanguage();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const isAr = language === 'ar';
 
   // Skip landing if already signed in
   useEffect(() => {
-    if (!authLoading && user) router.replace('/(tabs)/');
+    if (!authLoading && user) router.replace('/(tabs)/' as any);
   }, [user, authLoading]);
 
   return (
@@ -44,7 +44,7 @@ export default function LandingScreen() {
         bounces={false}
       >
         {/* Language toggle */}
-        <View style={[styles.langRow, { flexDirection: isAr ? 'row-reverse' : 'row' }]}>
+        <View style={[styles.langRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           {(['ar', 'en'] as const).map((lang) => (
             <TouchableOpacity
               key={lang}

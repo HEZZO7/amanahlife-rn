@@ -25,6 +25,13 @@ const ADHKAR_DATA: AdhkarCategory[] = [
     { id: 'm7', arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ الْعَفْوَ وَالْعَافِيَةَ', transliteration: "Allahumma inni as'alukal-'afwa wal-'afiyah", translation: 'O Allah, I ask You for pardon and well-being', count: 3 },
     { id: 'm8', arabic: 'حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ', transliteration: 'HasbiyAllahu la ilaha illa Huwa', translation: 'Allah is sufficient for me, there is no god but He', count: 7 },
   ] },
+  { id: 'afterPrayer', nameAr: 'أذكار بعد الصلاة', nameEn: 'After Prayer', icon: '🕌', items: [
+    { id: 'p1', arabic: 'أَسْتَغْفِرُ اللَّهَ', transliteration: 'Astaghfirullah', translation: 'I seek forgiveness from Allah', count: 3 },
+    { id: 'p2', arabic: 'سُبْحَانَ اللَّهِ', transliteration: 'SubhanAllah', translation: 'Glory be to Allah', count: 33 },
+    { id: 'p3', arabic: 'الْحَمْدُ لِلَّهِ', transliteration: 'Alhamdulillah', translation: 'All praise is due to Allah', count: 33 },
+    { id: 'p4', arabic: 'اللَّهُ أَكْبَرُ', transliteration: 'Allahu Akbar', translation: 'Allah is the Greatest', count: 33 },
+    { id: 'p5', arabic: 'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ', transliteration: 'La ilaha illAllahu wahdahu la sharika lah', translation: 'None has the right to be worshipped except Allah alone', count: 1 },
+  ] },
   { id: 'evening', nameAr: 'أذكار المساء', nameEn: 'Evening Adhkar', icon: '🌙', items: [
     { id: 'e1', arabic: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ', transliteration: 'Amsayna wa amsal mulku lillah', translation: 'We have reached the evening and the kingdom belongs to Allah', count: 1 },
     { id: 'e2', arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ', transliteration: 'SubhanAllahi wa bihamdihi', translation: 'Glory is to Allah and praise is to Him', count: 33 },
@@ -32,13 +39,6 @@ const ADHKAR_DATA: AdhkarCategory[] = [
     { id: 'e4', arabic: 'اللَّهُمَّ بِكَ أَمْسَيْنَا وَبِكَ أَصْبَحْنَا', transliteration: 'Allahumma bika amsayna wa bika asbahna', translation: 'O Allah, by Your leave we have reached the evening', count: 1 },
     { id: 'e5', arabic: 'اللَّهُمَّ مَا أَمْسَى بِي مِنْ نِعْمَةٍ فَمِنْكَ', transliteration: "Allahumma ma amsa bi min ni'matin faminka", translation: 'O Allah, whatever blessing has been received by me is from You', count: 1 },
     { id: 'e6', arabic: 'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ', transliteration: 'La ilaha illAllahu wahdahu la sharika lah', translation: 'None has the right to be worshipped except Allah alone', count: 3 },
-  ] },
-  { id: 'afterPrayer', nameAr: 'أذكار بعد الصلاة', nameEn: 'After Prayer', icon: '🕌', items: [
-    { id: 'p1', arabic: 'أَسْتَغْفِرُ اللَّهَ', transliteration: 'Astaghfirullah', translation: 'I seek forgiveness from Allah', count: 3 },
-    { id: 'p2', arabic: 'سُبْحَانَ اللَّهِ', transliteration: 'SubhanAllah', translation: 'Glory be to Allah', count: 33 },
-    { id: 'p3', arabic: 'الْحَمْدُ لِلَّهِ', transliteration: 'Alhamdulillah', translation: 'All praise is due to Allah', count: 33 },
-    { id: 'p4', arabic: 'اللَّهُ أَكْبَرُ', transliteration: 'Allahu Akbar', translation: 'Allah is the Greatest', count: 33 },
-    { id: 'p5', arabic: 'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ', transliteration: 'La ilaha illAllahu wahdahu la sharika lah', translation: 'None has the right to be worshipped except Allah alone', count: 1 },
   ] },
   { id: 'sleep', nameAr: 'أذكار النوم', nameEn: 'Sleep Adhkar', icon: '😴', items: [
     { id: 's1', arabic: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا', transliteration: 'Bismika Allahumma amutu wa ahya', translation: 'In Your name O Allah, I die and I live', count: 1 },
@@ -86,34 +86,41 @@ export default function Adhkar() {
         </Text>
       </View>
 
-      {/* Category tabs — full Arabic names, RTL-aware scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0 }}
-        contentContainerStyle={[
-          styles.catRow,
-          { flexDirection: isRTL ? 'row-reverse' : 'row' },
-        ]}
-      >
-        {(isRTL ? [...ADHKAR_DATA].reverse() : ADHKAR_DATA).map((cat) => {
+      {/* Category tabs — 4 equal tabs, no ScrollView */}
+      <View style={{
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        gap: 6,
+      }}>
+        {ADHKAR_DATA.map((cat) => {
           const active = selectedCategory === cat.id;
           return (
             <TouchableOpacity
               key={cat.id}
-              style={[styles.catChip, { backgroundColor: active ? colors.teal : colors.card }]}
               onPress={() => setSelectedCategory(cat.id)}
+              style={{
+                flex: 1,
+                backgroundColor: active ? colors.teal : colors.card,
+                borderRadius: 10,
+                paddingVertical: 8,
+                alignItems: 'center',
+              }}
             >
-              <Text
-                style={{ color: active ? '#04211C' : colors.textSecondary, fontSize: 13, fontFamily: FONT_UI_MEDIUM }}
-                numberOfLines={1}
-              >
-                {cat.icon} {language === 'ar' ? cat.nameAr : cat.nameEn}
+              <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
+              <Text style={{
+                color: active ? '#04211C' : colors.textSecondary,
+                fontSize: 10,
+                fontFamily: FONT_UI_MEDIUM,
+                textAlign: 'center',
+                marginTop: 3,
+              }} numberOfLines={2}>
+                {language === 'ar' ? cat.nameAr : cat.nameEn}
               </Text>
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
 
       {/* Overall progress */}
       <View style={{ paddingHorizontal: 16, paddingVertical: 6 }}>
@@ -135,6 +142,7 @@ export default function Adhkar() {
               <Text style={[styles.arabic, { color: colors.text, textAlign: 'right' }]}>{item.arabic}</Text>
               <Text style={[styles.translit, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.transliteration}</Text>
               <Text style={[styles.translation, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.translation}</Text>
+              {/* In Arabic: +1 on RIGHT, counter on LEFT */}
               <View style={[styles.itemFooter, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <View style={[styles.progWrap, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <View style={[styles.miniTrack, { backgroundColor: colors.surface }]}>
@@ -159,8 +167,8 @@ export default function Adhkar() {
 }
 
 const styles = StyleSheet.create({
-  catRow: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
-  catChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, minWidth: 110 },
+  catRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
+  catChip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, minWidth: 130 },
   content: { padding: 16, paddingTop: 6, paddingBottom: 32, gap: 12 },
   item: { padding: 16, borderRadius: 16, borderWidth: 1 },
   arabic: { fontSize: 19, fontFamily: FONT_ARABIC, textAlign: 'right', lineHeight: 36, marginBottom: 8 },

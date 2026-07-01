@@ -99,11 +99,11 @@ export default function FastingTracker() {
         <Card>
           <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{tr('Quran Pages', 'صفحات القرآن')}</Text>
           <View style={[styles.rowBetween, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <View>
+            <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
               <Text style={[styles.bigNum, { color: colors.gold }]}>{quranPages}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{tr('Goal', 'الهدف')}: 20 {tr('pages', 'صفحة')}</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8 }}>
               <TouchableOpacity style={[styles.pageBtn, { backgroundColor: colors.surface }]} onPress={() => addPages(-1)}>
                 <Text style={{ color: colors.text, fontSize: 18, fontFamily: FONT_UI_BOLD }}>−</Text>
               </TouchableOpacity>
@@ -138,7 +138,8 @@ function Toggle({ emoji, label, active, onPress, accent, colors }: any) {
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingTop: 12, paddingBottom: 32 },
-  cardTitle: { fontSize: 15, fontFamily: FONT_UI_BOLD, marginBottom: 12 },
+
+
   toggleRow: { flexDirection: 'row', gap: 10 },
   toggle: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

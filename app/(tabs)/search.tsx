@@ -114,8 +114,13 @@ export default function ClassicSearch() {
         <TextInput
           style={[
             styles.input,
-            { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
-            rtlText as any,
+            {
+              backgroundColor: colors.card,
+              color: colors.text,
+              borderColor: colors.border,
+              textAlign: isRTL ? 'right' : 'left',
+              writingDirection: isRTL ? 'rtl' : 'ltr',
+            },
           ]}
           placeholder={isRTL ? 'ابحث في الأدعية والأذكار والأحداث...' : 'Search duas, adhkar, events, tips...'}
           placeholderTextColor={colors.textMuted}
@@ -185,7 +190,8 @@ const styles = StyleSheet.create({
   cardHeader: { marginBottom: 8 },
   typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, alignSelf: 'flex-start' },
   typeText: { fontSize: 11, fontFamily: FONT_UI_BOLD },
-  cardTitle: { fontSize: 15, fontFamily: FONT_UI_BOLD, marginBottom: 4 },
+
+
   cardBody: { fontSize: 13, fontFamily: FONT_UI, lineHeight: 20 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyTitle: { fontSize: 18, fontFamily: FONT_UI_BOLD, marginBottom: 8, textAlign: 'center' },

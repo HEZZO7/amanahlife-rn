@@ -12,7 +12,15 @@ interface PageHeaderProps {
   right?: React.ReactNode;
 }
 
-/** PageHeader — mirrors the web `<PageHeader>` (back button + icon + title). */
+/**
+ * PageHeader — sticky screen header with back button, title, optional action.
+ *
+ * Layout in LTR (English):  [←back]  [title …]  [spacer]  [right]
+ * Layout in RTL (Arabic):   [right]  [spacer]  […title]  [→back]
+ *
+ * Using row-reverse in Arabic flips the order so the title appears on the
+ * RIGHT side and the back button is on the LEFT — standard Arabic app UX.
+ */
 export function PageHeader({ icon, title, right }: PageHeaderProps) {
   const router = useRouter();
   const { colors } = useTheme();
@@ -22,25 +30,34 @@ export function PageHeader({ icon, title, right }: PageHeaderProps) {
     <View
       style={[
         styles.header,
-        { backgroundColor: colors.bg, borderBottomColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' },
+        {
+          backgroundColor: colors.bg,
+          borderBottomColor: colors.border,
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+        },
       ]}
     >
+      {/* Back button — always the first element in JSX order */}
       <TouchableOpacity
         onPress={() => router.back()}
         style={[styles.back, { backgroundColor: colors.card, borderColor: colors.border }]}
         activeOpacity={0.7}
       >
         <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2}>
+          {/* Arrow points right (→) in Arabic so it makes sense as "back" in RTL */}
           <Path d={isRTL ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7'} strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       </TouchableOpacity>
+
+      {/* Title — flex:1 so it fills available space */}
       <Text
-        style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}
+        style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left', flex: 1 }]}
         numberOfLines={1}
       >
         {icon ? icon + '  ' : ''}{title}
       </Text>
-      <View style={{ flex: 1 }} />
+
+      {/* Optional right/left action slot */}
       {right}
     </View>
   );

@@ -44,7 +44,7 @@ export default function GlobalHeader() {
       {/* Logo + Name */}
       <TouchableOpacity
         style={[styles.brand, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
-        onPress={() => router.push('/(tabs)/')}
+        onPress={() => router.push('/(tabs)/' as any)}
         activeOpacity={0.8}
       >
         <Image
@@ -110,37 +110,53 @@ export default function GlobalHeader() {
           ]}>
             {/* User info */}
             <View style={[styles.userRow, { borderBottomColor: colors.border }]}>
-              <View style={[styles.avatar, { backgroundColor: colors.teal + '30' }]}>
-                <Text style={{ color: colors.teal, fontSize: 16, fontFamily: FONT_UI_BOLD }}>
-                  {(userName[0] || '?').toUpperCase()}
-                </Text>
-              </View>
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                {!!userName && <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>{userName}</Text>}
-                <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>{userEmail}</Text>
-              </View>
+              {isRTL ? (
+                <>
+                  <View style={{ flex: 1, marginRight: 10, alignItems: 'flex-end' }}>
+                    {!!userName && <Text style={[styles.userName, { color: colors.text, textAlign: 'right' }]} numberOfLines={1}>{userName}</Text>}
+                    <Text style={[styles.userEmail, { color: colors.textSecondary, textAlign: 'right' }]} numberOfLines={1}>{userEmail}</Text>
+                  </View>
+                  <View style={[styles.avatar, { backgroundColor: colors.teal + '30' }]}>
+                    <Text style={{ color: colors.teal, fontSize: 16, fontFamily: FONT_UI_BOLD }}>{(userName[0] || '?').toUpperCase()}</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={[styles.avatar, { backgroundColor: colors.teal + '30' }]}>
+                    <Text style={{ color: colors.teal, fontSize: 16, fontFamily: FONT_UI_BOLD }}>{(userName[0] || '?').toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    {!!userName && <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>{userName}</Text>}
+                    <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>{userEmail}</Text>
+                  </View>
+                </>
+              )}
             </View>
 
             {/* Menu items */}
             <MenuItem
+              isRTL={isRTL}
               icon="⚙️"
               label={language === 'ar' ? 'الإعدادات' : 'Settings'}
               colors={colors}
               onPress={() => { setMenuOpen(false); router.push('/(tabs)/settings'); }}
             />
             <MenuItem
+              isRTL={isRTL}
               icon="🔔"
               label={language === 'ar' ? 'الإشعارات' : 'Notifications'}
               colors={colors}
               onPress={() => { setMenuOpen(false); router.push('/(tabs)/settings'); }}
             />
             <MenuItem
+              isRTL={isRTL}
               icon="💎"
               label={language === 'ar' ? 'الاشتراك' : 'Subscription'}
               colors={colors}
               onPress={() => { setMenuOpen(false); router.push('/(tabs)/subscription'); }}
             />
             <MenuItem
+              isRTL={isRTL}
               icon="🌙"
               label={isDark ? (language === 'ar' ? 'الوضع الفاتح' : 'Light Mode') : (language === 'ar' ? 'الوضع الداكن' : 'Dark Mode')}
               colors={colors}
@@ -148,6 +164,7 @@ export default function GlobalHeader() {
             />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <MenuItem
+              isRTL={isRTL}
               icon="🚪"
               label={language === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
               colors={colors}
@@ -161,13 +178,25 @@ export default function GlobalHeader() {
   );
 }
 
-function MenuItem({ icon, label, onPress, colors, labelColor }: {
-  icon: string; label: string; onPress: () => void; colors: any; labelColor?: string;
+function MenuItem({ icon, label, onPress, colors, labelColor, isRTL }: {
+  icon: string; label: string; onPress: () => void; colors: any; labelColor?: string; isRTL?: boolean;
 }) {
+  // Always keep flexDirection: 'row'. In Arabic, put label FIRST (right side)
+  // and icon SECOND (left side) so the layout is positionally correct
+  // regardless of I18nManager state.
   return (
     <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
-      <Text style={{ fontSize: 16, marginRight: 10 }}>{icon}</Text>
-      <Text style={[styles.menuLabel, { color: labelColor || colors.text }]}>{label}</Text>
+      {isRTL ? (
+        <>
+          <Text style={[styles.menuLabel, { color: labelColor || colors.text, textAlign: 'right', flex: 1, marginRight: 10 }]}>{label}</Text>
+          <Text style={{ fontSize: 16 }}>{icon}</Text>
+        </>
+      ) : (
+        <>
+          <Text style={{ fontSize: 16, marginRight: 10 }}>{icon}</Text>
+          <Text style={[styles.menuLabel, { color: labelColor || colors.text, textAlign: 'left', flex: 1 }]}>{label}</Text>
+        </>
+      )}
     </TouchableOpacity>
   );
 }

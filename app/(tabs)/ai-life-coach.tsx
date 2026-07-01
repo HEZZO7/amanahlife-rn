@@ -106,8 +106,8 @@ export default function AILifeCoach() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Welcome */}
         <LinearGradient colors={['#1A4A3A', '#0D3328']} style={styles.welcome}>
-          <Text style={[styles.welcomeTitle, { color: colors.text }]}>🧠 {isAr ? 'مدربك الشخصي' : 'Your Personal Coach'}</Text>
-          <Text style={[styles.welcomeSub, { color: colors.textSecondary }]}>
+          <Text style={[styles.welcomeTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>🧠 {isAr ? 'مدربك الشخصي' : 'Your Personal Coach'}</Text>
+          <Text style={[styles.welcomeSub, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
             {isAr ? 'احصل على نصائح مخصصة بناءً على أهدافك وعاداتك' : 'Get personalized advice based on your goals and habits'}
           </Text>
         </LinearGradient>
@@ -145,7 +145,11 @@ export default function AILifeCoach() {
                     ? { backgroundColor: colors.teal + '1A', borderColor: colors.teal + '33', marginLeft: isRTL ? 0 : 28, marginRight: isRTL ? 28 : 0 }
                     : { backgroundColor: gold + '1A', borderColor: gold + '33', marginRight: isRTL ? 0 : 16, marginLeft: isRTL ? 16 : 0 }]}
                 >
-                  {msg.type === 'coach' && <Text style={{ color: gold, fontSize: 11, fontFamily: FONT_UI_MEDIUM, marginBottom: 4 }}>🤖 {isAr ? 'المدرب' : 'Coach'}</Text>}
+                  {msg.type === 'coach' && (
+                    <Text style={{ color: gold, fontSize: 11, fontFamily: FONT_UI_MEDIUM, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
+                      {isAr ? `المدرب 🤖` : `🤖 Coach`}
+                    </Text>
+                  )}
                   <Text style={{ color: colors.text, fontSize: 13, fontFamily: FONT_UI, lineHeight: 19, textAlign: isRTL ? 'right' : 'left' }}>{msg.text}</Text>
                 </View>
               ))}
@@ -221,7 +225,8 @@ const styles = StyleSheet.create({
   welcome: { borderRadius: 16, padding: 16, marginBottom: 14 },
   welcomeTitle: { fontSize: 16, fontFamily: FONT_UI_BOLD, marginBottom: 6 },
   welcomeSub: { fontSize: 13, fontFamily: FONT_UI, lineHeight: 19 },
-  cardTitle: { fontSize: 15, fontFamily: FONT_UI_BOLD, marginBottom: 12 },
+
+
   catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   catBtn: { width: '48%', padding: 12, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
   msg: { padding: 12, borderRadius: 12, borderWidth: 1 },

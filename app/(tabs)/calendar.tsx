@@ -146,7 +146,7 @@ export default function IslamicCalendar() {
         </LinearGradient>
 
         {/* Upcoming events */}
-        <Text style={[styles.sectionHeader, { color: colors.text }]}>🗓️ {isAr ? 'الأحداث القادمة' : 'Upcoming Events'}</Text>
+        <Text style={[styles.sectionHeader, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>🗓️ {isAr ? 'الأحداث القادمة' : 'Upcoming Events'}</Text>
         {groupedEvents.length === 0 ? (
           <Text style={{ color: colors.textSecondary, textAlign: 'center', paddingVertical: 16, fontFamily: FONT_UI }}>{isAr ? 'لا توجد أحداث قادمة' : 'No upcoming events'}</Text>
         ) : (
@@ -257,11 +257,10 @@ const styles = StyleSheet.create({
   bannerYear: { color: 'rgba(255,255,255,0.9)', fontSize: 20, fontFamily: FONT_UI_MEDIUM, marginTop: 4 },
   bannerPill: { marginTop: 14, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
   bannerPillText: { color: '#fff', fontSize: 13, fontFamily: FONT_UI_MEDIUM },
-  sectionHeader: { fontSize: 17, fontFamily: FONT_UI_BOLD, marginBottom: 14 },
   groupDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   line: { flex: 1, height: 1 },
   groupChip: { fontSize: 12.5, fontFamily: FONT_UI_BOLD, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, overflow: 'hidden' },
-  eventTop: { gap: 12, alignItems: 'center' },
+  eventTop: { gap: 12, alignItems: 'center', flexDirection: 'row' },
   eventIcon: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   eventName: { fontSize: 15, fontFamily: FONT_UI_BOLD },
   eventDesc: { fontSize: 11.5, fontFamily: FONT_UI, marginTop: 2, lineHeight: 16 },
@@ -269,6 +268,7 @@ const styles = StyleSheet.create({
   badge: { fontSize: 11, fontFamily: FONT_UI_MEDIUM, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, overflow: 'hidden' },
   monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   monthBtn: { width: '31.5%', height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  subHeader: { fontSize: 14, fontFamily: FONT_UI_BOLD, marginBottom: 12 },
+
+
   infoNote: { marginTop: 16, padding: 14, borderRadius: 12, borderWidth: 1 },
 });

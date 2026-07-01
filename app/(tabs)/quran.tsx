@@ -94,14 +94,14 @@ export default function QuranReader() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Header with contextual back */}
+      {/* Header — back button always left in Arabic (row-reverse puts back on left, title on right) */}
       <View style={[styles.header, { backgroundColor: colors.bg, borderBottomColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
         <TouchableOpacity onPress={goBack} style={[styles.back, { backgroundColor: colors.card, borderColor: colors.border }]} activeOpacity={0.7}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2}>
             <Path d={isRTL ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7'} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+        <Text style={[styles.headerTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
           📖 {selectedSurah ? (isRTL ? selectedSurah.name : selectedSurah.englishName) : tr('Quran', 'القرآن الكريم')}
         </Text>
       </View>
@@ -120,10 +120,10 @@ export default function QuranReader() {
 
             {/* Last read */}
             {lastRead && (
-              <Card style={[styles.lastRead, { borderColor: colors.teal + '4D', backgroundColor: colors.teal + '14' }]}>
+              <Card style={[styles.lastRead, { borderColor: colors.teal + '4D', backgroundColor: colors.teal + '14', flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.teal, fontSize: 11, fontFamily: FONT_UI_MEDIUM }}>{tr('Continue Reading', 'متابعة القراءة')}</Text>
-                  <Text style={{ color: colors.text, fontSize: 15, fontFamily: FONT_UI_BOLD, marginTop: 2 }}>{lastRead.name}</Text>
+                  <Text style={{ color: colors.teal, fontSize: 11, fontFamily: FONT_UI_MEDIUM, textAlign: isRTL ? 'right' : 'left' }}>{tr('Continue Reading', 'متابعة القراءة')}</Text>
+                  <Text style={{ color: colors.text, fontSize: 15, fontFamily: FONT_UI_BOLD, marginTop: 2, textAlign: isRTL ? 'right' : 'left' }}>{lastRead.name}</Text>
                 </View>
                 <TouchableOpacity
                   style={[styles.resumeBtn, { backgroundColor: colors.teal }]}
@@ -202,12 +202,12 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontFamily: FONT_UI_BOLD, flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
   search: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, fontFamily: FONT_UI, marginBottom: 14 },
-  lastRead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  lastRead: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   resumeBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
   surahRow: { alignItems: 'center', gap: 14 },
   surahNum: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  surahName: { fontSize: 15, fontFamily: FONT_UI_BOLD },
-  surahSub: { fontSize: 11, fontFamily: FONT_UI, marginTop: 2 },
+  surahName: { fontSize: 15, fontFamily: FONT_UI_BOLD, alignSelf: 'stretch' },
+  surahSub: { fontSize: 11, fontFamily: FONT_UI, marginTop: 2, alignSelf: 'stretch' },
   surahArabic: { fontSize: 18, fontFamily: FONT_ARABIC },
   bismillah: { textAlign: 'center', fontSize: 24, fontFamily: FONT_ARABIC, paddingVertical: 8, lineHeight: 44 },
   ayahHeader: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },

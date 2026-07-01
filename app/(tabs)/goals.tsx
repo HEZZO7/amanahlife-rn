@@ -151,8 +151,8 @@ export default function Goals() {
           </Card>
         )}
 
-        {/* Category filters */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        {/* Category filters — wrapping View so row-reverse works properly in Arabic */}
+        <View style={[styles.filterRow, { flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', marginBottom: 8 }]}>
           {['All', 'Personal', 'Financial', 'Spiritual', 'Family'].map((cat) => (
             <TouchableOpacity
               key={cat}
@@ -162,10 +162,10 @@ export default function Goals() {
               <Text style={[styles.filterText, { color: filterCategory === cat ? '#04211C' : colors.textSecondary }]}>{L(CAT_LABELS[cat])}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         {/* Status filters */}
-        <View style={[styles.filterRow, { marginBottom: 14 }]}>
+        <View style={[styles.filterRow, { marginBottom: 14, flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap' }]}>
           {['All', 'Active', 'Completed', 'Paused'].map((st) => (
             <TouchableOpacity
               key={st}
@@ -227,7 +227,7 @@ export default function Goals() {
                   </View>
 
                   {/* Quick-set + linked tasks */}
-                  <View style={[styles.rowBetween, { flexDirection: isRTL ? 'row-reverse' : 'row', marginTop: 10 }]}>
+                  <View style={[styles.rowBetween, { flexDirection: 'row', marginTop: 10 }]}>
                     <View style={{ flexDirection: 'row', gap: 5 }}>
                       {[10, 25, 50, 75, 100].map((val) => (
                         <TouchableOpacity

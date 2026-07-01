@@ -107,7 +107,7 @@ export default function RamadanPlanner() {
           </View>
         );
       })}
-      <View style={[styles.totalRow, { borderTopColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+      <View style={[styles.totalRow, { borderTopColor: colors.border, flexDirection: 'row' }]}>
         <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI_BOLD }}>{isAr ? 'الإجمالي' : 'Total'}</Text>
         <Text style={{ color: colors.gold, fontSize: 14, fontFamily: FONT_UI_BOLD }}>{entries.reduce((a, [, b]) => a + b, 0).toLocaleString()}</Text>
       </View>
@@ -154,6 +154,7 @@ export default function RamadanPlanner() {
           <Card>
             <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{isAr ? '30 يوم رمضان' : '30 Days of Ramadan'}</Text>
             {/* RTL: day 1 top-right, day 30 bottom-left + Arabic numerals */}
+            {/* RTL: day 1 top-right, flowing right→left */}
             <View style={[styles.dayGrid, { flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap' }]}>
               {data.days.map((day) => (
                 <TouchableOpacity
@@ -162,17 +163,20 @@ export default function RamadanPlanner() {
                   onPress={() => toggleFast(day.day)}
                 >
                   <Text style={{ color: day.fasted ? colors.teal : colors.textSecondary, fontSize: 12, fontFamily: FONT_UI_BOLD }}>
-                    {isRTL ? String(day.day).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[parseInt(d)]) : day.day}
+                    {day.day}
                   </Text>
                   {day.fasted && <Text style={{ color: colors.teal, fontSize: 8 }}>✓</Text>}
                 </TouchableOpacity>
               ))}
             </View>
             <Text style={[styles.subTitle, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{isAr ? 'صفحات القرآن اليومية' : 'Daily Quran Pages'}</Text>
-            <View style={styles.quranGrid}>
+            {/* Quran pages grid — Arabic: right-to-left with "يوم N" labels */}
+            <View style={[styles.quranGrid, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               {data.days.slice(0, 10).map((day) => (
                 <View key={day.day} style={styles.quranCell}>
-                  <Text style={{ color: colors.textSecondary, fontSize: 9, fontFamily: FONT_UI, textAlign: 'center' }}>D{day.day}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 9, fontFamily: FONT_UI, textAlign: 'center' }}>
+                    {isAr ? `يوم ${day.day}` : `D${day.day}`}
+                  </Text>
                   <TextInput
                     value={day.quranPages ? String(day.quranPages) : ''}
                     onChangeText={(v) => updateQuranPages(day.day, parseInt(v) || 0)}
@@ -192,7 +196,7 @@ export default function RamadanPlanner() {
               <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>🌅 {isAr ? 'أفكار السحور' : 'Suhoor Ideas'}</Text>
               <View style={{ gap: 8 }}>
                 {data.mealPlan.suhoor.map((meal, i) => (
-                  <View key={i} style={[styles.mealRow, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}><Text>🥣</Text><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI }}>{meal}</Text></View>
+                  <View key={i} style={[styles.mealRow, { backgroundColor: colors.bg, flexDirection: 'row' }]}><Text>🥣</Text><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI }}>{meal}</Text></View>
                 ))}
               </View>
             </Card>
@@ -200,7 +204,7 @@ export default function RamadanPlanner() {
               <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>🌙 {isAr ? 'أفكار الإفطار' : 'Iftar Ideas'}</Text>
               <View style={{ gap: 8 }}>
                 {data.mealPlan.iftar.map((meal, i) => (
-                  <View key={i} style={[styles.mealRow, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}><Text>🍲</Text><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI }}>{meal}</Text></View>
+                  <View key={i} style={[styles.mealRow, { backgroundColor: colors.bg, flexDirection: 'row' }]}><Text>🍲</Text><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI }}>{meal}</Text></View>
                 ))}
               </View>
             </Card>
@@ -234,7 +238,7 @@ export default function RamadanPlanner() {
             <Card>
               <Text style={[styles.subTitle, { color: colors.textSecondary, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }]}>{isAr ? 'سجل الصدقات' : 'Charity Log'}</Text>
               {data.days.filter((d) => d.charity > 0).length > 0 ? data.days.filter((d) => d.charity > 0).map((d) => (
-                <View key={d.day} style={[styles.logRow, { borderBottomColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <View key={d.day} style={[styles.logRow, { borderBottomColor: colors.border, flexDirection: 'row' }]}>
                   <Text style={{ color: colors.text, fontSize: 12, fontFamily: FONT_UI }}>{isAr ? 'يوم' : 'Day'} {d.day}</Text>
                   <Text style={{ color: colors.teal, fontSize: 12, fontFamily: FONT_UI_MEDIUM }}>{d.charity}</Text>
                 </View>
@@ -258,7 +262,8 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 10, fontFamily: FONT_UI, marginTop: 2, textAlign: 'center' },
   tabRow: { gap: 8 },
   tab: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, borderWidth: 1 },
-  cardTitle: { fontSize: 14, fontFamily: FONT_UI_BOLD, marginBottom: 12 },
+
+
   dayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   dayCell: { width: '14%', aspectRatio: 1, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   subTitle: { fontSize: 12, fontFamily: FONT_UI_BOLD, marginTop: 16, marginBottom: 8 },

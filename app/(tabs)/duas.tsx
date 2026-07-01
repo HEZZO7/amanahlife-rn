@@ -43,6 +43,7 @@ function DuaCard({ dua, isFavorite, onToggle, language, isRTL }: { dua: Dua; isF
   const [expanded, setExpanded] = useState(false);
   return (
     <Card style={isFavorite ? { borderColor: colors.gold + '80', backgroundColor: colors.gold + '0D' } : undefined}>
+      {/* In Arabic: star on LEFT, badge on RIGHT (row-reverse) */}
       <View style={[styles.cardTop, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
         <View style={[styles.catBadge, { backgroundColor: colors.gold + '1A' }]}>
           <Text style={{ color: colors.gold, fontSize: 11, fontFamily: FONT_UI_MEDIUM }}>{language === 'ar' ? dua.categoryAr : dua.category}</Text>

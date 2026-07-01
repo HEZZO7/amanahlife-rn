@@ -81,7 +81,7 @@ interface Message { role: 'user' | 'ai'; text: string; }
 export default function AISearch() {
   const { user } = useAuth();
   const { colors } = useTheme();
-  const { isRTL, rtlText, rtlView, language } = useRTL();
+  const { isRTL, rtlText, rtlView, rtlAlign, language } = useRTL();
   const isAr = language === 'ar';
 
   const [query, setQuery] = useState('');
@@ -181,7 +181,9 @@ export default function AISearch() {
               : [styles.aiBubble, { backgroundColor: colors.card, borderColor: colors.border, alignSelf: isRTL ? 'flex-end' : 'flex-start' }],
           ]}>
             {msg.role === 'ai' && (
-              <Text style={[styles.aiLabel, { color: colors.gold }]}>🤖 {isAr ? 'المساعد' : 'AI'}</Text>
+              <Text style={[styles.aiLabel, { color: colors.gold, textAlign: isRTL ? 'right' : 'left' }]}>
+                {isAr ? `المساعد الذكي 🤖` : `🤖 AI`}
+              </Text>
             )}
             <Text style={[
               styles.bubbleText,
@@ -203,8 +205,13 @@ export default function AISearch() {
         <TextInput
           style={[
             styles.input,
-            { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
-            rtlText as any,
+            {
+              backgroundColor: colors.card,
+              color: colors.text,
+              borderColor: colors.border,
+              textAlign: isRTL ? 'right' : 'left',
+              writingDirection: isRTL ? 'rtl' : 'ltr',
+            },
           ]}
           placeholder={isAr ? 'اسأل سؤالاً...' : 'Ask a question...'}
           placeholderTextColor={colors.textMuted}
@@ -239,8 +246,8 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '85%', borderRadius: 16, padding: 12, marginBottom: 10 },
   userBubble: {},
   aiBubble: { borderWidth: 1 },
-  aiLabel: { fontSize: 11, fontFamily: FONT_UI_BOLD, marginBottom: 4 },
-  bubbleText: { fontSize: 14, fontFamily: FONT_UI, lineHeight: 22 },
+  aiLabel: { fontSize: 11, fontFamily: FONT_UI_BOLD, marginBottom: 4, alignSelf: 'stretch' },
+  bubbleText: { fontSize: 14, fontFamily: FONT_UI, lineHeight: 22, alignSelf: 'stretch' },
   inputBar: { padding: 12, borderTopWidth: 1, gap: 8, alignItems: 'flex-end' },
   input: { flex: 1, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontFamily: FONT_UI, maxHeight: 100 },
   sendBtn: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },

@@ -149,20 +149,20 @@ export default function SubscriptionScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Social proof banner */}
-        <View style={[styles.banner, { backgroundColor: colors.gold + '15', borderColor: colors.gold + '30' }]}>
+        <View style={[styles.banner, { backgroundColor: colors.gold + '15', borderColor: colors.gold + '30', flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <Text style={{ fontSize: 18 }}>🌍</Text>
-          <Text style={[styles.bannerText, { color: colors.text, textAlign: 'center', flex: 1 }]}>
+          <Text style={[styles.bannerText, { color: colors.text, textAlign: isRTL ? 'right' : 'center', flex: 1 }]}>
             {tr('Your smart companion for a more organized and balanced life ✨', 'رفيقك الذكي لحياة أكثر تنظيمًا وتوازنًا ✨')}
           </Text>
         </View>
 
         {/* Trial banner */}
         {isTrialActive && (
-          <Card style={[styles.trialCard, { borderColor: colors.gold + '60', backgroundColor: colors.gold + '12' }]}>
+          <Card style={[styles.trialCard, { borderColor: colors.gold + '60', backgroundColor: colors.gold + '12', flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.gold + '25', alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 22 }}>⏳</Text>
             </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
+            <View style={{ flex: 1, marginLeft: isRTL ? 0 : 12, marginRight: isRTL ? 12 : 0, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
               <Text style={[styles.trialTitle, { color: colors.text }]}>{tr('Free Trial Active', 'التجربة المجانية نشطة')}</Text>
               <Text style={[styles.trialSub, { color: colors.textSecondary }]}>
                 {tr(`${trialDaysRemaining} day${trialDaysRemaining === 1 ? '' : 's'} remaining`, `متبقي ${trialDaysRemaining} ${trialDaysRemaining === 1 ? 'يوم' : 'أيام'}`)}
@@ -193,7 +193,7 @@ export default function SubscriptionScreen() {
             <View style={[styles.currentAvatar, { backgroundColor: colors.gold + '30' }]}>
               <Text style={{ fontSize: 22 }}>{currentPlan?.icon || '🌱'}</Text>
             </View>
-            <View style={{ marginLeft: isRTL ? 0 : 12, marginRight: isRTL ? 12 : 0 }}>
+            <View style={{ marginLeft: isRTL ? 0 : 12, marginRight: isRTL ? 12 : 0, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
               <Text style={[styles.currentName, { color: colors.text }]}>
                 {isAr ? currentPlan?.nameAr : currentPlan?.nameEn}
                 {isTrialActive && <Text style={{ color: colors.gold, fontSize: 12 }}> · {tr('Trial', 'تجربة')}</Text>}
@@ -229,8 +229,8 @@ export default function SubscriptionScreen() {
             {tr('Available Plans', 'الباقات المتاحة')}
           </Text>
 
-          {/* Monthly / Yearly pill */}
-          <View style={[styles.billingPill, { backgroundColor: colors.bg, borderColor: colors.border, alignSelf: 'center', marginBottom: 16 }]}>
+          {/* Billing pill — in Arabic: شهري on RIGHT, سنوي on LEFT */}
+          <View style={[styles.billingPill, { backgroundColor: colors.bg, borderColor: colors.border, alignSelf: 'center', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             {(['monthly', 'yearly'] as const).map((b) => (
               <TouchableOpacity
                 key={b}
@@ -293,7 +293,7 @@ export default function SubscriptionScreen() {
                     {(isAr ? plan.featuresAr : plan.featuresEn).map((f, i) => (
                       <View key={i} style={[styles.featureRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                         <Text style={{ color: colors.green, fontSize: 14, marginRight: isRTL ? 0 : 8, marginLeft: isRTL ? 8 : 0 }}>✓</Text>
-                        <Text style={[styles.featureText, { color: colors.textSecondary }]}>{f}</Text>
+                        <Text style={[styles.featureText, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left', flex: 1 }]}>{f}</Text>
                       </View>
                     ))}
                   </View>
@@ -335,7 +335,7 @@ export default function SubscriptionScreen() {
           <View style={{ gap: 10 }}>
             {TESTIMONIALS.map((t, i) => (
               <View key={i} style={[styles.testimonialCard, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <View style={{ flexDirection: 'row', gap: 3, marginBottom: 8 }}>
+                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 3, marginBottom: 8 }}>
                   {Array.from({ length: 5 }).map((_, si) => (
                     <Text key={si} style={{ color: si < t.rating ? colors.gold : colors.border, fontSize: 12 }}>★</Text>
                   ))}
@@ -349,7 +349,7 @@ export default function SubscriptionScreen() {
                       {(isAr ? t.nameAr : t.nameEn).charAt(0)}
                     </Text>
                   </View>
-                  <View style={{ marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0 }}>
+                  <View style={{ marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
                     <Text style={[styles.reviewerName, { color: colors.text }]}>{isAr ? t.nameAr : t.nameEn}</Text>
                     <Text style={[styles.reviewerLoc, { color: colors.textSecondary }]}>{isAr ? t.locationAr : t.locationEn}</Text>
                   </View>
@@ -376,8 +376,9 @@ const styles = StyleSheet.create({
   ctaSub: { fontSize: 13, fontFamily: FONT_UI, textAlign: 'center', lineHeight: 18, marginBottom: 14 },
   ctaBtn: { paddingHorizontal: 24, paddingVertical: 13, borderRadius: 14 },
   ctaBtnText: { fontSize: 15, fontFamily: FONT_UI_BOLD },
-  sectionLabel: { fontSize: 13, fontFamily: FONT_UI_MEDIUM },
-  currentRow: { alignItems: 'center' },
+
+
+  currentRow: { flexDirection: 'row', alignItems: 'center' },
   currentAvatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   currentName: { fontSize: 16, fontFamily: FONT_UI_BOLD },
   currentBilling: { fontSize: 12, fontFamily: FONT_UI, marginTop: 2 },
@@ -387,7 +388,7 @@ const styles = StyleSheet.create({
   billingPill: { flexDirection: 'row', borderRadius: 24, borderWidth: 1, padding: 3 },
   billingBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   billingText: { fontSize: 13, fontFamily: FONT_UI_BOLD },
-  currencyRow: { alignItems: 'center', gap: 6 },
+  currencyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   currencyChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1 },
   planCard: { borderRadius: 16, borderWidth: 1, padding: 14 },
   planHeader: { justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
@@ -403,7 +404,7 @@ const styles = StyleSheet.create({
   upgradeBtnText: { fontSize: 14, fontFamily: FONT_UI_BOLD },
   testimonialCard: { padding: 14, borderRadius: 14, borderWidth: 1 },
   quoteText: { fontSize: 13, fontFamily: FONT_UI, lineHeight: 20 },
-  reviewerRow: { alignItems: 'center' },
+  reviewerRow: { flexDirection: 'row', alignItems: 'center' },
   reviewerAvatar: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   reviewerName: { fontSize: 12, fontFamily: FONT_UI_BOLD },
   reviewerLoc: { fontSize: 10, fontFamily: FONT_UI },

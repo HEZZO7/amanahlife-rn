@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Modal,
-  Pressable, Platform,
+  Pressable, Platform, I18nManager,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -104,8 +104,13 @@ export default function BottomNav() {
 
   return (
     <>
-      <View style={[styles.nav, { backgroundColor: colors.bg, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 12) }]}>
-        {(isRTL ? [...NAV_ITEMS].reverse() : NAV_ITEMS).map((item) => {
+      <View style={[styles.nav, {
+        backgroundColor: colors.bg,
+        borderTopColor: colors.border,
+        paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 12),
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+      }]}>
+        {NAV_ITEMS.map((item) => {
           const isSearchModal = item.path === 'search-modal';
           const isActive = !isSearchModal && (
             item.path === '/(tabs)/' ? pathname === '/' : pathname.includes(item.id)
@@ -136,23 +141,23 @@ export default function BottomNav() {
         <Pressable style={styles.overlay} onPress={() => setShowSearchModal(false)}>
           <Pressable onPress={() => {}} style={[styles.sheet, { backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>
+            <Text style={[styles.sheetTitle, { color: colors.text, textAlign: language === 'ar' ? 'right' : 'center' }]}>
               {language === 'ar' ? 'اختر نوع البحث' : 'Choose Search Type'}
             </Text>
 
             {/* Classic Search — Free */}
             <TouchableOpacity
-              style={[styles.searchOption, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => { setShowSearchModal(false); router.push('/(tabs)/search'); }}
+              style={[styles.searchOption, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: language === 'ar' ? 'row-reverse' : 'row' }]}
+              onPress={() => { setShowSearchModal(false); setTimeout(() => router.navigate('/(tabs)/search'), 50); }}
             >
               <View style={[styles.searchIcon, { backgroundColor: colors.teal + '20' }]}>
                 <SearchIcon color={colors.teal} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.searchTitle, { color: colors.text }]}>
+                <Text style={[styles.searchTitle, { color: colors.text, textAlign: language === 'ar' ? 'right' : 'left' }]}>
                   {language === 'ar' ? 'البحث الكلاسيكي' : 'Classic Search'}
                 </Text>
-                <Text style={[styles.searchSub, { color: colors.textSecondary }]}>
+                <Text style={[styles.searchSub, { color: colors.textSecondary, textAlign: language === 'ar' ? 'right' : 'left' }]}>
                   {language === 'ar' ? 'بحث نصي في المحتوى والصفحات' : 'Text search across content & pages'}
                 </Text>
               </View>
@@ -165,17 +170,17 @@ export default function BottomNav() {
 
             {/* AI Smart Search — Premium */}
             <TouchableOpacity
-              style={[styles.searchOption, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => { setShowSearchModal(false); router.push('/(tabs)/ai-search'); }}
+              style={[styles.searchOption, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: language === 'ar' ? 'row-reverse' : 'row' }]}
+              onPress={() => { setShowSearchModal(false); setTimeout(() => router.navigate('/(tabs)/ai-search'), 50); }}
             >
               <View style={[styles.searchIcon, { backgroundColor: colors.gold + '20' }]}>
                 <SearchIcon color={colors.gold} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.searchTitle, { color: colors.text }]}>
+                <Text style={[styles.searchTitle, { color: colors.text, textAlign: language === 'ar' ? 'right' : 'left' }]}>
                   {language === 'ar' ? 'البحث الذكي بالذكاء الاصطناعي' : 'AI Smart Search'}
                 </Text>
-                <Text style={[styles.searchSub, { color: colors.textSecondary }]}>
+                <Text style={[styles.searchSub, { color: colors.textSecondary, textAlign: language === 'ar' ? 'right' : 'left' }]}>
                   {language === 'ar' ? 'بحث بلغة طبيعية في بياناتك' : 'Natural language search across your data'}
                 </Text>
               </View>

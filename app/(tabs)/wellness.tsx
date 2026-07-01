@@ -68,7 +68,7 @@ function Stepper({ label, value, min, max, onChange, accent }: {
 }
 
 export default function Wellness() {
-  const { language } = useLanguage();
+  const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
 
@@ -168,12 +168,15 @@ export default function Wellness() {
 
         {/* 7-day trend */}
         <Card>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginBottom: 12 }]}>{tr('Weekly Trend', 'الاتجاه الأسبوعي')}</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginBottom: 12, textAlign: isRTL ? 'right' : 'left', alignSelf: 'stretch' }]}>{tr('Weekly Trend', 'الاتجاه الأسبوعي')}</Text>
           <View style={styles.chart}>
             {last7.map((entry, i) => {
               const score = entry.mood > 0 ? getWellnessScore(entry) : 0;
               const height = score > 0 ? Math.max(10, score) : 5;
-              const dayLabel = new Date(entry.date).toLocaleDateString('en', { weekday: 'short' }).slice(0, 2);
+              // Full day names in Arabic, short in English
+              const dayLabel = isRTL
+                ? new Date(entry.date).toLocaleDateString('ar', { weekday: 'long' })
+                : new Date(entry.date).toLocaleDateString('en', { weekday: 'short' }).slice(0, 2);
               return (
                 <View key={i} style={styles.barCol}>
                   <Text style={[styles.barValue, { color: colors.textSecondary }]}>{score > 0 ? score : ''}</Text>
@@ -184,7 +187,7 @@ export default function Wellness() {
                       <View style={[styles.bar, { height: `${height}%`, backgroundColor: colors.surface }]} />
                     )}
                   </View>
-                  <Text style={[styles.barLabel, { color: colors.textSecondary }]}>{dayLabel}</Text>
+                  <Text style={[styles.barLabel, { color: colors.textSecondary, fontSize: isRTL ? 8 : 10 }]}>{dayLabel}</Text>
                 </View>
               );
             })}
@@ -208,7 +211,8 @@ const styles = StyleSheet.create({
   stepTrack: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
   saveBtn: { paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginTop: 4 },
   saveBtnText: { fontSize: 14, fontFamily: FONT_UI_BOLD },
-  sectionLabel: { fontSize: 13, fontFamily: FONT_UI_MEDIUM },
+
+
   bigScore: { fontSize: 40, fontFamily: FONT_UI_BLACK },
   metricsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   metricEmoji: { position: 'absolute', width: 48, height: 48, textAlign: 'center', lineHeight: 48, fontSize: 16 },

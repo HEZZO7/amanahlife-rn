@@ -138,7 +138,7 @@ export default function FamilyBudget() {
             <Card>
               <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{isAr ? 'أفراد العائلة' : 'Family Members'}</Text>
               {data.members.map((m) => (
-                <View key={m.id} style={[styles.memberRow, { borderBottomColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <View key={m.id} style={[styles.memberRow, { borderBottomColor: colors.border, flexDirection: 'row' }]}>
                   <View>
                     <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI_MEDIUM, textAlign: isRTL ? 'right' : 'left' }}>{m.name}</Text>
                     <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, textAlign: isRTL ? 'right' : 'left' }}>{m.role}</Text>
@@ -160,7 +160,7 @@ export default function FamilyBudget() {
                 const progress = Math.min((totalIncome * 0.1) / value * 100, 100);
                 return (
                   <View key={key} style={{ marginBottom: 12 }}>
-                    <View style={[styles.rowBetween, { flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 5 }]}>
+                    <View style={[styles.rowBetween, { flexDirection: 'row', marginBottom: 5 }]}>
                       <Text style={{ color: colors.text, fontSize: 12.5, fontFamily: FONT_UI }}>{label.icon} {isAr ? label.ar : label.en}</Text>
                       <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: FONT_UI }}>{value.toLocaleString()}</Text>
                     </View>
@@ -182,7 +182,9 @@ export default function FamilyBudget() {
               return (
                 <View key={idx} style={{ marginBottom: 12 }}>
                   <View style={[styles.rowBetween, { flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 5 }]}>
-                    <Text style={{ color: colors.text, fontSize: 12.5, fontFamily: FONT_UI }}>{cat.icon} {isAr ? cat.nameAr : cat.name}</Text>
+                    <Text style={{ color: colors.text, fontSize: 12.5, fontFamily: FONT_UI }}>
+                      {isAr ? `${isAr ? cat.nameAr : cat.name} ${cat.icon}` : `${cat.icon} ${cat.name}`}
+                    </Text>
                     <Text style={{ color: over ? colors.red : colors.textSecondary, fontSize: 12, fontFamily: FONT_UI }}>{Math.round(cat.actual).toLocaleString()}/{cat.budgeted.toLocaleString()}</Text>
                   </View>
                   <ProgressBar value={pct} color={over ? colors.red : colors.teal} />
@@ -257,7 +259,8 @@ const styles = StyleSheet.create({
   summaryCard: { flex: 1, alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4 },
   sLabel: { fontSize: 10, fontFamily: FONT_UI, textAlign: 'center' },
   sVal: { fontSize: 15, fontFamily: FONT_UI_BOLD, marginTop: 3 },
-  cardTitle: { fontSize: 14, fontFamily: FONT_UI_BOLD, marginBottom: 12 },
+
+
   memberRow: { justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1 },
   rowBetween: { justifyContent: 'space-between', alignItems: 'center' },
   input: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, fontFamily: FONT_UI },

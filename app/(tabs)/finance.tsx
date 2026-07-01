@@ -134,7 +134,7 @@ export default function Finance() {
               {transactions.slice(0, 20).map((tx) => (
                 <View
                   key={tx.id}
-                  style={[styles.txRow, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}
+                  style={[styles.txRow, { backgroundColor: colors.bg, flexDirection: 'row' }]}
                 >
                   <View style={[styles.txLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     <Text style={{ fontSize: 18 }}>{CATEGORY_ICONS[tx.category]}</Text>
@@ -247,7 +247,8 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: 18, fontFamily: FONT_UI_BOLD },
   rowBetween: { justifyContent: 'space-between', alignItems: 'center' },
   bodyText: { fontSize: 13, fontFamily: FONT_UI },
-  sectionTitle: { fontSize: 15, fontFamily: FONT_UI_BOLD },
+
+
   empty: { textAlign: 'center', paddingVertical: 16, fontSize: 13, fontFamily: FONT_UI },
   txRow: { alignItems: 'center', justifyContent: 'space-between', padding: 10, borderRadius: 12 },
   txLeft: { alignItems: 'center', gap: 8, flexShrink: 1 },

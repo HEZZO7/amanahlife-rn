@@ -127,21 +127,22 @@ export default function WeeklyLifeScore() {
           <View style={{ gap: 12 }}>
             {dimensions.map((dim) => (
               <View key={dim.name} style={{ gap: 5 }}>
-                {/* In RTL: score on left, label+icon on right */}
+                {/* Label row: in Arabic → icon+name RIGHT, score RIGHT */}
                 <View style={[styles.dimHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                  <Text style={{ color: isRTL ? scoreColor(dim.score) : colors.text, fontSize: 13.5, fontFamily: FONT_UI_MEDIUM, textAlign: isRTL ? 'right' : 'left' }}>
-                    {isRTL ? `${dim.score}/100` : `${dim.icon} ${dim.name}`}
+                  <Text style={{
+                    color: colors.text, fontSize: 13.5, fontFamily: FONT_UI_MEDIUM,
+                    textAlign: isRTL ? 'right' : 'left', flex: 1,
+                  }}>
+                    {isRTL ? `${dim.nameAr} ${dim.icon}` : `${dim.icon} ${dim.name}`}
                   </Text>
-                  <Text style={{ color: isRTL ? colors.text : scoreColor(dim.score), fontSize: 13.5, fontFamily: FONT_UI_BOLD, textAlign: isRTL ? 'left' : 'right' }}>
-                    {isRTL ? `${dim.icon} ${dim.nameAr}` : `${dim.score}/100`}
+                  <Text style={{ color: scoreColor(dim.score), fontSize: 13.5, fontFamily: FONT_UI_BOLD }}>
+                    {dim.score}/100
                   </Text>
                 </View>
                 {/* Bar grows from right in RTL */}
                 <View style={[styles.track, { backgroundColor: colors.bg }]}>
                   <View style={{
-                    width: `${dim.score}%`,
-                    height: 10,
-                    borderRadius: 5,
+                    width: `${dim.score}%`, height: 10, borderRadius: 5,
                     backgroundColor: dim.color,
                     alignSelf: isRTL ? 'flex-end' : 'flex-start',
                   }} />
@@ -202,7 +203,8 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
   overall: { borderRadius: 18, padding: 24, borderWidth: 1, alignItems: 'center', marginBottom: 14 },
   overallNum: { fontSize: 48, fontFamily: FONT_UI_BLACK },
-  cardTitle: { fontSize: 15, fontFamily: FONT_UI_BOLD, marginBottom: 14 },
+
+
   dimHeader: { justifyContent: 'space-between', alignItems: 'center' },
   track: { height: 10, borderRadius: 5, overflow: 'hidden' },
   chart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 110, gap: 8 },

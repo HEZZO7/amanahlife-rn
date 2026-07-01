@@ -51,7 +51,7 @@ export default function LoginScreen() {
     setLoading(false);
     if (error) { toast.error(error.message); return; }
     toast.success(isAr ? 'مرحباً بعودتك!' : 'Welcome back!');
-    router.replace('/(tabs)/');
+    router.replace('/(tabs)/' as any);
   };
 
   const handleSignUp = async () => {
@@ -158,7 +158,7 @@ export default function LoginScreen() {
 
         {/* Forgot password link */}
         {tab === 'signin' && (
-          <TouchableOpacity onPress={() => setShowForgot(true)} style={[styles.forgotRow, { flexDirection: isRTL ? 'row' : 'row-reverse' }]}>
+          <TouchableOpacity onPress={() => setShowForgot(true)} style={[styles.forgotRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <Text style={[styles.forgotText, { color: colors.teal }]}>
               {isAr ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}
             </Text>

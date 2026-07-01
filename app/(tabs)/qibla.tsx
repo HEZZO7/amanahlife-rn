@@ -74,10 +74,10 @@ export default function QiblaFinder() {
   if (authLoading) return null;
 
   const cardinals: { label: string; style: object; color: string }[] = [
-    { label: isAr ? 'ش' : 'N', style: { top: 6, alignSelf: 'center' }, color: colors.red },
-    { label: isAr ? 'ج' : 'S', style: { bottom: 6, alignSelf: 'center' }, color: colors.textSecondary },
-    { label: isAr ? 'شر' : 'E', style: { right: 8, top: COMPASS / 2 - 10 }, color: colors.textSecondary },
-    { label: isAr ? 'غ' : 'W', style: { left: 8, top: COMPASS / 2 - 10 }, color: colors.textSecondary },
+    { label: isAr ? 'شمال' : 'N', style: { top: 4, alignSelf: 'center' }, color: colors.red },
+    { label: isAr ? 'جنوب' : 'S', style: { bottom: 4, alignSelf: 'center' }, color: colors.textSecondary },
+    { label: isAr ? 'شرق' : 'E', style: { right: 4, top: COMPASS / 2 - 11 }, color: colors.textSecondary },
+    { label: isAr ? 'غرب' : 'W', style: { left: 4, top: COMPASS / 2 - 11 }, color: colors.textSecondary },
   ];
 
   return (
@@ -91,7 +91,7 @@ export default function QiblaFinder() {
           </View>
         )}
 
-        <Text style={[styles.location, { color: colors.textSecondary }]}>📍 {locationName}</Text>
+        <Text style={[styles.location, { color: colors.textSecondary, textAlign: isAr ? 'right' : 'left' }]}>📍 {locationName}</Text>
 
         {/* Compass */}
         <View style={styles.compassWrap}>
@@ -140,12 +140,12 @@ export default function QiblaFinder() {
 
         {/* Instructions */}
         <View style={[styles.instructions, { backgroundColor: colors.teal + '14', borderColor: colors.teal + '40' }]}>
-          <Text style={[styles.instrTitle, { color: colors.teal }]}>{isAr ? 'طريقة الاستخدام:' : 'How to use:'}</Text>
+          <Text style={[styles.instrTitle, { color: colors.teal, textAlign: isAr ? 'right' : 'left' }]}>{isAr ? 'طريقة الاستخدام:' : 'How to use:'}</Text>
           {(isAr
             ? ['أمسك جهازك بشكل مسطح ومستوٍ', 'السهم الأخضر يشير نحو الكعبة', 'لأفضل دقة، فعّل خدمات الموقع', 'قم بمعايرة البوصلة بتحريك هاتفك على شكل رقم 8']
             : ['Hold your device flat and level', 'The green arrow points toward the Kaaba', 'For best accuracy, enable location services', 'Calibrate your compass by moving your phone in a figure-8 pattern']
           ).map((line, i) => (
-            <Text key={i} style={[styles.instrLine, { color: colors.teal }]}>• {line}</Text>
+            <Text key={i} style={[styles.instrLine, { color: colors.teal, textAlign: isAr ? 'right' : 'left' }]}>• {line}</Text>
           ))}
         </View>
       </ScrollView>
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   location: { fontSize: 13, fontFamily: FONT_UI, textAlign: 'center', marginBottom: 18 },
   compassWrap: { alignItems: 'center' },
   compass: { width: COMPASS, height: COMPASS, borderRadius: COMPASS / 2, borderWidth: 4, alignItems: 'center', justifyContent: 'center' },
-  cardinal: { position: 'absolute', fontSize: 14, fontFamily: FONT_UI_BOLD },
+  cardinal: { position: 'absolute', fontSize: 12, fontFamily: FONT_UI_BOLD },
   arrowWrap: { alignItems: 'center', justifyContent: 'flex-start', paddingTop: 28 },
   kaaba: { fontSize: 18, marginBottom: 2 },
   arrowHead: { width: 0, height: 0, borderLeftWidth: 12, borderRightWidth: 12, borderBottomWidth: 78, borderLeftColor: 'transparent', borderRightColor: 'transparent' },

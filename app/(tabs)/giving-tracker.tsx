@@ -136,14 +136,14 @@ export default function ZakatCalculator() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Currency selector */}
         <Card style={[styles.currencyCard, { borderColor: colors.teal + '4D', backgroundColor: colors.teal + '0D' }]}>
-          <View style={[styles.rowBetween, { flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 8 }]}>
+          <View style={[styles.rowBetween, { flexDirection: 'row', marginBottom: 8 }]}>
             <Text style={[styles.cardLabel, { color: colors.text }]}>🌍 {isAr ? 'اختر العملة' : 'Select Currency'}</Text>
             <Text style={{ color: ratesLoading ? colors.textSecondary : colors.teal, fontSize: 10, fontFamily: FONT_UI_MEDIUM }}>
               {ratesLoading ? (isAr ? 'جاري تحميل الأسعار...' : 'Loading rates...') : `✓ ${isAr ? 'أسعار مباشرة' : 'Live rates'}`}
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.currencyBtn, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}
+            style={[styles.currencyBtn, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: 'row' }]}
             onPress={() => setShowCurrencyPicker(true)}
           >
             <Text style={{ color: colors.text, fontFamily: FONT_UI_BOLD, fontSize: 15 }}>{currency}</Text>
@@ -153,7 +153,7 @@ export default function ZakatCalculator() {
         </Card>
 
         {/* Nisab info */}
-        <Card style={[styles.nisabCard, { borderColor: colors.green + '4D', backgroundColor: colors.green + '14', flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+        <Card style={[styles.nisabCard, { borderColor: colors.green + '4D', backgroundColor: colors.green + '14', flexDirection: 'row' }]}>
           <View>
             <Text style={{ color: colors.green, fontSize: 11, fontFamily: FONT_UI_MEDIUM }}>{isAr ? 'حد النصاب الحالي' : 'Current Nisab Threshold'}</Text>
             <Text style={{ color: colors.text, fontSize: 17, fontFamily: FONT_UI_BOLD, marginTop: 2 }}>{formatAmount(nisabDisplay)} {currency}</Text>
@@ -190,7 +190,7 @@ export default function ZakatCalculator() {
         {/* Liabilities */}
         <Card style={{ marginBottom: 14 }}>
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{isAr ? 'الخصومات' : 'Deductions'}</Text>
-          <View style={[styles.assetRow, { flexDirection: isRTL ? 'row-reverse' : 'row', marginTop: 10 }]}>
+          <View style={[styles.assetRow, { flexDirection: 'row', marginTop: 10 }]}>
             <Text style={{ fontSize: 20, width: 30, textAlign: 'center' }}>📋</Text>
             <View style={{ flex: 1 }}>
               <Text style={[styles.assetLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{isAr ? 'الديون والالتزامات المستحقة' : 'Outstanding Debts & Liabilities'}</Text>
@@ -240,12 +240,12 @@ export default function ZakatCalculator() {
 
         {/* Info */}
         <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.infoTitle, { color: colors.text }]}>ℹ️ {isAr ? 'عن الزكاة ومتتبع العطاء' : 'About Zakat & Giving Tracker'}</Text>
+          <Text style={[styles.infoTitle, { color: colors.text, textAlign: isAr ? 'right' : 'left' }]}>ℹ️ {isAr ? 'عن الزكاة ومتتبع العطاء' : 'About Zakat & Giving Tracker'}</Text>
           {(isAr
             ? ['يُحسب العطاء بنسبة ٢.٥٪ من الثروة المحتفظ بها لسنة فوق النصاب', 'النصاب هو الحد الأدنى الذي يوجب العطاء', 'أسعار الذهب تقريبية — راجع أسعار السوق الحالية', 'أسعار الصرف مباشرة وقد تختلف قليلاً', 'استشر عالماً للأحكام الخاصة بحالتك']
             : ['Giving is calculated as 2.5% of wealth held for one year above Nisab', 'Nisab is the minimum threshold that triggers a giving obligation', 'Gold prices are approximate — consult current market rates', 'Exchange rates are fetched live and may vary slightly', 'Consult a scholar for specific rulings on your situation']
           ).map((line, i) => (
-            <Text key={i} style={[styles.infoLine, { color: colors.textSecondary }]}>• {line}</Text>
+            <Text key={i} style={[styles.infoLine, { color: colors.textSecondary, textAlign: isAr ? 'right' : 'left' }]}>• {line}</Text>
           ))}
         </View>
       </ScrollView>
@@ -295,10 +295,12 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
   rowBetween: { justifyContent: 'space-between', alignItems: 'center' },
   currencyCard: { marginBottom: 14 },
-  cardLabel: { fontSize: 14, fontFamily: FONT_UI_BOLD },
+
+
   currencyBtn: { alignItems: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
   nisabCard: { marginBottom: 14, justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontSize: 15, fontFamily: FONT_UI_BOLD },
+
+
   assetRow: { alignItems: 'center', gap: 12 },
   assetLabel: { fontSize: 11, fontFamily: FONT_UI, marginBottom: 4 },
   input: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: FONT_UI },

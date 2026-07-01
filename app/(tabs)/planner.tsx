@@ -192,8 +192,7 @@ export default function Planner() {
                   style={[styles.weekRow, {
                     backgroundColor: isToday ? colors.teal + '1A' : colors.card,
                     borderColor: isToday ? colors.teal : colors.border,
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
-                  }]}
+                    flexDirection: isRTL ? 'row-reverse' : 'row' }]}
                 >
                   <View style={[styles.weekLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     <View style={[styles.weekDateBox, { backgroundColor: isToday ? colors.teal : colors.bg }]}>
@@ -220,11 +219,11 @@ export default function Planner() {
         {/* Monthly */}
         {view === 'monthly' && (
           <View>
-            <Text style={[styles.monthTitle, { color: colors.text }]}>
+            <Text style={[styles.monthTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
               {new Date().toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
             </Text>
-            {!!hijriDate && <Text style={[styles.monthHijri, { color: colors.gold }]}>{hijriDate}</Text>}
-            {/* Full Arabic day names, RTL order when AR */}
+            {!!hijriDate && <Text style={[styles.monthHijri, { color: colors.gold, textAlign: isRTL ? 'right' : 'left' }]}>{hijriDate}</Text>}
+            {/* Full Arabic day names, RTL grid when AR */}
             <View style={[styles.monthGrid, { flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap' }]}>
               {(isRTL
                 ? ['السبت', 'الجمعة', 'الخميس', 'الأربعاء', 'الثلاثاء', 'الاثنين', 'الأحد']

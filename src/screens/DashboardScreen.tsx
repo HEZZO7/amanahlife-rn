@@ -17,6 +17,7 @@ import * as Location from 'expo-location';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useRTL } from '../hooks/useRTL';
 
 const DAILY_VERSES = [
   { arabic: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا', translation: 'Indeed, with hardship comes ease.', reference: 'Quran 94:6' },
@@ -35,6 +36,7 @@ export default function DashboardScreen() {
   const { user, loading: authLoading } = useAuth();
   const { t, language, isRTL } = useLanguage();
   const { colors, toggleTheme } = useTheme();
+  const { rtlView, rtlText } = useRTL();
   const router = useRouter();
 
   const [hijriDate, setHijriDate] = useState<HijriInfo | null>(null);
@@ -53,7 +55,7 @@ export default function DashboardScreen() {
     }
   }, [user, authLoading]);
 
-  // Fetch Hijri date — same API as web app
+  // Fetch Hijri date — re-runs when language changes so month name is in correct language
   const fetchHijri = useCallback(async () => {
     try {
       const today = new Date();
@@ -62,11 +64,11 @@ export default function DashboardScreen() {
       const data = await res.json();
       setHijriDate({
         day: data.data.hijri.day,
-        month: data.data.hijri.month.en,
+        month: language === 'ar' ? data.data.hijri.month.ar : data.data.hijri.month.en,
         year: data.data.hijri.year,
       });
     } catch {}
-  }, []);
+  }, [language]);
 
   // Fetch prayer times — same API as web app, uses expo-location
   const fetchPrayerTimes = useCallback(async () => {
@@ -120,7 +122,7 @@ export default function DashboardScreen() {
     fetchHijri();
     fetchPrayerTimes();
     calcStreak();
-  }, []);
+  }, [fetchHijri]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -175,29 +177,34 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal} />}
     >
       {/* Header */}
-      <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-        <View>
-          <Text style={[styles.greeting, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+      <View style={[styles.header, rtlView as any]}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.greeting, { color: colors.textSecondary }, rtlText as any]}>
             {greeting} 👋
           </Text>
-          <Text style={[styles.name, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-            {userName} {hijriDate && `· ${hijriDate.day} ${hijriDate.month} ${hijriDate.year}H`}
+          <Text style={[styles.name, { color: colors.text }, rtlText as any]}>
+            {userName} {hijriDate && `· ${hijriDate.day} ${hijriDate.month} ${hijriDate.year}${language === 'ar' ? 'هـ' : 'H'}`}
           </Text>
         </View>
       </View>
 
       {/* Daily verse */}
-      <View style={[styles.verseCard, { backgroundColor: colors.card, borderColor: colors.teal + '40' }]}>
-        <Text style={[styles.verseLabel, { color: colors.teal }]}>
+      <View style={[styles.verseCard, {
+        backgroundColor: colors.card,
+        borderColor: colors.teal + '40',
+        borderLeftWidth: isRTL ? 1 : 3,
+        borderRightWidth: isRTL ? 3 : 1,
+      }]}>
+        <Text style={[styles.verseLabel, { color: colors.teal }, rtlText as any]}>
           {language === 'ar' ? 'آية اليوم' : 'Verse of the Day'}
         </Text>
         <Text style={[styles.verseArabic, { color: colors.text }]}>{dailyVerse.arabic}</Text>
-        <Text style={[styles.verseTranslation, { color: colors.textSecondary }]}>{dailyVerse.translation}</Text>
-        <Text style={[styles.verseRef, { color: colors.teal }]}>{dailyVerse.reference}</Text>
+        <Text style={[styles.verseTranslation, { color: colors.textSecondary }, rtlText as any]}>{dailyVerse.translation}</Text>
+        <Text style={[styles.verseRef, { color: colors.teal }, rtlText as any]}>{dailyVerse.reference}</Text>
       </View>
 
       {/* Stats row */}
-      <View style={styles.statsRow}>
+      <View style={[styles.statsRow, rtlView as any]}>
         {/* Next prayer */}
         <TouchableOpacity
           style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -208,7 +215,10 @@ export default function DashboardScreen() {
             {nextPrayer ? nextPrayer.time : '--:--'}
           </Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-            {nextPrayer ? nextPrayer.name : (language === 'ar' ? 'الصلاة القادمة' : 'Next Prayer')}
+            {nextPrayer
+              ? (language === 'ar' ? ({ Fajr:'الفجر',Sunrise:'الشروق',Dhuhr:'الظهر',Asr:'العصر',Maghrib:'المغرب',Isha:'العشاء' }[nextPrayer.name] || nextPrayer.name)
+                : nextPrayer.name)
+              : (language === 'ar' ? 'الصلاة القادمة' : 'Next Prayer')}
           </Text>
         </TouchableOpacity>
 
@@ -239,11 +249,19 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
-      <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Text style={{ color: colors.textSecondary, marginRight: 8 }}>🔍</Text>
+      {/* Search — icon on RIGHT in Arabic, placeholder right-aligned */}
+      <View style={[styles.searchBar, {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+      }]}>
+        <Text style={{ color: colors.textSecondary, marginRight: isRTL ? 0 : 8, marginLeft: isRTL ? 8 : 0 }}>🔍</Text>
         <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
+          style={[styles.searchInput, {
+            color: colors.text,
+            textAlign: isRTL ? 'right' : 'left',
+            writingDirection: isRTL ? 'rtl' : 'ltr',
+          }]}
           placeholder={language === 'ar' ? 'ابحث في الميزات...' : 'Search features...'}
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
@@ -253,10 +271,12 @@ export default function DashboardScreen() {
       </View>
 
       {/* All features grid */}
-      <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-        {language === 'ar' ? 'كل الميزات' : 'ALL FEATURES'}
-      </Text>
-      <View style={styles.grid}>
+      <View style={{ width: '100%' }}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left', width: '100%' }]}>
+          {language === 'ar' ? 'كل الميزات' : 'ALL FEATURES'}
+        </Text>
+      </View>
+      <View style={[styles.grid, isRTL ? { flexDirection: 'row-reverse', flexWrap: 'wrap' } : {}]}>
         {filtered.map((item) => (
           <TouchableOpacity
             key={item.path}
@@ -289,7 +309,7 @@ const styles = StyleSheet.create({
   statCard: { flex: 1, borderRadius: 16, padding: 14, borderWidth: 1, alignItems: 'center' },
   statValue: { fontSize: 16, fontWeight: '800', marginBottom: 2, textAlign: 'center' },
   statLabel: { fontSize: 10, fontWeight: '600', textAlign: 'center' },
-  searchBar: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, marginBottom: 16 },
+  searchBar: { alignItems: 'center', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, marginBottom: 16 },
   searchInput: { flex: 1, fontSize: 14 },
   sectionTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

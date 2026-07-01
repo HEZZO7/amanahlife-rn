@@ -45,7 +45,7 @@ export default function TaskManager() {
     const d = new Date(); d.setDate(d.getDate() - d.getDay() + i); return d;
   });
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dayNamesAr = ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'];
+  const dayNamesAr = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
   useEffect(() => { AsyncStorage.getItem('amanah_tasks').then((s) => { if (s) setTasks(JSON.parse(s)); }); }, []);
 
@@ -72,8 +72,8 @@ export default function TaskManager() {
         </Text>
       </View>
 
-      {/* Week strip */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekRow} style={{ flexGrow: 0 }}>
+      {/* Week strip — reversed in Arabic so الأحد appears on the right */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.weekRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]} style={{ flexGrow: 0 }}>
         {weekDays.map((day) => {
           const isSel = day.toDateString() === selectedDate;
           return (
@@ -120,8 +120,7 @@ export default function TaskManager() {
               backgroundColor: task.completed ? colors.teal + '0D' : colors.card,
               borderColor: task.completed ? colors.teal + '33' : colors.border,
               opacity: task.completed ? 0.7 : 1,
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-            }]}
+              flexDirection: isRTL ? 'row-reverse' : 'row' }]}
           >
             <TouchableOpacity
               style={[styles.checkbox, { borderColor: task.completed ? colors.teal : colors.textMuted, backgroundColor: task.completed ? colors.teal : 'transparent' }]}
@@ -201,7 +200,7 @@ export default function TaskManager() {
 
 const styles = StyleSheet.create({
   weekRow: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
-  dayBtn: { width: 48, paddingVertical: 8, borderRadius: 12, alignItems: 'center' },
+  dayBtn: { minWidth: 52, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, alignItems: 'center' },
   filterRow: { gap: 8, paddingHorizontal: 16, paddingBottom: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
   content: { padding: 16, paddingTop: 8, paddingBottom: 90, gap: 8 },

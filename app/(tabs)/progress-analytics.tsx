@@ -133,6 +133,7 @@ export default function ProgressAnalytics() {
 }
 
 function BarChart({ data, colors }: { data: { name: string; progress: number }[]; colors: any }) {
+  const { isRTL } = useLanguage();
   const H = 180, barW = CHART_W / data.length * 0.5, gap = CHART_W / data.length;
   return (
     <View>
@@ -147,7 +148,7 @@ function BarChart({ data, colors }: { data: { name: string; progress: number }[]
           return <Rect key={i} x={x} y={H - 24 - barH} width={barW} height={Math.max(barH, 1)} rx={6} fill={GOLD} />;
         })}
       </Svg>
-      <View style={{ flexDirection: 'row' }}>
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         {data.map((d, i) => (
           <View key={i} style={{ width: gap, alignItems: 'center' }}>
             <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{d.name}</Text>
@@ -251,7 +252,7 @@ function ActivityCard({ emoji, value, color, label, colors }: any) {
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
-  h2: { fontSize: 16, fontFamily: FONT_UI_BOLD, marginBottom: 12 },
+  h2: { fontSize: 16, fontFamily: FONT_UI_BOLD, marginBottom: 12, alignSelf: 'stretch' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center', marginTop: 8 },
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   statCard: { width: '47%', alignItems: 'center', paddingVertical: 16 },

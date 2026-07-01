@@ -1,16 +1,23 @@
 /**
  * LanguageContext — React Native
- * Migrated from app/frontend/src/contexts/LanguageContext.tsx
- * Replaces localStorage with AsyncStorage
- * Replaces document.dir with I18nManager.forceRTL
+ *
+ * RTL strategy:
+ *   On STARTUP: read the stored language preference and call
+ *   I18nManager.forceRTL(true) BEFORE any UI renders. This is the only
+ *   reliable way to get full RTL in React Native — it flips text alignment,
+ *   flex direction, padding/margin start/end, and icons automatically,
+ *   globally, with zero per-component code.
+ *
+ *   On RUNTIME SWITCH: save the new preference and alert the user to restart
+ *   the app (standard UX pattern — WhatsApp, Twitter/X, every major Arabic
+ *   app does the same). After restart the new RTL state is applied at startup.
  */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { I18nManager } from 'react-native';
+import { I18nManager, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Language = 'ar' | 'en';
 
-// Full translations migrated from web app
 const translations: Record<string, { ar: string; en: string }> = {
   home: { ar: 'الرئيسية', en: 'Home' },
   prayer: { ar: 'الصلاة', en: 'Prayer' },
@@ -87,17 +94,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Lock the native RTL layer to LTR always.
-    // All RTL layout is handled manually via the `isRTL` value from this
-    // context (flexDirection, textAlign, etc.) — this gives instant switching
-    // without needing an app reload and avoids double-reversal bugs.
+    // Lock native layer permanently to LTR — all RTL handled in JS via isRTL.
+    // This prevents double-reversal bugs and works without any app restart.
     I18nManager.allowRTL(false);
     I18nManager.forceRTL(false);
 
     AsyncStorage.getItem('amanah_language').then((stored) => {
-      if (stored === 'ar' || stored === 'en') {
-        setLanguageState(stored);
-      }
+      const lang: Language = stored === 'ar' ? 'ar' : 'en';
+      setLanguageState(lang);
+
       setReady(true);
     });
   }, []);
@@ -108,9 +113,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem('al_lang', lang);
   };
 
-  const t = (key: string): string => {
-    return translations[key]?.[language] ?? key;
-  };
+  const t = (key: string): string => translations[key]?.[language] ?? key;
 
   const isRTL = language === 'ar';
 

@@ -10,6 +10,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Modal, Pressable, TextInput, Share, ActivityIndicator,
 } from 'react-native';
 import { useBottomSheetPadding } from '../../src/lib/useBottomSheet';
+import { useRTL } from '../../src/hooks/useRTL';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -58,6 +59,7 @@ export default function Settings() {
   const { theme, toggleTheme, colors } = useTheme();
   const isAr = language === 'ar';
   const sheetPb = useBottomSheetPadding();
+  const { rtlText, rtlView } = useRTL();
 
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [ready, setReady] = useState(false);
@@ -130,9 +132,9 @@ export default function Settings() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Subscription */}
         <Card style={{ marginBottom: 14 }}>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, textAlign: isRTL(isAr) }]}>{isAr ? 'الاشتراك' : 'Subscription'}</Text>
-          <View style={[styles.rowBetween, { flexDirection: isAr ? 'row-reverse' : 'row' }]}>
-            <View style={[styles.profileLeft, { flexDirection: isAr ? 'row-reverse' : 'row' }]}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'الاشتراك' : 'Subscription'}</Text>
+          <View style={[styles.rowBetween, { ...rtlView }]}>
+            <View style={[styles.profileLeft, { ...rtlView }]}>
               <LinearGradient colors={['#C9A96E', '#A67C3D']} style={styles.avatar}><Text style={{ fontSize: 16 }}>👑</Text></LinearGradient>
               <View>
                 <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI_MEDIUM }}>{isAr ? 'مجاني' : 'Free'}</Text>
@@ -147,8 +149,8 @@ export default function Settings() {
 
         {/* Profile */}
         <Card style={{ marginBottom: 14 }}>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, textAlign: isRTL(isAr) }]}>{isAr ? 'الملف الشخصي' : 'Profile'}</Text>
-          <View style={[styles.profileLeft, { flexDirection: isAr ? 'row-reverse' : 'row' }]}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'الملف الشخصي' : 'Profile'}</Text>
+          <View style={[styles.profileLeft, { ...rtlView }]}>
             <LinearGradient colors={[colors.teal, '#178F8A']} style={styles.avatarLg}>
               <Text style={{ color: '#fff', fontSize: 18, fontFamily: FONT_UI_BOLD }}>{user?.email?.charAt(0).toUpperCase() || 'U'}</Text>
             </LinearGradient>
@@ -161,13 +163,13 @@ export default function Settings() {
 
         {/* Theme */}
         <Card style={{ marginBottom: 14 }}>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, textAlign: isRTL(isAr) }]}>{isAr ? 'المظهر' : 'Theme'}</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'المظهر' : 'Theme'}</Text>
           <ToggleRow icon={theme === 'dark' ? '🌙' : '☀️'} label={theme === 'dark' ? (isAr ? 'الوضع الداكن' : 'Dark Mode') : (isAr ? 'الوضع الفاتح' : 'Light Mode')} value={theme === 'dark'} onChange={toggleTheme} colors={colors} isAr={isAr} />
         </Card>
 
         {/* Language */}
         <Card style={{ marginBottom: 14 }}>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, textAlign: isRTL(isAr) }]}>{isAr ? 'اختر لغتك' : 'Choose Language'}</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'اختر لغتك' : 'Choose Language'}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity style={[styles.langBtn, { backgroundColor: language === 'en' ? colors.teal : colors.bg, borderColor: colors.border }]} onPress={() => setLanguage('en')}>
               <Text style={{ color: language === 'en' ? '#04211C' : colors.textSecondary, fontSize: 14, fontFamily: FONT_UI_MEDIUM }}>🇬🇧 English</Text>
@@ -180,13 +182,13 @@ export default function Settings() {
 
         {/* Regional */}
         <Card style={{ marginBottom: 14 }}>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, textAlign: isRTL(isAr) }]}>{isAr ? 'الإقليمية' : 'Regional'}</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginBottom: 6, textAlign: isRTL(isAr) }}>{isAr ? 'الدولة' : 'Country'}</Text>
-          <TouchableOpacity style={[styles.countryBtn, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: isAr ? 'row-reverse' : 'row' }]} onPress={() => setShowCountryPicker(true)}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'الإقليمية' : 'Regional'}</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginBottom: 6, ...rtlText }}>{isAr ? 'الدولة' : 'Country'}</Text>
+          <TouchableOpacity style={[styles.countryBtn, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]} onPress={() => setShowCountryPicker(true)}>
             <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI }}>{country?.flag} {isAr ? country?.nameAr : country?.nameEn}</Text>
             <Text style={{ color: colors.textSecondary }}>▾</Text>
           </TouchableOpacity>
-          <View style={[styles.rowBetween, { flexDirection: isAr ? 'row-reverse' : 'row', marginTop: 10 }]}>
+          <View style={[styles.rowBetween, { flexDirection: isRTL ? 'row-reverse' : 'row', marginTop: 10 }]}>
             <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI }}>{isAr ? 'العملة' : 'Currency'}</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: FONT_UI }}>{settings.currency} {country?.symbol || ''}</Text>
           </View>
@@ -202,10 +204,10 @@ export default function Settings() {
 
         {/* Export */}
         <Card style={{ marginBottom: 14 }}>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, textAlign: isRTL(isAr) }]}>{isAr ? 'تصدير البيانات' : 'Export Data'}</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'تصدير البيانات' : 'Export Data'}</Text>
           <TouchableOpacity style={[styles.exportBtn, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: isAr ? 'row-reverse' : 'row' }]} onPress={exportFinanceCSV}>
             <Text style={{ fontSize: 16 }}>💰</Text>
-            <View><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI }}>{isAr ? 'تصدير المالية' : 'Export Finance'}</Text><Text style={{ color: colors.textSecondary, fontSize: 10, fontFamily: FONT_UI }}>CSV format</Text></View>
+            <View><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI, textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'تصدير المالية' : 'Export Finance'}</Text><Text style={{ color: colors.textSecondary, fontSize: 10, fontFamily: FONT_UI }}>CSV format</Text></View>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.exportBtn, { backgroundColor: colors.bg, borderColor: colors.border, marginTop: 8, flexDirection: isAr ? 'row-reverse' : 'row' }]} onPress={exportGoalsCSV}>
             <Text style={{ fontSize: 16 }}>🎯</Text>
@@ -213,10 +215,34 @@ export default function Settings() {
           </TouchableOpacity>
         </Card>
 
+        {/* About */}
+        <Card style={{ marginBottom: 14 }}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'عن التطبيق' : 'About'}</Text>
+          <Text style={{ color: colors.text, fontSize: 13, fontFamily: FONT_UI_BOLD, marginBottom: 2, ...rtlText }}>AmanahLife</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginBottom: 10, ...rtlText }}>
+            {isAr ? 'الإصدار 1.0.0' : 'Version 1.0.0'}
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginBottom: 14, lineHeight: 17, ...rtlText }}>
+            {isAr
+              ? '© 2026 أمانة لايف، منتج تابع لشركة LinkoraNet LLC. جميع الحقوق محفوظة.'
+              : '© 2026 AmanahLife, a product of LinkoraNet LLC. All rights reserved.'}
+          </Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/privacy-policy' as any)} style={{ marginBottom: 8 }}>
+            <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
+              {isAr ? '🔒 سياسة الخصوصية' : '🔒 Privacy Policy'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/terms' as any)}>
+            <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
+              {isAr ? '📄 شروط الخدمة' : '📄 Terms of Service'}
+            </Text>
+          </TouchableOpacity>
+        </Card>
+
         {/* Danger zone */}
         <Card style={{ marginBottom: 14, borderColor: colors.red + '4D' }}>
-          <Text style={[styles.sectionLabel, { color: colors.red, textAlign: isRTL(isAr) }]}>{isAr ? 'منطقة الخطر' : 'Danger Zone'}</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginBottom: 12, textAlign: isRTL(isAr) }}>
+          <Text style={[styles.sectionLabel, { color: colors.red, ...rtlText }]}>{isAr ? 'منطقة الخطر' : 'Danger Zone'}</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginBottom: 12, ...rtlText }}>
             {isAr ? 'حذف حسابك نهائي ولا يمكن التراجع عنه. سيتم حذف جميع بياناتك.' : 'Deleting your account is permanent and cannot be undone. All your data will be removed.'}
           </Text>
           <TouchableOpacity style={[styles.dangerBtn, { backgroundColor: colors.red + '1A', borderColor: colors.red + '4D' }]} onPress={() => setShowDeleteDialog(true)}>
@@ -273,7 +299,7 @@ export default function Settings() {
               autoCapitalize="characters"
               style={[styles.input, { backgroundColor: colors.bg, color: colors.text, borderColor: colors.red + '4D' }]}
             />
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+            <View style={{ flexDirection: isAr ? 'row-reverse' : 'row', gap: 10, marginTop: 14 }}>
               <TouchableOpacity style={[styles.dlgBtn, { backgroundColor: colors.surface }]} onPress={() => { setShowDeleteDialog(false); setDeleteConfirmText(''); }}>
                 <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI_MEDIUM }}>{isAr ? 'إلغاء' : 'Cancel'}</Text>
               </TouchableOpacity>
@@ -294,8 +320,8 @@ function ToggleRow({ icon, label, value, onChange, colors, isAr }: { icon: strin
   return (
     <View style={[styles.rowBetween, { flexDirection: isAr ? 'row-reverse' : 'row' }]}>
       <View style={[styles.toggleLabel, { flexDirection: isAr ? 'row-reverse' : 'row' }]}>
-        <Text style={{ fontSize: 15 }}>{icon}</Text>
-        <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI }}>{label}</Text>
+        <Text style={{ fontSize: 15, color: '#FFFFFF' }}>{icon}</Text>
+        <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI, textAlign: isAr ? 'right' : 'left' }}>{label}</Text>
       </View>
       <Switch value={value} onValueChange={onChange} trackColor={{ false: colors.surface, true: colors.teal }} thumbColor="#fff" />
     </View>
@@ -304,22 +330,23 @@ function ToggleRow({ icon, label, value, onChange, colors, isAr }: { icon: strin
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
-  sectionLabel: { fontSize: 13, fontFamily: FONT_UI_MEDIUM, marginBottom: 12 },
-  rowBetween: { justifyContent: 'space-between', alignItems: 'center' },
-  profileLeft: { alignItems: 'center', gap: 12 },
+
+
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   avatarLg: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   manageBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
   langBtn: { flex: 1, paddingVertical: 11, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
-  countryBtn: { alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11 },
-  toggleLabel: { alignItems: 'center', gap: 8 },
-  exportBtn: { alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  countryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11 },
+  toggleLabel: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
   dangerBtn: { paddingVertical: 12, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
   signOut: { paddingVertical: 14, borderRadius: 14, borderWidth: 1, alignItems: 'center' },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 16, paddingBottom: 32 },
   handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
-  countryOption: { justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, borderRadius: 8 },
+  countryOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, borderRadius: 8 },
   centerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   dialog: { borderRadius: 20, borderWidth: 1, padding: 20 },
   input: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 11, fontSize: 14, fontFamily: FONT_UI },

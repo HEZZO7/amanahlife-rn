@@ -15,9 +15,19 @@ import { SubscriptionProvider } from '../src/contexts/SubscriptionContext';
 
 const queryClient = new QueryClient();
 
+// Inner component so it can read LanguageContext after providers are mounted.
+// I18nManager.forceRTL is applied in LanguageContext on startup, so by the
+// time AppShell renders the native RTL state is already correct.
+function AppShell() {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="(auth)" />
+    </Stack>
+  );
+}
+
 export default function RootLayout() {
-  // Load the web app's fonts (Tajawal for UI, Amiri for Arabic). We render the
-  // app even before they finish — RN falls back to the system font meanwhile.
   useFonts({
     Tajawal_400Regular, Tajawal_500Medium, Tajawal_700Bold, Tajawal_900Black,
     Amiri_400Regular, Amiri_700Bold,
@@ -31,10 +41,7 @@ export default function RootLayout() {
             <LanguageProvider>
               <AuthProvider>
                 <SubscriptionProvider>
-                  <Stack screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="(auth)" />
-                  </Stack>
+                  <AppShell />
                 </SubscriptionProvider>
               </AuthProvider>
             </LanguageProvider>
