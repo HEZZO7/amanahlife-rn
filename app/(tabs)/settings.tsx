@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Modal, Pressable, TextInput, Share, ActivityIndicator,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useBottomSheetPadding } from '../../src/lib/useBottomSheet';
 import { useRTL } from '../../src/hooks/useRTL';
 import { useRouter } from 'expo-router';
@@ -227,14 +228,19 @@ export default function Settings() {
               ? '© 2026 أمانة لايف، منتج تابع لشركة LinkoraNet LLC. جميع الحقوق محفوظة.'
               : '© 2026 AmanahLife, a product of LinkoraNet LLC. All rights reserved.'}
           </Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/privacy-policy' as any)} style={{ marginBottom: 8 }}>
+          <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync('https://app.amanahlife.com/privacy')} style={{ marginBottom: 8 }}>
             <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
               {isAr ? '🔒 سياسة الخصوصية' : '🔒 Privacy Policy'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/terms' as any)}>
+          <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync('https://app.amanahlife.com/terms')} style={{ marginBottom: 8 }}>
             <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
               {isAr ? '📄 شروط الخدمة' : '📄 Terms of Service'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/more-info' as any)}>
+            <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
+              {isAr ? 'ℹ️ المزيد' : 'ℹ️ More'}
             </Text>
           </TouchableOpacity>
         </Card>
