@@ -7,9 +7,12 @@
  */
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Modal, Pressable, TextInput, Share, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Modal, Pressable, TextInput, Share, ActivityIndicator, Alert,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as DocumentPicker from 'expo-document-picker';
+import Constants from 'expo-constants';
 import { useBottomSheetPadding } from '../../src/lib/useBottomSheet';
 import { useRTL } from '../../src/hooks/useRTL';
 import { useRouter } from 'expo-router';
@@ -101,6 +104,75 @@ export default function Settings() {
     const headers = 'Title,Category,Status,Progress,Target Date\n';
     const rows = goals.map((g: any) => `${g.title || ''},${g.category || ''},${g.status || ''},${g.progress || 0}%,${g.targetDate || ''}`).join('\n');
     exportCSV(headers + rows, 'amanah-goals-export.csv', 'goals');
+  };
+
+  const BACKUP_KEYS = [
+    'amanah-agenda', 'amanah-goals', 'amanah-settings', 'amanah-streaks', 'amanah-tasks',
+    'amanah-theme', 'amanah-theme-autoswitch', 'amanah-transactions', 'amanah-wellness',
+    'amanah_finance', 'amanah_language', 'amanah_tasks', 'dua_favorites', 'quran_bookmarks', 'quran_last_read',
+  ];
+
+  const [backupBusy, setBackupBusy] = useState(false);
+
+  const exportAllData = async () => {
+    setBackupBusy(true);
+    try {
+      const entries = await AsyncStorage.multiGet(BACKUP_KEYS);
+      const data: Record<string, string | null> = {};
+      entries.forEach(([key, value]) => { data[key] = value; });
+      const payload = {
+        timestamp: new Date().toISOString(),
+        appVersion: Constants.expoConfig?.version || '1.0.0',
+        data,
+      };
+      const fileUri = FileSystem.documentDirectory + `amanahlife-backup-${Date.now()}.json`;
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(payload, null, 2));
+      await Share.share({ url: fileUri, message: isAr ? 'نسخة احتياطية من أمانة لايف' : 'AmanahLife backup' });
+      toast.success(isAr ? 'تم تصدير البيانات' : 'Data exported');
+    } catch {
+      toast.error(isAr ? 'فشل التصدير' : 'Export failed');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const importAllData = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
+      if (result.canceled || !result.assets?.[0]) return;
+      const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
+      const payload = JSON.parse(content);
+      if (!payload.data) throw new Error('invalid backup file');
+
+      const doRestore = async () => {
+        setBackupBusy(true);
+        try {
+          const pairs: [string, string][] = Object.entries(payload.data)
+            .filter(([, v]) => typeof v === 'string')
+            .map(([k, v]) => [k, v as string]);
+          await AsyncStorage.multiSet(pairs);
+          toast.success(isAr ? 'تم استعادة البيانات. أعد تشغيل التطبيق لتطبيق التغييرات.' : 'Data restored. Restart the app to apply changes.');
+        } finally {
+          setBackupBusy(false);
+        }
+      };
+
+      Alert.alert(
+        isAr ? 'استعادة البيانات' : 'Restore Data',
+        isAr
+          ? 'سيؤدي هذا إلى استبدال بياناتك الحالية بالكامل بالبيانات الموجودة في هذا الملف. هل تريد المتابعة؟'
+          : 'This will completely overwrite your current data with the contents of this file. Continue?',
+        [
+          { text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel' },
+          { text: isAr ? 'استعادة' : 'Restore', style: 'destructive', onPress: doRestore },
+        ]
+      );
+      return;
+    } catch {
+      toast.error(isAr ? 'ملف نسخة احتياطية غير صالح' : 'Invalid backup file');
+    } finally {
+      setBackupBusy(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -202,6 +274,27 @@ export default function Settings() {
           <ToggleRow icon="🕌" label={isAr ? 'المناسبات الإسلامية' : 'Islamic Events'} value={settings.showIslamicEvents} onChange={() => updateSetting('showIslamicEvents', !settings.showIslamicEvents)} colors={colors} isAr={isAr} />
           <ToggleRow icon="🌙" label={isAr ? 'وضع رمضان' : 'Ramadan Mode'} value={settings.ramadanMode} onChange={() => updateSetting('ramadanMode', !settings.ramadanMode)} colors={colors} isAr={isAr} />
           <ToggleRow icon="١٢٣" label={isAr ? 'الأرقام العربية' : 'Eastern Numerals'} value={settings.easternNumerals} onChange={() => updateSetting('easternNumerals', !settings.easternNumerals)} colors={colors} isAr={isAr} />
+        </Card>
+
+        {/* Backup & Restore */}
+        <Card style={{ marginBottom: 14 }}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? '💾 النسخ الاحتياطي والاستعادة' : '💾 Backup & Restore'}</Text>
+          <TouchableOpacity
+            style={[styles.exportBtn, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: isAr ? 'row-reverse' : 'row', opacity: backupBusy ? 0.5 : 1 }]}
+            onPress={exportAllData}
+            disabled={backupBusy}
+          >
+            <Text style={{ fontSize: 16 }}>⬇️</Text>
+            <View><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI, textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'تصدير البيانات' : 'Export Data'}</Text><Text style={{ color: colors.textSecondary, fontSize: 10, fontFamily: FONT_UI }}>{isAr ? 'تنزيل نسخة JSON' : 'Download JSON backup'}</Text></View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.exportBtn, { backgroundColor: colors.bg, borderColor: colors.border, marginTop: 8, flexDirection: isAr ? 'row-reverse' : 'row', opacity: backupBusy ? 0.5 : 1 }]}
+            onPress={importAllData}
+            disabled={backupBusy}
+          >
+            <Text style={{ fontSize: 16 }}>⬆️</Text>
+            <View><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI, textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'استعادة البيانات' : 'Import Data'}</Text><Text style={{ color: colors.textSecondary, fontSize: 10, fontFamily: FONT_UI }}>{isAr ? 'استعادة من ملف JSON' : 'Restore from JSON file'}</Text></View>
+          </TouchableOpacity>
         </Card>
 
         {/* Export */}
