@@ -22,6 +22,10 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { supabase } from '../../src/lib/supabase';
+import {
+  PrayerName, PrayerReminderSettings, DEFAULT_REMINDER_SETTINGS,
+  getReminderSettings, saveReminderSettings, schedulePrayerNotifications,
+} from '../../src/lib/prayerNotifications';
 import { PageHeader, Card } from '../../src/components/ui';
 import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
@@ -72,11 +76,21 @@ export default function Settings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
+  const [reminders, setReminders] = useState<PrayerReminderSettings>(DEFAULT_REMINDER_SETTINGS);
 
   useEffect(() => {
     AsyncStorage.getItem('amanah-settings').then((s) => { if (s) { try { setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(s) }); } catch {} } setReady(true); });
+    getReminderSettings().then(setReminders);
   }, []);
   useEffect(() => { if (ready) AsyncStorage.setItem('amanah-settings', JSON.stringify(settings)); }, [settings, ready]);
+
+  const updateReminders = async (next: PrayerReminderSettings) => {
+    setReminders(next);
+    await saveReminderSettings(next);
+    await schedulePrayerNotifications(next, isAr);
+  };
+  const togglePrayerReminder = (prayer: PrayerName) =>
+    updateReminders({ ...reminders, perPrayer: { ...reminders.perPrayer, [prayer]: !reminders.perPrayer[prayer] } });
 
   const updateSetting = (key: keyof AppSettings, value: boolean | string) => setSettings((p) => ({ ...p, [key]: value }));
   const handleCountryChange = (code: string) => {
@@ -295,6 +309,32 @@ export default function Settings() {
             <Text style={{ fontSize: 16 }}>⬆️</Text>
             <View><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI, textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'استعادة البيانات' : 'Import Data'}</Text><Text style={{ color: colors.textSecondary, fontSize: 10, fontFamily: FONT_UI }}>{isAr ? 'استعادة من ملف JSON' : 'Restore from JSON file'}</Text></View>
           </TouchableOpacity>
+        </Card>
+
+        {/* Prayer Reminders */}
+        <Card style={{ marginBottom: 14 }}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? '🕌 تذكيرات الصلاة' : '🕌 Prayer Reminders'}</Text>
+          <ToggleRow
+            icon="🔔"
+            label={isAr ? `تفعيل التذكيرات (قبل ${reminders.minutesBefore} دقيقة)` : `Enable reminders (${reminders.minutesBefore} min before)`}
+            value={reminders.enabled}
+            onChange={() => updateReminders({ ...reminders, enabled: !reminders.enabled })}
+            colors={colors}
+            isAr={isAr}
+          />
+          {reminders.enabled && (['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as PrayerName[]).map((prayer) => (
+            <ToggleRow
+              key={prayer}
+              icon="•"
+              label={isAr
+                ? { Fajr: 'الفجر', Dhuhr: 'الظهر', Asr: 'العصر', Maghrib: 'المغرب', Isha: 'العشاء' }[prayer]
+                : prayer}
+              value={reminders.perPrayer[prayer]}
+              onChange={() => togglePrayerReminder(prayer)}
+              colors={colors}
+              isAr={isAr}
+            />
+          ))}
         </Card>
 
         {/* Export */}

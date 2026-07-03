@@ -1,5 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { getReminderSettings, schedulePrayerNotifications } from '../src/lib/prayerNotifications';
+import { useLanguage } from '../src/contexts/LanguageContext';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -19,6 +31,14 @@ const queryClient = new QueryClient();
 // I18nManager.forceRTL is applied in LanguageContext on startup, so by the
 // time AppShell renders the native RTL state is already correct.
 function AppShell() {
+  const { language } = useLanguage();
+
+  useEffect(() => {
+    getReminderSettings().then((settings) => {
+      if (settings.enabled) schedulePrayerNotifications(settings, language === 'ar');
+    });
+  }, [language]);
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
