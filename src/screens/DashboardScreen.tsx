@@ -27,6 +27,12 @@ const DAILY_VERSES = [
   { arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي', translation: 'My Lord, expand for me my chest with assurance.', reference: 'Quran 20:25' },
   { arabic: 'وَقُل رَّبِّ زِدْنِي عِلْمًا', translation: 'My Lord, increase me in knowledge.', reference: 'Quran 20:114' },
   { arabic: 'إِنَّ اللَّهَ مَعَ الصَّابِرِينَ', translation: 'Indeed, Allah is with the patient.', reference: 'Quran 2:153' },
+  // General motivational quotes (mixed in per Feature 2 — pre-written bilingual pairs, not machine-translated)
+  { arabic: 'النجاح ليس نهائياً، والفشل ليس قاتلاً، ما يهم هو الشجاعة للاستمرار.', translation: 'Success is not final, failure is not fatal: it is the courage to continue that counts.', reference: 'Daily Inspiration' },
+  { arabic: 'كل يوم هو فرصة جديدة لتصبح نسخة أفضل من نفسك.', translation: 'Every day is a new chance to become a better version of yourself.', reference: 'Daily Inspiration' },
+  { arabic: 'الانضباط هو الجسر بين الأهداف والإنجاز.', translation: 'Discipline is the bridge between goals and accomplishment.', reference: 'Daily Inspiration' },
+  { arabic: 'ابدأ من حيث أنت، استخدم ما تملك، افعل ما تستطيع.', translation: 'Start where you are, use what you have, do what you can.', reference: 'Daily Inspiration' },
+  { arabic: 'التقدم الصغير كل يوم يؤدي إلى نتائج كبيرة.', translation: 'Small progress every day adds up to big results.', reference: 'Daily Inspiration' },
 ];
 
 interface HijriInfo { day: string; month: string; year: string; }
@@ -196,7 +202,7 @@ export default function DashboardScreen() {
         borderRightWidth: isRTL ? 3 : 1,
       }]}>
         <Text style={[styles.verseLabel, { color: colors.teal }, rtlText as any]}>
-          {language === 'ar' ? 'آية اليوم' : 'Verse of the Day'}
+          {language === 'ar' ? 'إلهام اليوم' : 'Daily Inspiration'}
         </Text>
         <Text style={[styles.verseArabic, { color: colors.text }]}>{dailyVerse.arabic}</Text>
         <Text style={[styles.verseTranslation, { color: colors.textSecondary }, rtlText as any]}>{dailyVerse.translation}</Text>

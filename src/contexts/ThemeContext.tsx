@@ -3,8 +3,9 @@
  * Migrated from app/frontend/src/contexts/ThemeContext.tsx
  * Replaces localStorage with AsyncStorage
  */
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 
 type Theme = 'light' | 'dark';
 
@@ -53,12 +54,44 @@ interface ThemeContextType {
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   isDark: boolean;
+  autoSwitch: boolean;
+  setAutoSwitch: (value: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/** Fetch today's Sunrise/Maghrib for the device location via the same Aladhan API used for prayer times. */
+async function fetchSunriseSunset(): Promise<{ sunrise: string; sunset: string } | null> {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    const coords = status === 'granted'
+      ? (await Location.getCurrentPositionAsync({})).coords
+      : { latitude: 21.4225, longitude: 39.8262 }; // Mecca fallback
+    const today = new Date();
+    const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+    const res = await fetch(
+      `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${coords.latitude}&longitude=${coords.longitude}&method=2`
+    );
+    const data = await res.json();
+    return { sunrise: data.data.timings.Sunrise, sunset: data.data.timings.Maghrib };
+  } catch {
+    return null;
+  }
+}
+
+function isNightNow(sunrise: string, sunset: string): boolean {
+  const toMinutes = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return nowMin < toMinutes(sunrise) || nowMin >= toMinutes(sunset);
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
+  const [autoSwitch, setAutoSwitchState] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('amanah-theme').then((stored) => {
@@ -66,11 +99,33 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setThemeState(stored);
       }
     });
+    AsyncStorage.getItem('amanah-theme-autoswitch').then((stored) => {
+      if (stored === 'true') setAutoSwitchState(true);
+    });
   }, []);
+
+  const applyAutoSwitch = useCallback(async () => {
+    const times = await fetchSunriseSunset();
+    if (!times) return;
+    setThemeState(isNightNow(times.sunrise, times.sunset) ? 'dark' : 'light');
+  }, []);
+
+  // Re-check every 15 minutes while auto-switch is on and the provider is mounted.
+  useEffect(() => {
+    if (!autoSwitch) return;
+    applyAutoSwitch();
+    const interval = setInterval(applyAutoSwitch, 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [autoSwitch, applyAutoSwitch]);
 
   const setTheme = async (newTheme: Theme) => {
     setThemeState(newTheme);
     await AsyncStorage.setItem('amanah-theme', newTheme);
+  };
+
+  const setAutoSwitch = async (value: boolean) => {
+    setAutoSwitchState(value);
+    await AsyncStorage.setItem('amanah-theme-autoswitch', value ? 'true' : 'false');
   };
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -78,7 +133,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const colors = theme === 'dark' ? darkColors : lightColors;
 
   return (
-    <ThemeContext.Provider value={{ theme, colors, setTheme, toggleTheme, isDark: theme === 'dark' }}>
+    <ThemeContext.Provider value={{ theme, colors, setTheme, toggleTheme, isDark: theme === 'dark', autoSwitch, setAutoSwitch }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -92,5 +147,7 @@ export function useTheme() {
     setTheme: async () => {},
     toggleTheme: () => {},
     isDark: true,
+    autoSwitch: false,
+    setAutoSwitch: async () => {},
   };
 }

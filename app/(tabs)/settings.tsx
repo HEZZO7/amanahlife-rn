@@ -57,7 +57,7 @@ export default function Settings() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { language, setLanguage } = useLanguage();
-  const { theme, toggleTheme, colors } = useTheme();
+  const { theme, toggleTheme, colors, autoSwitch, setAutoSwitch } = useTheme();
   const isAr = language === 'ar';
   const sheetPb = useBottomSheetPadding();
   const { rtlText, rtlView } = useRTL();
@@ -166,6 +166,7 @@ export default function Settings() {
         <Card style={{ marginBottom: 14 }}>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'المظهر' : 'Theme'}</Text>
           <ToggleRow icon={theme === 'dark' ? '🌙' : '☀️'} label={theme === 'dark' ? (isAr ? 'الوضع الداكن' : 'Dark Mode') : (isAr ? 'الوضع الفاتح' : 'Light Mode')} value={theme === 'dark'} onChange={toggleTheme} colors={colors} isAr={isAr} />
+          <ToggleRow icon="🌗" label={isAr ? 'التبديل التلقائي (شروق/غروب)' : 'Auto-switch (sunrise/sunset)'} value={autoSwitch} onChange={() => setAutoSwitch(!autoSwitch)} colors={colors} isAr={isAr} />
         </Card>
 
         {/* Language */}
