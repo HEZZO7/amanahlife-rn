@@ -28,7 +28,7 @@ Handoff document for the full AmanahLife project (web + Android). Last updated 2
 | Payments (web) | Lemon Squeezy (checkout + webhook edge functions); Paddle functions also present in repo but Lemon Squeezy is the active processor |
 | Payments (Android) | **Not yet integrated with Google Play Billing** — currently opens the same Lemon Squeezy checkout via in-app browser. This is a hard blocker before Play Store Production release (see Pending Items). |
 | Build system | EAS (Expo Application Services) — remote managed builds, no local `android/` folder |
-| Web hosting | Currently served via **Atoms Dev** platform (see Known Issues) — domain `amanahlife.com` is registered/DNS-managed on **Hostinger**; `app.amanahlife.com` subdomain's DNS currently points to Atoms Dev's infrastructure |
+| Web hosting | **Hostinger VPS (`72.60.186.183`) via Coolify** — same VPS as LinkoraNet's other services. `amanahlife.com` domain registered/DNS-managed on Hostinger; `app.amanahlife.com` A record points to the VPS. Migrated off Atoms Dev on 2026-07-04 — see `MIGRATION-COMPLETE.md` and `DEPLOYMENT.md` in the `AmanahLifeapp` repo. |
 | Digital products site | `amanahlife.netlify.app` — separate Netlify site, out of scope for the Atoms Dev migration |
 | Repos | `HEZZO7/amanahlife-rn` (Android), `HEZZO7/AmanahLifeapp` (web) — both on GitHub, owned by Huzaifa |
 
@@ -76,7 +76,7 @@ Handoff document for the full AmanahLife project (web + Android). Last updated 2
 2. Apple App Store / iOS build — not started.
 3. Founder photo on About page — placeholder in place (`TODO(Huzaifa):` marker in code), Huzaifa to provide professional photo.
 4. Play Store screenshots — captured from device by Huzaifa, committed to `assets/play-store/screenshots/`.
-5. Atoms Dev migration — web app still served via Atoms Dev; migration to Hostinger-hosted, GitHub-deployed infrastructure is in progress (see `MIGRATION-COMPLETE.md` once finished, or Known Issues below if still pending).
+5. ~~Atoms Dev migration~~ — **done 2026-07-04.** Web app now runs on the Hostinger VPS via Coolify, fully independent of Atoms Dev. See `MIGRATION-COMPLETE.md` and `DEPLOYMENT.md` in the `AmanahLifeapp` repo.
 
 ---
 
@@ -121,8 +121,9 @@ Project `nyhsnvjdgifphwkqzwel` (region eu-west-1, Postgres 17.6). **No formal mi
 
 ## 0g. Known Issues
 
-- **Web app is not yet migrated off Atoms Dev.** `app.amanahlife.com` is served by Atoms Dev's infrastructure; the GitHub repo `HEZZO7/AmanahLifeapp` has historically been a manually-synced mirror, not the deploy source. Atoms Dev's own account has hit its usage quota ("0 credits remaining"), which blocks further changes through that chat interface.
 - **Android subscriptions still use Lemon Squeezy via in-app browser**, not native Google Play Billing — see Pending Items #1.
+- Auto-deploy on push is not yet configured for the web app (manual redeploy via Coolify dashboard for now) — see `DEPLOYMENT.md` in the `AmanahLifeapp` repo.
+- Full auth flow and subscription checkout were not explicitly re-tested end-to-end immediately after the Coolify migration (structure/routing/SSL were verified) — worth a quick pass.
 - Document Vault feature not confirmed ported to Android (web has it, Android status unclear as of this writing).
 - Two Google Cloud project numbers are involved in OAuth (`792822759216` and `405525965488`) due to historical setup by a previous builder — both are correctly authorized in Supabase's Google provider config, but this dual-project setup is worth consolidating into one project eventually for cleanliness (not urgent, currently working correctly).
 
