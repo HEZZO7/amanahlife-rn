@@ -89,6 +89,23 @@ Handoff document for the full AmanahLife project (web + Android). Last updated 2
 - **Google Cloud Console** — project `amanahlife-497015` (web OAuth client, number `792822759216`) and a second project (number `405525965488`, used by the Android OAuth client and originally by web before consolidation — both client IDs are in Supabase's authorized list).
 - **Hostinger** — domain registrar + DNS host for `amanahlife.com`. No actual website hosting product is provisioned there yet (confirmed via hPanel: "Create or migrate your website" step is incomplete).
 - **Netlify** — hosts the separate digital products site `amanahlife.netlify.app` (unrelated to the main app migration).
+
+### Supabase schema state (confirmed live via Supabase MCP, 2026-07-04)
+
+Project `nyhsnvjdgifphwkqzwel` (region eu-west-1, Postgres 17.6). **No formal migration files are tracked** (`list_migrations` returns empty) — schema has been applied directly via the dashboard/SQL editor rather than versioned migrations. Six tables in `public` schema, all prefixed `app_11941c8fec_` (app instance ID), **RLS enabled on all of them**:
+
+| Table | RLS | Rows |
+|---|---|---|
+| `subscriptions` | ✅ | 0 |
+| `exchange_rates` | ✅ | 3 |
+| `email_digest` | ✅ | 0 |
+| `search_history` | ✅ | 0 |
+| `push_subscriptions` | ✅ | 1 |
+| `notification_preferences` | ✅ | 1 |
+
+**Security advisories (non-blocking, worth addressing):**
+- `notification_preferences` and `push_subscriptions` each have a `service_role_all_*` policy with `USING (true)` / `WITH CHECK (true)` for `ALL` commands — likely an intentional service-role backend-access pattern (edge functions manage these tables), but worth double-checking it's scoped only to the service role and not exposed to anon/authenticated users.
+- Leaked password protection (HaveIBeenPwned check) is disabled in Supabase Auth settings — free to enable, recommended.
 - **Atoms Dev** (atoms.dev) — currently serves `app.amanahlife.com` via a custom DNS A record pointing to their infrastructure (UCloud, Hong Kong). This is being migrated away from — see Known Issues.
 
 ---
