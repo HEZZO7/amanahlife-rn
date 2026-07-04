@@ -5,7 +5,7 @@
  * to web across landing section, /about page, and this native screen.
  */
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Image } from 'react-native';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useRTL } from '../../src/hooks/useRTL';
@@ -47,10 +47,10 @@ export default function About() {
             {isAr ? 'تعرّف على المؤسس' : 'Meet the Founder'}
           </Text>
           <View style={{ flexDirection: 'row', gap: 14, marginBottom: 12 }}>
-            {/* TODO(Huzaifa): Replace with professional photo */}
-            <View style={[styles.avatar, { borderColor: colors.teal, backgroundColor: colors.teal + '15' }]}>
-              <Text style={{ fontSize: 32 }}>👤</Text>
-            </View>
+            <Image
+              source={require('../../assets/founder-photo.jpg')}
+              style={[styles.avatar, { borderColor: colors.teal }]}
+            />
             <View style={{ flex: 1, justifyContent: 'center' }}>
               <Text style={{ color: colors.text, fontSize: 16, fontFamily: FONT_UI_BOLD }}>Huzaifa Al Ezzo</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: FONT_UI }}>
@@ -92,8 +92,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontFamily: FONT_UI_BOLD, marginBottom: 8 },
   sectionLabel: { fontSize: 11, fontFamily: FONT_UI_BOLD, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   avatar: {
-    width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center',
+    width: 64, height: 64, borderRadius: 32, borderWidth: 2,
   },
   linkedinBtn: {
     alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 7,
