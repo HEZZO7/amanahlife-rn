@@ -1,13 +1,18 @@
 # AAB Readiness — amanahlife-rn
 
-**Build:** `463d03cb-81fe-4670-91aa-b9fa8a146582` · **Commit:** `d5422c4` · **Profile:** production · **Finished:** 2026-07-04 01:01 UTC
+**Build:** `053a9c91-8c4a-4e8b-99ac-923082aca238` · **Commit:** `9c4e98f` · **Profile:** production · **Finished:** 2026-07-04 23:57 UTC
 
 ## 1a. Commit audit
 
-✅ Build `463d03cb` confirmed built from commit `d5422c4` (verified via `eas build:view`).
+✅ Build `053a9c91` confirmed built from commit `9c4e98f` (verified via `eas build:view`), which is `HEAD` — no commits after it, fully current.
 
-Commits after `d5422c4`:
-- `fcf80df` — "Add Play Store screenshots" — assets only (`assets/play-store/screenshots/`), does not touch app code. **No rebuild required.**
+Superseded builds:
+- `463d03cb` (commit `d5422c4`) — previous production build, missing founder photo + About Us link, now replaced.
+
+## 1b-extra. Additional items confirmed in this build (added after the original readiness check)
+
+- [x] Founder photo (Huzaifa Al Ezzo) replacing the placeholder avatar — `app/(tabs)/about.tsx`
+- [x] "About Us" link added to More/Info screen's Company section, matching the web footer exactly (About Us, Privacy Policy, Terms of Service, Refund Policy, Contact Us)
 
 ## 1b. Android feature checklist
 
