@@ -362,7 +362,7 @@ export default function Settings() {
               ? '© 2026 أمانة لايف، منتج تابع لشركة LinkoraNet LLC. جميع الحقوق محفوظة.'
               : '© 2026 AmanahLife, a product of LinkoraNet LLC. All rights reserved.'}
           </Text>
-          <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync('https://app.amanahlife.com/privacy')} style={{ marginBottom: 8 }}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/privacy' as any)} style={{ marginBottom: 8 }}>
             <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
               {isAr ? '🔒 سياسة الخصوصية' : '🔒 Privacy Policy'}
             </Text>
@@ -370,6 +370,11 @@ export default function Settings() {
           <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync('https://app.amanahlife.com/terms')} style={{ marginBottom: 8 }}>
             <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
               {isAr ? '📄 شروط الخدمة' : '📄 Terms of Service'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/refund' as any)} style={{ marginBottom: 8 }}>
+            <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
+              {isAr ? '💳 سياسة الاسترداد' : '💳 Refund Policy'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/about' as any)} style={{ marginBottom: 8 }}>

@@ -42,9 +42,9 @@ export default function MoreInfo() {
       label: isAr ? 'الشركة' : 'Company',
       items: [
         { label: isAr ? 'عنّا' : 'About Us', onPress: () => router.push('/(tabs)/about' as any) },
-        { label: isAr ? 'سياسة الخصوصية' : 'Privacy Policy', onPress: () => openWeb('/privacy') },
+        { label: isAr ? 'سياسة الخصوصية' : 'Privacy Policy', onPress: () => router.push('/(tabs)/privacy' as any) },
         { label: isAr ? 'شروط الخدمة' : 'Terms of Service', onPress: () => openWeb('/terms') },
-        { label: isAr ? 'سياسة الاسترداد' : 'Refund Policy', onPress: () => openWeb('/refund') },
+        { label: isAr ? 'سياسة الاسترداد' : 'Refund Policy', onPress: () => router.push('/(tabs)/refund' as any) },
         { label: isAr ? 'اتصل بنا' : 'Contact Us', onPress: () => openWeb('/contact') },
       ],
     },
