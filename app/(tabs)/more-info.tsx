@@ -21,11 +21,19 @@ const WEB_BASE = 'https://app.amanahlife.com';
 export default function MoreInfo() {
   const router = useRouter();
   const { language } = useLanguage();
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const { rtlText } = useRTL();
   const isAr = language === 'ar';
 
-  const openWeb = (path: string) => WebBrowser.openBrowserAsync(`${WEB_BASE}${path}`);
+  const openWeb = (path: string) => {
+    // Pages opened in an external browser tab have no access to the app's
+    // storage, so the theme/language must be passed explicitly or they fall
+    // back to the web's hardcoded defaults (English, dark).
+    const [base, hash] = path.split('#');
+    const separator = base.includes('?') ? '&' : '?';
+    const url = `${WEB_BASE}${base}${separator}lang=${language}&theme=${theme}${hash ? `#${hash}` : ''}`;
+    return WebBrowser.openBrowserAsync(url);
+  };
   const openMail = () => Linking.openURL('mailto:support@amanahlife.com');
   const openCeoMail = () => Linking.openURL('mailto:CEO@amanahlife.com');
 

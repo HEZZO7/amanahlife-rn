@@ -367,7 +367,7 @@ export default function Settings() {
               {isAr ? '🔒 سياسة الخصوصية' : '🔒 Privacy Policy'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync('https://app.amanahlife.com/terms')} style={{ marginBottom: 8 }}>
+          <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(`https://app.amanahlife.com/terms?lang=${language}&theme=${theme}`)} style={{ marginBottom: 8 }}>
             <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
               {isAr ? '📄 شروط الخدمة' : '📄 Terms of Service'}
             </Text>
