@@ -4,6 +4,7 @@
  * Replaces localStorage with AsyncStorage
  */
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 
@@ -92,15 +93,22 @@ function isNightNow(sunrise: string, sunset: string): boolean {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
   const [autoSwitch, setAutoSwitchState] = useState(false);
+  // Gate rendering until the stored theme is loaded, so screens never get a
+  // chance to flash the 'dark' default before AsyncStorage resolves — the
+  // provider is a single root-level instance, but this closes the one
+  // window (first paint after app launch) where a stale default could show.
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem('amanah-theme').then((stored) => {
-      if (stored === 'light' || stored === 'dark') {
-        setThemeState(stored);
+    Promise.all([
+      AsyncStorage.getItem('amanah-theme'),
+      AsyncStorage.getItem('amanah-theme-autoswitch'),
+    ]).then(([storedTheme, storedAutoSwitch]) => {
+      if (storedTheme === 'light' || storedTheme === 'dark') {
+        setThemeState(storedTheme);
       }
-    });
-    AsyncStorage.getItem('amanah-theme-autoswitch').then((stored) => {
-      if (stored === 'true') setAutoSwitchState(true);
+      if (storedAutoSwitch === 'true') setAutoSwitchState(true);
+      setReady(true);
     });
   }, []);
 
@@ -134,7 +142,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, colors, setTheme, toggleTheme, isDark: theme === 'dark', autoSwitch, setAutoSwitch }}>
-      {children}
+      {ready ? children : <View style={{ flex: 1, backgroundColor: colors.bg }} />}
     </ThemeContext.Provider>
   );
 }
