@@ -5,14 +5,12 @@
  * to web across landing section, /about page, and this native screen.
  */
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useRTL } from '../../src/hooks/useRTL';
 import { PageHeader, Card } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
-
-const LINKEDIN_URL = 'https://www.linkedin.com/in/huzaifa-ezzo-trans7';
 
 export default function About() {
   const { language } = useLanguage();
@@ -63,12 +61,6 @@ export default function About() {
               ? 'حذيفة العزو متخصص ثنائي اللغة يمتلك أكثر من عشر سنوات من الخبرة في الإدارة والموارد البشرية والتعليم والبحث العلمي. يحمل ماجستير في الإدارة العامة وبكالوريوس في اللغة الإنجليزية والترجمة، وقد أسس أمانة لايف انطلاقاً من رغبة حقيقية في مساعدة الناس على تنظيم حياتهم وتتبع تقدمهم والنمو بهدف. رؤيته أن يكون أمانة لايف شريكاً حقيقياً في الحياة — أداة ترافق الإنسان في رحلته نحو حياة أكثر وعياً وتحقيقاً.'
               : "Huzaifa Al Ezzo is a bilingual professional with over ten years of experience in administration, human resources, education, and research. Holding a Master of Public Administration and a Bachelor's in English Language and Translation, he built AmanahLife out of a genuine desire to help people organize their lives, track their progress, and grow with purpose. His vision is to make AmanahLife a trusted life partner — a tool that walks alongside people on their journey toward a more intentional and fulfilling life."}
           </Text>
-          <TouchableOpacity
-            onPress={() => Linking.openURL(LINKEDIN_URL)}
-            style={[styles.linkedinBtn, { borderColor: colors.teal }]}
-          >
-            <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_BOLD }}>LinkedIn</Text>
-          </TouchableOpacity>
         </Card>
 
         {/* Block 3 — Company */}
@@ -93,9 +85,5 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 11, fontFamily: FONT_UI_BOLD, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   avatar: {
     width: 64, height: 64, borderRadius: 32, borderWidth: 2,
-  },
-  linkedinBtn: {
-    alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1,
   },
 });
