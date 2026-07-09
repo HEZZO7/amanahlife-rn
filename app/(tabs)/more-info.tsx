@@ -27,6 +27,7 @@ export default function MoreInfo() {
 
   const openWeb = (path: string) => WebBrowser.openBrowserAsync(`${WEB_BASE}${path}`);
   const openMail = () => Linking.openURL('mailto:support@amanahlife.com');
+  const openCeoMail = () => Linking.openURL('mailto:CEO@amanahlife.com');
 
   const sections: { label: string; items: { label: string; onPress: () => void }[] }[] = [
     {
@@ -52,6 +53,7 @@ export default function MoreInfo() {
       label: isAr ? 'الدعم' : 'Support',
       items: [
         { label: 'support@amanahlife.com', onPress: openMail },
+        { label: 'CEO@amanahlife.com', onPress: openCeoMail },
         { label: isAr ? 'مركز المساعدة' : 'Help Center', onPress: () => openWeb('/contact') },
         { label: isAr ? 'المدونة' : 'Blog', onPress: () => openWeb('/blog') },
       ],
