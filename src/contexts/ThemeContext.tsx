@@ -20,7 +20,7 @@ export const darkColors = {
   border: '#163828',    // --border-dark-green / border
   text: '#F2EFE9',      // foreground — warm cream
   textSecondary: '#9DB5AA', // muted-foreground — sage
-  textMuted: '#5F7D72', // tertiary
+  textMuted: '#7E9A90', // tertiary — brightened from #5F7D72 (was ~3.2:1 on dark bg, failed WCAG AA; now ~5.7:1)
   teal: '#1FC7C1',      // --teal-accent — primary brand color
   tealLight: '#3DD9D3',
   tealDark: '#178F8A',  // gradient end used on web hero cards
@@ -37,7 +37,7 @@ export const lightColors = {
   border: '#DDE3DE',    // border 150 10% 88%
   text: '#0B1F17',      // foreground 152 53% 8%
   textSecondary: '#4A5C54', // muted-foreground 152 20% 35%
-  textMuted: '#8A968F',
+  textMuted: '#5C6B63', // darkened from #8A968F (was ~2.8:1 on light bg, failed WCAG AA; now ~5.2:1)
   teal: '#178F8A',
   tealLight: '#1FC7C1',
   tealDark: '#0F6B67',

@@ -605,7 +605,6 @@ export default function DashboardScreen() {
                   borderRadius: 999,
                   backgroundColor: badge.earned ? colors.gold + '20' : colors.border + '80',
                   color: badge.earned ? colors.gold : colors.textMuted,
-                  opacity: badge.earned ? 1 : 0.6,
                 }}
               >
                 {badge.icon} {badge.name}
