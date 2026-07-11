@@ -249,6 +249,11 @@ export default function Goals() {
           </View>
         )}
       </ScrollView>
+
+      {/* FAB — mirrors the Tasks screen's persistent bottom Add button */}
+      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.teal }]} onPress={() => setShowForm(true)} activeOpacity={0.85}>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -276,4 +281,10 @@ const styles = StyleSheet.create({
   smallMuted: { fontSize: 11, fontFamily: FONT_UI },
   track: { height: 8, borderRadius: 4, overflow: 'hidden', marginTop: 5 },
   pctBtn: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  fab: {
+    position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 28,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6,
+  },
+  fabText: { color: '#04211C', fontSize: 30, fontFamily: FONT_UI_BOLD, marginTop: -2 },
 });
