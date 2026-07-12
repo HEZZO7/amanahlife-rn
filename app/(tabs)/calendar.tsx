@@ -132,7 +132,7 @@ export default function IslamicCalendar() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PageHeader icon="📅" title={isAr ? 'التقويم الإسلامي' : 'Islamic Calendar'} />
+      <PageHeader icon="🗓️" title={isAr ? 'التقويم الإسلامي' : 'Islamic Calendar'} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Current month banner */}
@@ -141,7 +141,7 @@ export default function IslamicCalendar() {
           <Text style={[styles.bannerMonth, isAr && { fontFamily: FONT_ARABIC_BOLD }]}>{isAr ? HIJRI_MONTHS_AR[hijriMonth - 1] : HIJRI_MONTHS_EN[hijriMonth - 1]}</Text>
           <Text style={styles.bannerYear}>{isAr ? `${hijriYear} هـ` : `${hijriYear} AH`}</Text>
           <View style={styles.bannerPill}>
-            <Text style={styles.bannerPillText}>📅 {isAr ? `اليوم: ${hijriDay} ${HIJRI_MONTHS_AR[hijriMonth - 1]}` : `Today: ${hijriDay} ${HIJRI_MONTHS_EN[hijriMonth - 1]}`}</Text>
+            <Text style={styles.bannerPillText}>🗓️ {isAr ? `اليوم: ${hijriDay} ${HIJRI_MONTHS_AR[hijriMonth - 1]}` : `Today: ${hijriDay} ${HIJRI_MONTHS_EN[hijriMonth - 1]}`}</Text>
           </View>
         </LinearGradient>
 

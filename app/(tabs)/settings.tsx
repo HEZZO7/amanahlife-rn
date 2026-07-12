@@ -284,7 +284,7 @@ export default function Settings() {
 
         {/* Islamic toggles */}
         <Card style={{ marginBottom: 14, gap: 14 }}>
-          <ToggleRow icon="📅" label={isAr ? 'التقويم الهجري' : 'Hijri Calendar'} value={settings.showHijri} onChange={() => updateSetting('showHijri', !settings.showHijri)} colors={colors} isAr={isAr} />
+          <ToggleRow icon="🗓️" label={isAr ? 'التقويم الهجري' : 'Hijri Calendar'} value={settings.showHijri} onChange={() => updateSetting('showHijri', !settings.showHijri)} colors={colors} isAr={isAr} />
           <ToggleRow icon="🕌" label={isAr ? 'المناسبات الإسلامية' : 'Islamic Events'} value={settings.showIslamicEvents} onChange={() => updateSetting('showIslamicEvents', !settings.showIslamicEvents)} colors={colors} isAr={isAr} />
           <ToggleRow icon="🌙" label={isAr ? 'وضع رمضان' : 'Ramadan Mode'} value={settings.ramadanMode} onChange={() => updateSetting('ramadanMode', !settings.ramadanMode)} colors={colors} isAr={isAr} />
           <ToggleRow icon="١٢٣" label={isAr ? 'الأرقام العربية' : 'Eastern Numerals'} value={settings.easternNumerals} onChange={() => updateSetting('easternNumerals', !settings.easternNumerals)} colors={colors} isAr={isAr} />

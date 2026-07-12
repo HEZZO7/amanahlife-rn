@@ -428,7 +428,7 @@ export default function DashboardScreen() {
     { icon: '💰', title: language === 'ar' ? 'المالية' : 'Finance', path: '/(tabs)/finance' },
     { icon: '🧭', title: language === 'ar' ? 'القبلة' : 'Qibla', path: '/(tabs)/qibla' },
     { icon: '💎', title: language === 'ar' ? 'الزكاة' : 'Zakat', path: '/(tabs)/giving-tracker' },
-    { icon: '📅', title: language === 'ar' ? 'التقويم' : 'Calendar', path: '/(tabs)/calendar' },
+    { icon: '🗓️', title: language === 'ar' ? 'التقويم' : 'Calendar', path: '/(tabs)/calendar' },
     { icon: '🎯', title: language === 'ar' ? 'الأهداف' : 'Goals', path: '/(tabs)/goals' },
     { icon: '💚', title: language === 'ar' ? 'العافية' : 'Wellness', path: '/(tabs)/wellness' },
     { icon: '📋', title: language === 'ar' ? 'المخطط' : 'Planner', path: '/(tabs)/planner' },

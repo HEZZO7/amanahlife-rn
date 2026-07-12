@@ -67,7 +67,7 @@ export default function RamadanPlanner() {
   const totalQuranPages = data.days.reduce((s, d) => s + d.quranPages, 0);
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
-    { key: 'calendar', label: isAr ? 'التقويم' : 'Calendar', icon: '📅' },
+    { key: 'calendar', label: isAr ? 'التقويم' : 'Calendar', icon: '🗓️' },
     { key: 'meals', label: isAr ? 'الوجبات' : 'Meals', icon: '🍽️' },
     { key: 'budget', label: isAr ? 'الميزانية' : 'Budget', icon: '💰' },
     { key: 'eid', label: isAr ? 'العيد' : 'Eid', icon: '🎉' },
