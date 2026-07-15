@@ -58,7 +58,7 @@ const COUNTRIES = [
   { code: 'AU', nameAr: 'أستراليا', nameEn: 'Australia', currency: 'AUD', symbol: 'A$', flag: '🇦🇺' },
   { code: 'NZ', nameAr: 'نيوزيلندا', nameEn: 'New Zealand', currency: 'NZD', symbol: 'NZ$', flag: '🇳🇿' },
 ];
-const DEFAULT_SETTINGS: AppSettings = { currency: 'QAR', country: 'QA', showHijri: true, showIslamicEvents: true, ramadanMode: false, easternNumerals: false };
+const DEFAULT_SETTINGS: AppSettings = { currency: 'USD', country: 'US', showHijri: true, showIslamicEvents: true, ramadanMode: false, easternNumerals: false };
 
 export default function Settings() {
   const router = useRouter();
