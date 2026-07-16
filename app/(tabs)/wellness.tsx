@@ -80,6 +80,7 @@ export default function Wellness() {
   const [showForm, setShowForm] = useState(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
+  const [editingDate, setEditingDate] = useState(todayStr);
   const todayEntry = entries.find((e) => e.date === todayStr);
 
   useEffect(() => {
@@ -87,9 +88,19 @@ export default function Wellness() {
   }, []);
   useEffect(() => { AsyncStorage.setItem('amanah-wellness', JSON.stringify(entries)); }, [entries]);
 
+  const openFormFor = (date: string) => {
+    const existing = entries.find((e) => e.date === date);
+    setMood(existing?.mood || 3);
+    setSleepHours(existing?.sleep ?? 7);
+    setHydration(existing?.hydration ?? 6);
+    setStress(existing?.stress || 2);
+    setEditingDate(date);
+    setShowForm(true);
+  };
+
   const logToday = () => {
-    const entry: WellnessEntry = { date: todayStr, mood, sleep: sleepHours, hydration, stress };
-    setEntries([entry, ...entries.filter((e) => e.date !== todayStr)]);
+    const entry: WellnessEntry = { date: editingDate, mood, sleep: sleepHours, hydration, stress };
+    setEntries([entry, ...entries.filter((e) => e.date !== editingDate)]);
     setShowForm(false);
   };
 
@@ -113,17 +124,22 @@ export default function Wellness() {
       <PageHeader
         icon="💚"
         title={tr('Wellness', 'العافية')}
-        right={!todayEntry ? (
-          <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.teal }]} onPress={() => setShowForm((s) => !s)}>
+        right={(
+          <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.teal }]} onPress={() => (showForm ? setShowForm(false) : openFormFor(todayStr))}>
             <Text style={styles.addBtnText}>+ {tr('Log', 'تسجيل')}</Text>
           </TouchableOpacity>
-        ) : undefined}
+        )}
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Log form */}
         {showForm && (
           <Card style={{ marginBottom: 16 }}>
+            {editingDate !== todayStr && (
+              <Text style={{ color: colors.gold, fontSize: 12, fontFamily: FONT_UI_MEDIUM, marginBottom: 10 }}>
+                {tr('Editing entry for', 'تعديل إدخال يوم')}: {new Date(editingDate).toLocaleDateString()}
+              </Text>
+            )}
             <Text style={[styles.label, { color: colors.textSecondary }]}>{tr('Mood', 'المزاج')}</Text>
             <View style={styles.moodRow}>
               {MOOD_EMOJIS.map((emoji, i) => (
@@ -178,7 +194,7 @@ export default function Wellness() {
                 ? new Date(entry.date).toLocaleDateString('ar', { weekday: 'long' })
                 : new Date(entry.date).toLocaleDateString('en', { weekday: 'short' }).slice(0, 2);
               return (
-                <View key={i} style={styles.barCol}>
+                <TouchableOpacity key={i} style={styles.barCol} onPress={() => openFormFor(entry.date)} activeOpacity={0.7}>
                   <Text style={[styles.barValue, { color: colors.textSecondary }]}>{score > 0 ? score : ''}</Text>
                   <View style={styles.barTrack}>
                     {score > 0 ? (
@@ -188,7 +204,7 @@ export default function Wellness() {
                     )}
                   </View>
                   <Text style={[styles.barLabel, { color: colors.textSecondary, fontSize: isRTL ? 8 : 10 }]}>{dayLabel}</Text>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -203,6 +219,7 @@ const styles = StyleSheet.create({
   addBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 },
   addBtnText: { color: '#04211C', fontSize: 13, fontFamily: FONT_UI_BOLD },
   label: { fontSize: 13, fontFamily: FONT_UI, marginBottom: 8 },
+  sectionLabel: { fontSize: 13, fontFamily: FONT_UI_MEDIUM },
   moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   moodBtn: { padding: 8, borderRadius: 12 },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
