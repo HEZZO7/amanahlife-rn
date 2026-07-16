@@ -7,9 +7,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useSubscription } from '../../src/contexts/SubscriptionContext';
 import { PageHeader, Card, ProgressBar } from '../../src/components/ui';
+import LockedFeatureModal from '../../src/components/LockedFeatureModal';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
 interface FamilyMember { id: string; name: string; role: string; }
@@ -48,6 +51,10 @@ type Tab = 'family' | 'budget' | 'income' | 'expenses';
 export default function FamilyBudget() {
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
+  const router = useRouter();
+  const { tier, isTrialActive, loading: subLoading } = useSubscription();
+  const hasAccess = tier === 'family' || isTrialActive;
+  const [lockedModalOpen, setLockedModalOpen] = useState(true);
   const isAr = language === 'ar';
 
   const [data, setData] = useState<FamilyBudgetData>(DEFAULT_DATA);
@@ -107,6 +114,30 @@ export default function FamilyBudget() {
       ))}
     </View>
   );
+
+  if (subLoading) return null;
+
+  if (!hasAccess) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <PageHeader icon="👨‍👩‍👧‍👦" title={isAr ? 'ميزانية العائلة' : 'Family Budget'} />
+        <LockedFeatureModal
+          visible={lockedModalOpen}
+          onClose={() => { setLockedModalOpen(false); router.push('/(tabs)/subscription' as any); }}
+          requiredPlan="family"
+        />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ fontSize: 48, marginBottom: 12 }}>🔒</Text>
+          <Text style={{ color: colors.text, fontSize: 16, fontFamily: FONT_UI_BOLD, marginBottom: 6 }}>
+            {isAr ? 'ميزة مدفوعة' : 'Premium Feature'}
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: FONT_UI, textAlign: 'center' }}>
+            {isAr ? 'ميزانية العائلة متاحة في خطة أمانة العائلة.' : 'Family Budget is available in the Family Plan.'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
