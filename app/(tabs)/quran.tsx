@@ -34,13 +34,22 @@ export default function QuranReader() {
   const [search, setSearch] = useState('');
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [lastRead, setLastRead] = useState<{ surah: number; name: string } | null>(null);
+  const todayKey = new Date().toDateString();
+  const [quranPages, setQuranPages] = useState(0);
 
   useEffect(() => { if (!authLoading && !user) router.replace('/(auth)/landing'); }, [user, authLoading]);
 
   useEffect(() => {
     AsyncStorage.getItem('quran_bookmarks').then((s) => { if (s) setBookmarks(new Set(JSON.parse(s))); });
     AsyncStorage.getItem('quran_last_read').then((s) => { if (s) setLastRead(JSON.parse(s)); });
+    AsyncStorage.getItem(`quran_pages_${todayKey}`).then((s) => { if (s) setQuranPages(parseInt(s, 10)); });
   }, []);
+
+  const addPages = (n: number) => {
+    const newVal = Math.max(0, quranPages + n);
+    setQuranPages(newVal);
+    AsyncStorage.setItem(`quran_pages_${todayKey}`, String(newVal));
+  };
   useEffect(() => { AsyncStorage.setItem('quran_bookmarks', JSON.stringify([...bookmarks])); }, [bookmarks]);
 
   useEffect(() => {
@@ -109,6 +118,27 @@ export default function QuranReader() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {!selectedSurah ? (
           <>
+            {/* Pages read today */}
+            <Card style={[styles.pagesCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
+                <Text style={[styles.bigNum, { color: colors.gold }]}>{quranPages}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>
+                  {tr("Today's pages", 'صفحات اليوم')} • {tr('Goal', 'الهدف')}: 20
+                </Text>
+              </View>
+              <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8 }}>
+                <TouchableOpacity style={[styles.pageBtn, { backgroundColor: colors.surface }]} onPress={() => addPages(-1)}>
+                  <Text style={{ color: colors.text, fontSize: 18, fontFamily: FONT_UI_BOLD }}>−</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.pageBtn, { backgroundColor: colors.teal }]} onPress={() => addPages(1)}>
+                  <Text style={{ color: '#04211C', fontSize: 18, fontFamily: FONT_UI_BOLD }}>+</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.pageBtn, { backgroundColor: colors.gold }]} onPress={() => addPages(5)}>
+                  <Text style={{ color: '#1A1200', fontSize: 13, fontFamily: FONT_UI_BOLD }}>+5</Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
+
             {/* Search */}
             <TextInput
               placeholder={tr('Search surah by name or number...', 'ابحث عن سورة بالاسم أو الرقم...')}
@@ -202,6 +232,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontFamily: FONT_UI_BOLD, flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
   search: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, fontFamily: FONT_UI, marginBottom: 14 },
+  pagesCard: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  bigNum: { fontSize: 26, fontFamily: FONT_UI_BOLD },
+  pageBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   lastRead: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   resumeBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
   surahRow: { alignItems: 'center', gap: 14 },

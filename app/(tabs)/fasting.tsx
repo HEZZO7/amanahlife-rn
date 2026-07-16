@@ -8,8 +8,8 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { PageHeader, Card, ProgressBar } from '../../src/components/ui';
-import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK } from '../../src/theme/fonts';
+import { PageHeader, Card } from '../../src/components/ui';
+import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BLACK } from '../../src/theme/fonts';
 
 interface DayStatus { date: string; fasted: boolean; }
 
@@ -22,7 +22,6 @@ export default function FastingTracker() {
   const [suhoor, setSuhoor] = useState(false);
   const [fasting, setFasting] = useState(false);
   const [iftar, setIftar] = useState(false);
-  const [quranPages, setQuranPages] = useState(0);
   const [monthDays, setMonthDays] = useState<DayStatus[]>([]);
 
   useEffect(() => {
@@ -32,8 +31,6 @@ export default function FastingTracker() {
         const data = JSON.parse(storedToday);
         setSuhoor(!!data.suhoor); setFasting(!!data.fasting); setIftar(!!data.iftar);
       }
-      const storedPages = await AsyncStorage.getItem(`quran_pages_${today}`);
-      if (storedPages) setQuranPages(parseInt(storedPages, 10));
 
       const days: DayStatus[] = [];
       for (let i = 29; i >= 0; i--) {
@@ -56,13 +53,8 @@ export default function FastingTracker() {
   };
   const toggleIftar = () => { const v = !iftar; setIftar(v); saveToday(suhoor, fasting, v); };
 
-  const addPages = (n: number) => {
-    const newVal = Math.max(0, quranPages + n);
-    setQuranPages(newVal);
-    AsyncStorage.setItem(`quran_pages_${today}`, String(newVal));
-  };
-
   const fastedDays = monthDays.filter((d) => d.fasted).length;
+  const missedDays = monthDays.length - fastedDays;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -85,38 +77,27 @@ export default function FastingTracker() {
           </View>
         </Card>
 
-        {/* 30-day grid */}
+        {/* Missed vs made-up summary */}
         <Card style={{ marginBottom: 14 }}>
+          <View style={[styles.rowBetween, { flexDirection: 'row' }]}>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Text style={[styles.bigNum, { color: colors.teal, fontSize: 22 }]}>{fastedDays}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{tr('Completed', 'أيام مكتملة')}</Text>
+            </View>
+            <View style={{ flex: 1, alignItems: 'center', borderLeftWidth: 1, borderLeftColor: colors.border }}>
+              <Text style={[styles.bigNum, { color: colors.red, fontSize: 22 }]}>{missedDays}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, textAlign: 'center' }}>{tr('Missed (need makeup)', 'أيام فائتة (بحاجة للقضاء)')}</Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* 30-day grid */}
+        <Card>
           <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{tr('30-Day Progress', 'تقدم ٣٠ يوم')}</Text>
           <View style={styles.grid}>
             {monthDays.map((day, i) => (
               <View key={i} style={[styles.gridCell, { backgroundColor: day.fasted ? colors.teal : colors.surface }]} />
             ))}
-          </View>
-        </Card>
-
-        {/* Quran pages */}
-        <Card>
-          <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{tr('Quran Pages', 'صفحات القرآن')}</Text>
-          <View style={[styles.rowBetween, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
-              <Text style={[styles.bigNum, { color: colors.gold }]}>{quranPages}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{tr('Goal', 'الهدف')}: 20 {tr('pages', 'صفحة')}</Text>
-            </View>
-            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8 }}>
-              <TouchableOpacity style={[styles.pageBtn, { backgroundColor: colors.surface }]} onPress={() => addPages(-1)}>
-                <Text style={{ color: colors.text, fontSize: 18, fontFamily: FONT_UI_BOLD }}>−</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.pageBtn, { backgroundColor: colors.teal }]} onPress={() => addPages(1)}>
-                <Text style={{ color: '#04211C', fontSize: 18, fontFamily: FONT_UI_BOLD }}>+</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.pageBtn, { backgroundColor: colors.gold }]} onPress={() => addPages(5)}>
-                <Text style={{ color: '#1A1200', fontSize: 13, fontFamily: FONT_UI_BOLD }}>+5</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={{ marginTop: 12 }}>
-            <ProgressBar value={Math.min(100, (quranPages / 20) * 100)} color={colors.gold} />
           </View>
         </Card>
       </ScrollView>
@@ -140,6 +121,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingTop: 12, paddingBottom: 32 },
 
 
+  cardTitle: { fontSize: 15, fontFamily: FONT_UI_MEDIUM, marginBottom: 12 },
   toggleRow: { flexDirection: 'row', gap: 10 },
   toggle: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
