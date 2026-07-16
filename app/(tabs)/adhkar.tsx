@@ -78,7 +78,7 @@ export default function Adhkar() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PageHeader icon="📿" title={tr('Adhkar', 'الأذكار')} />
+      <PageHeader icon="🍃" title={tr('Adhkar', 'الأذكار')} />
 
       <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
         <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: FONT_UI, textAlign: isRTL ? 'right' : 'left' }}>

@@ -76,7 +76,7 @@ export default function DhikrCounter() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PageHeader icon="🔢" title={tr('Dhikr Counter', 'عداد الذكر')} />
+      <PageHeader icon="📿" title={tr('Dhikr Counter', 'عداد الذكر')} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Daily total */}
