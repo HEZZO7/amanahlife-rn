@@ -15,25 +15,39 @@ import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
 type TransactionType = 'income' | 'expense';
 type IncomeCategory = 'salary' | 'freelance' | 'investment' | 'gift' | 'other';
+type ExpenseCategory = 'housing' | 'food' | 'transport' | 'education' | 'healthcare' | 'charity' | 'entertainment' | 'utilities' | 'other';
+type Category = IncomeCategory | ExpenseCategory;
 
 interface Transaction {
   id: string;
   type: TransactionType;
-  category: IncomeCategory;
+  category: Category;
   amount: number;
   description: string;
   date: string;
 }
 
-const CATEGORY_ICONS: Record<IncomeCategory, string> = {
+const INCOME_CATEGORIES: IncomeCategory[] = ['salary', 'freelance', 'investment', 'gift', 'other'];
+const EXPENSE_CATEGORIES: ExpenseCategory[] = ['housing', 'food', 'transport', 'education', 'healthcare', 'charity', 'entertainment', 'utilities', 'other'];
+
+const CATEGORY_ICONS: Record<Category, string> = {
   salary: '💰', freelance: '💻', investment: '📈', gift: '🎁', other: '📦',
+  housing: '🏠', food: '🍽️', transport: '🚗', education: '📚', healthcare: '🏥', charity: '🤲', entertainment: '🎮', utilities: '💡',
 };
-const CATEGORY_LABELS: Record<IncomeCategory, { ar: string; en: string }> = {
+const CATEGORY_LABELS: Record<Category, { ar: string; en: string }> = {
   salary: { ar: 'راتب', en: 'Salary' },
   freelance: { ar: 'عمل حر', en: 'Freelance' },
   investment: { ar: 'استثمار', en: 'Investment' },
   gift: { ar: 'هدية', en: 'Gift' },
   other: { ar: 'أخرى', en: 'Other' },
+  housing: { ar: 'السكن', en: 'Housing' },
+  food: { ar: 'الطعام', en: 'Food' },
+  transport: { ar: 'المواصلات', en: 'Transport' },
+  education: { ar: 'التعليم', en: 'Education' },
+  healthcare: { ar: 'الصحة', en: 'Healthcare' },
+  charity: { ar: 'الصدقة', en: 'Charity' },
+  entertainment: { ar: 'الترفيه', en: 'Entertainment' },
+  utilities: { ar: 'المرافق', en: 'Utilities' },
 };
 
 export default function Finance() {
@@ -43,10 +57,13 @@ export default function Finance() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [type, setType] = useState<TransactionType>('income');
-  const [category, setCategory] = useState<IncomeCategory>('salary');
+  const [category, setCategory] = useState<Category>('salary');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+
+  const categoryOptions = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   useEffect(() => {
     AsyncStorage.getItem('amanah_finance').then((stored) => {
@@ -59,20 +76,46 @@ export default function Finance() {
     AsyncStorage.setItem('amanah_finance', JSON.stringify(updated));
   };
 
-  const addTransaction = () => {
-    if (!amount || parseFloat(amount) <= 0) return;
-    const newTx: Transaction = {
-      id: Date.now().toString(),
-      type,
-      category,
-      amount: parseFloat(amount),
-      description: description.trim() || CATEGORY_LABELS[category][language === 'ar' ? 'ar' : 'en'],
-      date: new Date().toISOString(),
-    };
-    saveTransactions([newTx, ...transactions]);
+  const resetForm = () => {
+    setEditingId(null);
+    setType('income');
+    setCategory('salary');
     setAmount('');
     setDescription('');
     setShowForm(false);
+  };
+
+  const submitTransaction = () => {
+    if (!amount || parseFloat(amount) <= 0) return;
+    if (editingId) {
+      saveTransactions(
+        transactions.map((tx) =>
+          tx.id === editingId
+            ? { ...tx, type, category, amount: parseFloat(amount), description: description.trim() || CATEGORY_LABELS[category][language === 'ar' ? 'ar' : 'en'] }
+            : tx
+        )
+      );
+    } else {
+      const newTx: Transaction = {
+        id: Date.now().toString(),
+        type,
+        category,
+        amount: parseFloat(amount),
+        description: description.trim() || CATEGORY_LABELS[category][language === 'ar' ? 'ar' : 'en'],
+        date: new Date().toISOString(),
+      };
+      saveTransactions([newTx, ...transactions]);
+    }
+    resetForm();
+  };
+
+  const openEditForm = (tx: Transaction) => {
+    setEditingId(tx.id);
+    setType(tx.type);
+    setCategory(tx.category);
+    setAmount(String(tx.amount));
+    setDescription(tx.description);
+    setShowForm(true);
   };
 
   const deleteTransaction = (id: string) => saveTransactions(transactions.filter((tx) => tx.id !== id));
@@ -136,7 +179,10 @@ export default function Finance() {
                   key={tx.id}
                   style={[styles.txRow, { backgroundColor: colors.bg, flexDirection: 'row' }]}
                 >
-                  <View style={[styles.txLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                  <TouchableOpacity
+                    style={[styles.txLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
+                    onPress={() => openEditForm(tx)}
+                  >
                     <Text style={{ fontSize: 18 }}>{CATEGORY_ICONS[tx.category]}</Text>
                     <View>
                       <Text style={[styles.txDesc, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{tx.description}</Text>
@@ -144,7 +190,7 @@ export default function Finance() {
                         {new Date(tx.date).toLocaleDateString()}
                       </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                   <View style={[styles.txRight, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     <Text style={[styles.txAmount, { color: tx.type === 'income' ? colors.teal : colors.red }]}>
                       {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount)}
@@ -169,23 +215,25 @@ export default function Finance() {
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
-      {/* Add transaction modal */}
-      <Modal visible={showForm} transparent animationType="fade" onRequestClose={() => setShowForm(false)}>
-        <Pressable style={styles.overlay} onPress={() => setShowForm(false)}>
+      {/* Add/Edit transaction modal */}
+      <Modal visible={showForm} transparent animationType="fade" onRequestClose={resetForm}>
+        <Pressable style={styles.overlay} onPress={resetForm}>
           <Pressable style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>{tr('Add Transaction', 'إضافة معاملة')}</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {editingId ? tr('Edit Transaction', 'تعديل المعاملة') : tr('Add Transaction', 'إضافة معاملة')}
+            </Text>
 
             {/* Type toggle */}
             <View style={styles.typeRow}>
               <TouchableOpacity
                 style={[styles.typeBtn, { backgroundColor: type === 'income' ? colors.teal : colors.surface }]}
-                onPress={() => setType('income')}
+                onPress={() => { setType('income'); setCategory('salary'); }}
               >
                 <Text style={[styles.typeText, { color: type === 'income' ? '#04211C' : colors.textSecondary }]}>{tr('Income', 'الدخل')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.typeBtn, { backgroundColor: type === 'expense' ? colors.red : colors.surface }]}
-                onPress={() => setType('expense')}
+                onPress={() => { setType('expense'); setCategory('housing'); }}
               >
                 <Text style={[styles.typeText, { color: type === 'expense' ? '#fff' : colors.textSecondary }]}>{tr('Expense', 'المصروفات')}</Text>
               </TouchableOpacity>
@@ -211,7 +259,7 @@ export default function Finance() {
               {tr('Category', 'الفئة')}
             </Text>
             <View style={styles.chipWrap}>
-              {(Object.keys(CATEGORY_ICONS) as IncomeCategory[]).map((c) => (
+              {categoryOptions.map((c) => (
                 <TouchableOpacity
                   key={c}
                   style={[styles.chip, { backgroundColor: category === c ? colors.gold : colors.surface }]}
@@ -225,11 +273,11 @@ export default function Finance() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.surface }]} onPress={() => setShowForm(false)}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.surface }]} onPress={resetForm}>
                 <Text style={[styles.typeText, { color: colors.textSecondary }]}>{tr('Cancel', 'إلغاء')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.teal }]} onPress={addTransaction}>
-                <Text style={[styles.typeText, { color: '#04211C' }]}>{tr('Add', 'إضافة')}</Text>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.teal }]} onPress={submitTransaction}>
+                <Text style={[styles.typeText, { color: '#04211C' }]}>{editingId ? tr('Save', 'حفظ') : tr('Add', 'إضافة')}</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -247,6 +295,7 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: 18, fontFamily: FONT_UI_BOLD },
   rowBetween: { justifyContent: 'space-between', alignItems: 'center' },
   bodyText: { fontSize: 13, fontFamily: FONT_UI },
+  sectionTitle: { fontSize: 15, fontFamily: FONT_UI_MEDIUM, marginBottom: 4 },
 
 
   empty: { textAlign: 'center', paddingVertical: 16, fontSize: 13, fontFamily: FONT_UI },
