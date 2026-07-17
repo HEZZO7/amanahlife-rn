@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useTimeFormat } from '../../src/contexts/TimeFormatContext';
 import { supabase } from '../../src/lib/supabase';
 import {
   PrayerName, PrayerReminderSettings, DEFAULT_REMINDER_SETTINGS,
@@ -65,6 +66,7 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { language, setLanguage } = useLanguage();
   const { theme, toggleTheme, colors, autoSwitch, setAutoSwitch } = useTheme();
+  const { timeFormat, setTimeFormat } = useTimeFormat();
   const isAr = language === 'ar';
   const sheetPb = useBottomSheetPadding();
   const { rtlText, rtlView } = useRTL();
@@ -290,6 +292,29 @@ export default function Settings() {
           <ToggleRow icon="١٢٣" label={isAr ? 'الأرقام العربية' : 'Eastern Numerals'} value={settings.easternNumerals} onChange={() => updateSetting('easternNumerals', !settings.easternNumerals)} colors={colors} isAr={isAr} />
         </Card>
 
+        {/* Time Format */}
+        <Card style={{ marginBottom: 14 }}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'صيغة الوقت' : 'Time Format'}</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+            <TouchableOpacity
+              style={[styles.timeFormatBtn, { backgroundColor: timeFormat === '12h' ? colors.teal : colors.surface }]}
+              onPress={() => setTimeFormat('12h')}
+            >
+              <Text style={{ color: timeFormat === '12h' ? '#04211C' : colors.textSecondary, fontFamily: FONT_UI_MEDIUM, fontSize: 13 }}>
+                {isAr ? '١٢ ساعة (ص/م)' : '12-hour (AM/PM)'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.timeFormatBtn, { backgroundColor: timeFormat === '24h' ? colors.teal : colors.surface }]}
+              onPress={() => setTimeFormat('24h')}
+            >
+              <Text style={{ color: timeFormat === '24h' ? '#04211C' : colors.textSecondary, fontFamily: FONT_UI_MEDIUM, fontSize: 13 }}>
+                {isAr ? '٢٤ ساعة' : '24-hour'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
+
         {/* Backup & Restore */}
         <Card style={{ marginBottom: 14 }}>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? '💾 النسخ الاحتياطي والاستعادة' : '💾 Backup & Restore'}</Text>
@@ -483,6 +508,8 @@ const styles = StyleSheet.create({
 
 
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionLabel: { fontSize: 13, fontFamily: FONT_UI_MEDIUM, marginBottom: 10 },
+  timeFormatBtn: { flex: 1, paddingVertical: 11, borderRadius: 12, alignItems: 'center' },
   profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   avatarLg: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },

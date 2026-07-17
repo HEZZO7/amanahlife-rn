@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useTimeFormat } from '../../src/contexts/TimeFormatContext';
 import { PageHeader, Card } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
@@ -21,6 +22,7 @@ type ViewMode = 'agenda' | 'weekly' | 'monthly';
 export default function Planner() {
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
+  const { formatTime } = useTimeFormat();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
   const locale = language === 'ar' ? 'ar' : 'en';
 
@@ -151,7 +153,7 @@ export default function Planner() {
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.itemTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{item.title}</Text>
                       <Text style={[styles.itemSub, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
-                        {item.time ? `${item.time} • ` : ''}{item.description || tr('Event', 'موعد')}
+                        {item.time ? `${formatTime(item.time)} • ` : ''}{item.description || tr('Event', 'موعد')}
                       </Text>
                     </View>
                     <TouchableOpacity onPress={() => removeAgendaItem(item.id)} hitSlop={8}>

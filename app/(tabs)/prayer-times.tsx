@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
+import { useTimeFormat } from '../../src/contexts/TimeFormatContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { Screen, Card, Button, GradientCard, ProgressBar } from '../../src/components/ui';
 import { toast } from '../../src/lib/toast';
@@ -28,6 +29,7 @@ const PRAYER_NAMES_AR: Record<string, string> = {
 export default function PrayerTimes() {
   const { user, loading: authLoading } = useAuth();
   const { language, isRTL } = useLanguage();
+  const { formatTime } = useTimeFormat();
   const { colors } = useTheme();
   const router = useRouter();
 
@@ -166,7 +168,7 @@ export default function PrayerTimes() {
           <Text style={styles.heroName}>
             {language === 'ar' && PRAYER_NAMES_AR[nextPrayer.name] ? PRAYER_NAMES_AR[nextPrayer.name] : nextPrayer.name}
           </Text>
-          <Text style={styles.heroTime}>{nextPrayer.time}</Text>
+          <Text style={styles.heroTime}>{formatTime(nextPrayer.time)}</Text>
           {!!nextPrayer.countdown && (
             <Text style={styles.heroCountdown}>
               {language === 'ar' ? 'بعد' : 'in'} {nextPrayer.countdown}
@@ -209,7 +211,7 @@ export default function PrayerTimes() {
                   <Text style={[styles.prayerName, { color: done ? colors.green : colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
                     {getPrayerDisplayName(prayer.name)}
                   </Text>
-                  <Text style={[styles.prayerTime, { color: colors.textSecondary }]}>{prayer.time}</Text>
+                  <Text style={[styles.prayerTime, { color: colors.textSecondary }]}>{formatTime(prayer.time)}</Text>
                 </View>
               </View>
               {prayer.name !== 'Sunrise' && (

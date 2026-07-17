@@ -22,6 +22,7 @@ import {
 import { Amiri_400Regular, Amiri_700Bold } from '@expo-google-fonts/amiri';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
 import { LanguageProvider } from '../src/contexts/LanguageContext';
+import { TimeFormatProvider } from '../src/contexts/TimeFormatContext';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { SubscriptionProvider } from '../src/contexts/SubscriptionContext';
 
@@ -59,11 +60,13 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <LanguageProvider>
-              <AuthProvider>
-                <SubscriptionProvider>
-                  <AppShell />
-                </SubscriptionProvider>
-              </AuthProvider>
+              <TimeFormatProvider>
+                <AuthProvider>
+                  <SubscriptionProvider>
+                    <AppShell />
+                  </SubscriptionProvider>
+                </AuthProvider>
+              </TimeFormatProvider>
             </LanguageProvider>
           </ThemeProvider>
         </QueryClientProvider>
