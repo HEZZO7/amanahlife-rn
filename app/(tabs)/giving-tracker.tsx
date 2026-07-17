@@ -193,7 +193,7 @@ export default function ZakatCalculator() {
           <View style={[styles.assetRow, { flexDirection: 'row', marginTop: 10 }]}>
             <Text style={{ fontSize: 20, width: 30, textAlign: 'center' }}>📋</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.assetLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{isAr ? 'الديون والالتزامات المستحقة' : 'Outstanding Debts & Liabilities'}</Text>
+              <Text style={[styles.assetLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{isAr ? 'أقساط الديون المستحقة خلال السنة القادمة' : 'Debt payments due in the next 12 months'}</Text>
               <TextInput
                 value={liabilities}
                 onChangeText={(v) => { setLiabilities(v); setCalculated(false); }}
@@ -202,6 +202,11 @@ export default function ZakatCalculator() {
                 placeholderTextColor={colors.textMuted}
                 style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border, textAlign: isRTL ? 'right' : 'left' }]}
               />
+              <Text style={[styles.hintText, { color: colors.textMuted, textAlign: isRTL ? 'right' : 'left' }]}>
+                {isAr
+                  ? 'أدخل فقط الأقساط المستحقة خلال الاثني عشر شهراً القادمة — وليس كامل رصيد الدين طويل الأجل.'
+                  : "Enter only payments due within the next 12 months — not a long-term loan's full balance."}
+              </Text>
             </View>
           </View>
         </Card>
@@ -242,8 +247,8 @@ export default function ZakatCalculator() {
         <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.infoTitle, { color: colors.text, textAlign: isAr ? 'right' : 'left' }]}>ℹ️ {isAr ? 'عن الزكاة ومتتبع العطاء' : 'About Zakat & Giving Tracker'}</Text>
           {(isAr
-            ? ['يُحسب العطاء بنسبة ٢.٥٪ من الثروة المحتفظ بها لسنة فوق النصاب', 'النصاب هو الحد الأدنى الذي يوجب العطاء', 'أسعار الذهب تقريبية — راجع أسعار السوق الحالية', 'أسعار الصرف مباشرة وقد تختلف قليلاً', 'استشر عالماً للأحكام الخاصة بحالتك']
-            : ['Giving is calculated as 2.5% of wealth held for one year above Nisab', 'Nisab is the minimum threshold that triggers a giving obligation', 'Gold prices are approximate — consult current market rates', 'Exchange rates are fetched live and may vary slightly', 'Consult a scholar for specific rulings on your situation']
+            ? ['يُحسب العطاء بنسبة ٢.٥٪ من الثروة المحتفظ بها لسنة فوق النصاب', 'النصاب هو الحد الأدنى الذي يوجب العطاء', 'تُخصم فقط أقساط الديون المستحقة خلال الاثني عشر شهراً القادمة، وليس كامل رصيد الدين طويل الأجل (وفق معيار AAOIFI رقم ٣٥)', 'أسعار الذهب تقريبية — راجع أسعار السوق الحالية', 'أسعار الصرف مباشرة وقد تختلف قليلاً', 'استشر عالماً للأحكام الخاصة بحالتك']
+            : ['Giving is calculated as 2.5% of wealth held for one year above Nisab', 'Nisab is the minimum threshold that triggers a giving obligation', "Only debt payments due within the next 12 months are deducted, not a long-term loan's full balance (per AAOIFI Sharia Standard No. 35)", 'Gold prices are approximate — consult current market rates', 'Exchange rates are fetched live and may vary slightly', 'Consult a scholar for specific rulings on your situation']
           ).map((line, i) => (
             <Text key={i} style={[styles.infoLine, { color: colors.textSecondary, textAlign: isAr ? 'right' : 'left' }]}>• {line}</Text>
           ))}
@@ -295,7 +300,8 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
   rowBetween: { justifyContent: 'space-between', alignItems: 'center' },
   currencyCard: { marginBottom: 14 },
-
+  cardLabel: { fontSize: 11, fontFamily: FONT_UI },
+  sectionTitle: { fontSize: 15, fontFamily: FONT_UI_MEDIUM, marginBottom: 4 },
 
   currencyBtn: { alignItems: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
   nisabCard: { marginBottom: 14, justifyContent: 'space-between', alignItems: 'center' },
@@ -303,6 +309,7 @@ const styles = StyleSheet.create({
 
   assetRow: { alignItems: 'center', gap: 12 },
   assetLabel: { fontSize: 11, fontFamily: FONT_UI, marginBottom: 4 },
+  hintText: { fontSize: 10, fontFamily: FONT_UI, marginTop: 6 },
   input: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: FONT_UI },
   calcBtn: { paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
   calcBtnText: { color: '#fff', fontSize: 16, fontFamily: FONT_UI_BOLD },
