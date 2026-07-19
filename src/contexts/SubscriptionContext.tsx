@@ -9,8 +9,13 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
 type SubscriptionTier = 'free' | 'balanced' | 'family';
-type SubscriptionStatus = 'active' | 'canceled' | 'past_due';
+type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'expired' | 'paused';
 type BillingCycle = 'monthly' | 'yearly';
+
+// Statuses that still grant access to a paid tier. 'past_due' is included
+// deliberately — a payment retry is in flight, cutting off a paying customer
+// mid-retry is hostile. Mirrors the same policy as the web app.
+const ENTITLING_STATUSES: ReadonlySet<SubscriptionStatus> = new Set(['active', 'past_due']);
 
 const TRIAL_KEY = 'amanah-trial-start';
 const TRIAL_DURATION_DAYS = 7;
@@ -52,22 +57,39 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchSubscription = useCallback(async () => {
-    if (!user) { setLoading(false); return; }
+    if (!user) {
+      setTier('free');
+      setStatus('active');
+      setBillingCycle('monthly');
+      setLoading(false);
+      return;
+    }
     try {
+      // Fetch by user_id only (not filtered to status='active') so a
+      // canceled/expired/paused row is still seen and can correctly reset
+      // the tier to free below, instead of silently returning no row and
+      // leaving whatever tier was last fetched stuck in state.
       const { data } = await supabase
         .from('subscriptions')
         .select('tier, status, billing_cycle')
         .eq('user_id', user.id)
-        .eq('status', 'active')
         .maybeSingle();
 
       if (data) {
-        setTier(data.tier as SubscriptionTier);
-        setStatus(data.status as SubscriptionStatus);
+        const fetchedStatus = data.status as SubscriptionStatus;
+        setTier(ENTITLING_STATUSES.has(fetchedStatus) ? (data.tier as SubscriptionTier) : 'free');
+        setStatus(fetchedStatus);
         setBillingCycle(data.billing_cycle as BillingCycle);
+      } else {
+        setTier('free');
+        setStatus('active');
+        setBillingCycle('monthly');
       }
     } catch {
       // Free tier fallback
+      setTier('free');
+      setStatus('active');
+      setBillingCycle('monthly');
     } finally {
       setLoading(false);
     }
