@@ -2,11 +2,9 @@
  * AuthContext — React Native
  * Migrated from app/frontend/src/contexts/AuthContext.tsx
  * Replaces window.location.href with expo-router navigation
- * Replaces localStorage.clear() with AsyncStorage.clear()
  */
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { supabase } from '../lib/supabase';
 import { router } from 'expo-router';
@@ -90,7 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Sign out of Google so next sign-in shows account picker cleanly.
     try { await GoogleSignin.signOut(); } catch {}
     try { await supabase.auth.signOut(); } catch {}
-    await AsyncStorage.clear();
+    // Do NOT clear AsyncStorage — nearly all user content (goals, tasks,
+    // finance, wellness, fasting, dhikr, quran progress, family budget, etc.)
+    // lives only here with no server copy, so a full clear() here
+    // permanently destroys it. Nothing account-specific is cached outside
+    // what supabase.auth.signOut() already clears itself.
     router.replace('/(auth)/landing');
   };
 
