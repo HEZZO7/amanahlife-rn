@@ -27,7 +27,7 @@ Superseded builds:
 - [x] About section: Huzaifa Al Ezzo, Founder & CEO, LinkoraNet LLC — `app/(tabs)/about.tsx`
 - [x] English bio — exact text present
 - [x] Arabic bio — exact text present
-- [x] LinkedIn: `https://www.linkedin.com/in/huzaifa-ezzo-trans7` — present
+- [x] LinkedIn link — intentionally removed (commit fda615e, 2026-07-09). **Note:** the .aab this readiness doc describes (build 053a9c91, commit 9c4e98f) predates that removal and still contains it — a new build after EAS quota renewal is needed to actually reflect this.
 - [x] Founder photo: placeholder with `TODO(Huzaifa):` marker, no stock photo — present
 - [x] `/about` page accessible from navigation — linked from Settings
 - [x] Privacy Policy at a publicly accessible URL — `https://app.amanahlife.com/privacy`, opened via in-app browser, not gated behind login

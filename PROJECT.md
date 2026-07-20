@@ -9,7 +9,7 @@ Handoff document for the full AmanahLife project (web + Android). Last updated 2
 - **Name:** AmanahLife (أمانة لايف)
 - **Description:** Personal life planning and daily log SaaS app — helps individuals and families plan goals, track habits, manage daily routines, and grow personally, with an Islamic-life-companion focus (prayer times, Quran, Zakat, Ramadan tools) alongside general productivity/finance features.
 - **Operator:** LinkoraNet LLC, a Wyoming-registered US entity
-- **Founder:** Huzaifa Al Ezzo — Founder & CEO, LinkoraNet LLC ([LinkedIn](https://www.linkedin.com/in/huzaifa-ezzo-trans7))
+- **Founder:** Huzaifa Al Ezzo — Founder & CEO, LinkoraNet LLC
 - **Mission:** Help people organize their lives, track their progress, and grow with purpose.
 - **Target markets:** Worldwide, including US, Canada, UK, Europe, Australia, and GCC/MENA (Saudi Arabia, UAE, Qatar, Egypt, Kuwait, Iraq)
 - **Languages:** English (primary), Arabic — full RTL support
@@ -113,7 +113,7 @@ Project `nyhsnvjdgifphwkqzwel` (region eu-west-1, Postgres 17.6). **No formal mi
 ## 0f. StartFleet / Mercury Bank Requirements — Status
 
 1. ✅ Footer: `© 2026 AmanahLife, a product of LinkoraNet LLC. All rights reserved.` (+ Arabic equivalent) — live on web footer/landing and Android Settings/More screens.
-2. ✅ About/Founder section — Huzaifa Al Ezzo bio (EN + AR, exact text), LinkedIn link, photo placeholder with `TODO(Huzaifa):` marker — present on web landing page, web `/about` page, and Android About screen.
+2. ✅ About/Founder section — Huzaifa Al Ezzo bio (EN + AR, exact text), real founder photo — present on web landing page, web `/about` page, and Android About screen. LinkedIn link intentionally removed from both platforms (web: commit eb47d2a, 2026-07-05; Android: commit fda615e, 2026-07-09) — **not yet reflected in the .aab currently in Play Store review**, which was built from an earlier commit (9c4e98f) that still has it. Requires a new build once EAS quota renews.
 3. ✅ `/about` page accessible from navigation on both platforms.
 4. ✅ Privacy Policy at a public URL (`https://app.amanahlife.com/privacy`), not behind login. Account deletion also has a public page at `/delete-account`.
 
