@@ -16,6 +16,7 @@ import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK } from '../../src/theme/fonts';
+import { useMetalPrices } from '../../src/hooks/useMetalPrices';
 
 interface ZakatItem { label: string; labelAr: string; value: string; key: string; icon: string; }
 interface CurrencyGroup { region: string; regionAr: string; currencies: { code: string; name: string; nameAr: string }[]; }
@@ -43,8 +44,6 @@ const CURRENCY_GROUPS: CurrencyGroup[] = [
     { code: 'AUD', name: 'Australian Dollar', nameAr: 'دولار أسترالي' }, { code: 'NZD', name: 'New Zealand Dollar', nameAr: 'دولار نيوزيلندي' } ] },
 ];
 
-const GOLD_PRICE_PER_GRAM_USD = 75;
-const SILVER_PRICE_PER_GRAM_USD = 0.95;
 const NISAB_GOLD_GRAMS = 87.48;
 const NISAB_SILVER_GRAMS = 612.36;
 const ZAKAT_RATE = 0.025;
@@ -62,6 +61,7 @@ export default function ZakatCalculator() {
   const router = useRouter();
   const isAr = language === 'ar';
   const sheetPb = useBottomSheetPadding();
+  const { goldPricePerGram, silverPricePerGram, isLive: pricesLive, asOf: pricesAsOf } = useMetalPrices();
 
   const [assets, setAssets] = useState<ZakatItem[]>([
     { label: 'Cash & Bank Balance', labelAr: 'النقد والرصيد البنكي', value: '', key: 'cash', icon: '💵' },
@@ -102,13 +102,13 @@ export default function ZakatCalculator() {
 
   const totalAssetsUSD = assets.reduce((sum, asset) => {
     const val = parseFloat(asset.value) || 0;
-    if (asset.key === 'gold') return sum + val * GOLD_PRICE_PER_GRAM_USD;
-    if (asset.key === 'silver') return sum + val * SILVER_PRICE_PER_GRAM_USD;
+    if (asset.key === 'gold') return sum + val * goldPricePerGram;
+    if (asset.key === 'silver') return sum + val * silverPricePerGram;
     return sum + convertToUSD(val, currency);
   }, 0);
   const totalLiabilitiesUSD = convertToUSD(parseFloat(liabilities) || 0, currency);
   const netWorthUSD = totalAssetsUSD - totalLiabilitiesUSD;
-  const nisabUSD = Math.min(NISAB_GOLD_GRAMS * GOLD_PRICE_PER_GRAM_USD, NISAB_SILVER_GRAMS * SILVER_PRICE_PER_GRAM_USD);
+  const nisabUSD = Math.min(NISAB_GOLD_GRAMS * goldPricePerGram, NISAB_SILVER_GRAMS * silverPricePerGram);
   const isEligible = netWorthUSD >= nisabUSD;
   const zakatAmountUSD = isEligible ? netWorthUSD * ZAKAT_RATE : 0;
 
@@ -153,14 +153,32 @@ export default function ZakatCalculator() {
         </Card>
 
         {/* Nisab info */}
-        <Card style={[styles.nisabCard, { borderColor: colors.green + '4D', backgroundColor: colors.green + '14', flexDirection: 'row' }]}>
-          <View>
-            <Text style={{ color: colors.green, fontSize: 11, fontFamily: FONT_UI_MEDIUM }}>{isAr ? 'حد النصاب الحالي' : 'Current Nisab Threshold'}</Text>
-            <Text style={{ color: colors.text, fontSize: 17, fontFamily: FONT_UI_BOLD, marginTop: 2 }}>{formatAmount(nisabDisplay)} {currency}</Text>
+        <Card style={[styles.nisabCard, { borderColor: colors.green + '4D', backgroundColor: colors.green + '14' }]}>
+          <View style={{ flexDirection: 'row' }}>
+            <View>
+              <Text style={{ color: colors.green, fontSize: 11, fontFamily: FONT_UI_MEDIUM }}>{isAr ? 'حد النصاب الحالي' : 'Current Nisab Threshold'}</Text>
+              <Text style={{ color: colors.text, fontSize: 17, fontFamily: FONT_UI_BOLD, marginTop: 2 }}>{formatAmount(nisabDisplay)} {currency}</Text>
+            </View>
+            <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{isAr ? 'ذهب' : 'Gold'}: {NISAB_GOLD_GRAMS}{isAr ? 'غ' : 'g'}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{isAr ? 'فضة' : 'Silver'}: {NISAB_SILVER_GRAMS}{isAr ? 'غ' : 'g'}</Text>
+            </View>
           </View>
-          <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end' }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{isAr ? 'ذهب' : 'Gold'}: {NISAB_GOLD_GRAMS}{isAr ? 'غ' : 'g'}</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{isAr ? 'فضة' : 'Silver'}: {NISAB_SILVER_GRAMS}{isAr ? 'غ' : 'g'}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.green + '33' }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 9, fontFamily: FONT_UI, flex: 1 }}>
+              {isAr
+                ? `الذهب ${formatAmount(goldPricePerGram)} / فضة ${formatAmount(silverPricePerGram)} لكل غرام (USD)`
+                : `Gold ${formatAmount(goldPricePerGram)} / Silver ${formatAmount(silverPricePerGram)} per gram (USD)`}
+            </Text>
+            {pricesLive ? (
+              <Text style={{ color: colors.green, fontSize: 9, fontFamily: FONT_UI_MEDIUM }}>✓ {isAr ? 'أسعار مباشرة' : 'Live prices'}</Text>
+            ) : (
+              <Text style={{ color: '#D4A017', fontSize: 9, fontFamily: FONT_UI_MEDIUM }}>
+                ⚠ {pricesAsOf
+                  ? (isAr ? `تقديرية (${pricesAsOf.toLocaleDateString()})` : `Estimated (${pricesAsOf.toLocaleDateString()})`)
+                  : (isAr ? 'تقديرية' : 'Estimated')}
+              </Text>
+            )}
           </View>
         </Card>
 
@@ -247,8 +265,8 @@ export default function ZakatCalculator() {
         <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.infoTitle, { color: colors.text, textAlign: isAr ? 'right' : 'left' }]}>ℹ️ {isAr ? 'عن الزكاة ومتتبع العطاء' : 'About Zakat & Giving Tracker'}</Text>
           {(isAr
-            ? ['يُحسب العطاء بنسبة ٢.٥٪ من الثروة المحتفظ بها لسنة فوق النصاب', 'النصاب هو الحد الأدنى الذي يوجب العطاء', 'تُخصم فقط أقساط الديون المستحقة خلال الاثني عشر شهراً القادمة، وليس كامل رصيد الدين طويل الأجل (وفق معيار AAOIFI رقم ٣٥)', 'أسعار الذهب تقريبية — راجع أسعار السوق الحالية', 'أسعار الصرف مباشرة وقد تختلف قليلاً', 'استشر عالماً للأحكام الخاصة بحالتك']
-            : ['Giving is calculated as 2.5% of wealth held for one year above Nisab', 'Nisab is the minimum threshold that triggers a giving obligation', "Only debt payments due within the next 12 months are deducted, not a long-term loan's full balance (per AAOIFI Sharia Standard No. 35)", 'Gold prices are approximate — consult current market rates', 'Exchange rates are fetched live and may vary slightly', 'Consult a scholar for specific rulings on your situation']
+            ? ['يُحسب العطاء بنسبة ٢.٥٪ من الثروة المحتفظ بها لسنة فوق النصاب', 'النصاب هو الحد الأدنى الذي يوجب العطاء', 'تُخصم فقط أقساط الديون المستحقة خلال الاثني عشر شهراً القادمة، وليس كامل رصيد الدين طويل الأجل (وفق معيار AAOIFI رقم ٣٥)', 'أسعار الذهب والفضة مباشرة عند توفرها؛ إذا تعذر الوصول إليها تُستخدم آخر قيمة معروفة أو تقدير تقريبي', 'أسعار الصرف مباشرة وقد تختلف قليلاً', 'استشر عالماً للأحكام الخاصة بحالتك']
+            : ['Giving is calculated as 2.5% of wealth held for one year above Nisab', 'Nisab is the minimum threshold that triggers a giving obligation', "Only debt payments due within the next 12 months are deducted, not a long-term loan's full balance (per AAOIFI Sharia Standard No. 35)", 'Gold and silver prices are live when reachable; otherwise the last known value or a rough estimate is used', 'Exchange rates are fetched live and may vary slightly', 'Consult a scholar for specific rulings on your situation']
           ).map((line, i) => (
             <Text key={i} style={[styles.infoLine, { color: colors.textSecondary, textAlign: isAr ? 'right' : 'left' }]}>• {line}</Text>
           ))}
