@@ -35,6 +35,7 @@ export default function Planner() {
   const [hijriDate, setHijriDate] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState({ title: '', date: '', time: '', description: '' });
+  const [selectedDay, setSelectedDay] = useState(new Date());
 
   useEffect(() => {
     // Note: 'amanah-tasks' (dash) is a pre-existing key-name mismatch with
@@ -67,6 +68,13 @@ export default function Planner() {
   const todayTasks = tasks.filter((task) => (task.date ? task.date === todayStr : true));
   const todayAgenda = agendaItems.filter((item) => item.date === todayStr);
   const hasItems = todayTasks.length > 0 || todayAgenda.length > 0;
+
+  // Weekly view: tapping a day card selects it for review below, instead of
+  // only ever auto-highlighting "Today" with no way to see other days' items.
+  const selectedDayStr = selectedDay.toISOString().split('T')[0];
+  const selectedDayTasks = tasks.filter((task) => (task.date ? task.date === selectedDayStr : selectedDayStr === todayStr));
+  const selectedDayAgenda = agendaItems.filter((item) => item.date === selectedDayStr);
+  const hasSelectedDayItems = selectedDayTasks.length > 0 || selectedDayAgenda.length > 0;
 
   const addAgendaItem = () => {
     if (!newItem.title.trim()) return;
@@ -194,37 +202,88 @@ export default function Planner() {
 
         {/* Weekly */}
         {view === 'weekly' && (
-          <View style={{ gap: 8 }}>
-            {getWeekDays().map((day, i) => {
-              const isToday = day.toDateString() === new Date().toDateString();
-              const count = getTaskCountForDate(day);
-              return (
-                <View
-                  key={i}
-                  style={[styles.weekRow, {
-                    backgroundColor: isToday ? colors.teal + '1A' : colors.card,
-                    borderColor: isToday ? colors.teal : colors.border,
-                    flexDirection: isRTL ? 'row-reverse' : 'row' }]}
-                >
-                  <View style={[styles.weekLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                    <View style={[styles.weekDateBox, { backgroundColor: isToday ? colors.teal : colors.bg }]}>
-                      <Text style={[styles.weekDow, { color: isToday ? '#04211C' : colors.textSecondary }]}>
-                        {day.toLocaleDateString(locale, { weekday: 'short' })}
+          <View style={{ gap: 16 }}>
+            <View style={{ gap: 8 }}>
+              {getWeekDays().map((day, i) => {
+                const isToday = day.toDateString() === new Date().toDateString();
+                const isSelected = day.toDateString() === selectedDay.toDateString();
+                const count = getTaskCountForDate(day);
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    activeOpacity={0.7}
+                    onPress={() => setSelectedDay(day)}
+                    style={[styles.weekRow, {
+                      backgroundColor: isToday ? colors.teal + '1A' : isSelected ? colors.gold + '15' : colors.card,
+                      borderColor: isToday ? colors.teal : isSelected ? colors.gold : colors.border,
+                      flexDirection: isRTL ? 'row-reverse' : 'row' }]}
+                  >
+                    <View style={[styles.weekLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                      <View style={[styles.weekDateBox, { backgroundColor: isToday ? colors.teal : colors.bg }]}>
+                        <Text style={[styles.weekDow, { color: isToday ? '#04211C' : colors.textSecondary }]}>
+                          {day.toLocaleDateString(locale, { weekday: 'short' })}
+                        </Text>
+                        <Text style={[styles.weekNum, { color: isToday ? '#04211C' : colors.text }]}>{day.getDate()}</Text>
+                      </View>
+                      <Text style={{ color: isToday ? colors.text : colors.textSecondary, fontSize: 13, fontFamily: FONT_UI_MEDIUM }}>
+                        {isToday ? tr('Today', 'اليوم') : day.toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
                       </Text>
-                      <Text style={[styles.weekNum, { color: isToday ? '#04211C' : colors.text }]}>{day.getDate()}</Text>
                     </View>
-                    <Text style={{ color: isToday ? colors.text : colors.textSecondary, fontSize: 13, fontFamily: FONT_UI_MEDIUM }}>
-                      {isToday ? tr('Today', 'اليوم') : day.toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
-                    </Text>
-                  </View>
-                  {count > 0 && (
-                    <View style={[styles.badge, { backgroundColor: colors.gold }]}>
-                      <Text style={styles.badgeText}>{count}</Text>
-                    </View>
-                  )}
+                    {count > 0 && (
+                      <View style={[styles.badge, { backgroundColor: colors.gold }]}>
+                        <Text style={styles.badgeText}>{count}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Selected day details */}
+            <View>
+              <Text style={[styles.muted, { color: colors.textSecondary, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }]}>
+                {selectedDay.toDateString() === new Date().toDateString()
+                  ? tr('Today', 'اليوم')
+                  : selectedDay.toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' })}
+              </Text>
+              {!hasSelectedDayItems ? (
+                <View style={[styles.emptyWrap, { paddingVertical: 24 }]}>
+                  <Text style={[styles.muted, { color: colors.textSecondary, textAlign: 'center' }]}>
+                    {tr('No items for this day', 'لا توجد عناصر لهذا اليوم')}
+                  </Text>
                 </View>
-              );
-            })}
+              ) : (
+                <View style={{ gap: 8 }}>
+                  {selectedDayAgenda.map((item) => (
+                    <Card key={item.id} padded={false} style={[styles.itemRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                      <View style={[styles.dot, { backgroundColor: colors.gold }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.itemTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{item.title}</Text>
+                        <Text style={[styles.itemSub, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                          {item.time ? `${formatTime(item.time)} • ` : ''}{item.description || tr('Event', 'موعد')}
+                        </Text>
+                      </View>
+                    </Card>
+                  ))}
+                  {selectedDayTasks.map((task) => (
+                    <Card key={task.id} padded={false} style={[styles.itemRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                      <View style={[styles.dot, { backgroundColor: priorityColor(task) }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.itemTitle, {
+                          color: task.completed ? colors.textSecondary : colors.text,
+                          textDecorationLine: task.completed ? 'line-through' : 'none',
+                          textAlign: isRTL ? 'right' : 'left',
+                        }]}>{task.title}</Text>
+                        <Text style={[styles.itemSub, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+                          {task.category} • {task.priority}
+                        </Text>
+                      </View>
+                      {task.completed && <Text style={{ color: colors.teal }}>✓</Text>}
+                    </Card>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
         )}
 

@@ -20,6 +20,25 @@ import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_ARABIC } from '../../src/th
 interface Surah { number: number; name: string; englishName: string; englishNameTranslation: string; numberOfAyahs: number; revelationType: string; }
 interface Ayah { number: number; text: string; numberInSurah: number; translation?: string; }
 
+// api.alquran.cloud prepends the Basmalah to the text of ayah 1 for every
+// surah except Al-Fatihah (1) and At-Tawbah (9, which has no Basmalah at all).
+// The Basmalah is not part of the ayah itself (Al-Fatihah is the sole
+// exception per the Madinah Mushaf/Hafs convention), and this screen already
+// renders it as a separate header above the surah, so it must be stripped
+// here to avoid it being duplicated/glued onto ayah 1's text.
+const BASMALAH_VARIANTS = [
+  'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+  'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
+];
+
+function stripBasmalahPrefix(text: string, surahNumber: number, numberInSurah: number): string {
+  if (surahNumber === 1 || numberInSurah !== 1) return text;
+  for (const b of BASMALAH_VARIANTS) {
+    if (text.startsWith(b)) return text.slice(b.length).trim();
+  }
+  return text;
+}
+
 export default function QuranReader() {
   const { user, loading: authLoading } = useAuth();
   const { language, isRTL } = useLanguage();
@@ -83,7 +102,11 @@ export default function QuranReader() {
       ]);
       const arabicData = await arabicRes.json();
       const englishData = await englishRes.json();
-      setAyahs(arabicData.data.ayahs.map((ayah: Ayah, i: number) => ({ ...ayah, translation: englishData.data.ayahs[i]?.text || '' })));
+      setAyahs(arabicData.data.ayahs.map((ayah: Ayah, i: number) => ({
+        ...ayah,
+        text: stripBasmalahPrefix(ayah.text, surah.number, ayah.numberInSurah),
+        translation: englishData.data.ayahs[i]?.text || '',
+      })));
     } catch {
       toast.error(tr('Failed to load surah', 'فشل تحميل السورة'));
     } finally { setLoading(false); }
