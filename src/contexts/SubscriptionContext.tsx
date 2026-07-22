@@ -87,7 +87,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       // the tier to free below, instead of silently returning no row and
       // leaving whatever tier was last fetched stuck in state.
       const { data } = await supabase
-        .from('subscriptions')
+        .from('app_11941c8fec_subscriptions')
         .select('tier, status, billing_cycle, trial_started_at, trial_used')
         .eq('user_id', user.id)
         .maybeSingle();
@@ -136,7 +136,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       // Check the server fresh — not whatever's currently in local state —
       // so a stale render can't grant a second trial.
       const { data: existing } = await supabase
-        .from('subscriptions')
+        .from('app_11941c8fec_subscriptions')
         .select('trial_used')
         .eq('user_id', user.id)
         .maybeSingle();
@@ -148,7 +148,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       const startedAt = new Date().toISOString();
       const { error } = await supabase
-        .from('subscriptions')
+        .from('app_11941c8fec_subscriptions')
         .upsert({ user_id: user.id, trial_started_at: startedAt, trial_used: true }, { onConflict: 'user_id' });
 
       if (error) return { error: error.message };
