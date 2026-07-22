@@ -45,18 +45,21 @@ Handoff document for the full AmanahLife project (web + Android). Last updated 2
 | Goals (personal + financial) | ✅ | ✅ |
 | Habit streaks | ✅ | ✅ |
 | Life Score (weekly) | ✅ | ✅ |
-| AI Life Coach | ✅ | ✅ |
+| AI Life Coach | ✅ real (fixed 2026-07-22 — was random canned strings, no AI) | ✅ real (fixed 2026-07-22, same fix) |
 | Prayer times + Qibla finder | ✅ | ✅ |
 | Quran reader with bookmarks | ✅ | ✅ |
 | Dhikr counter + daily duas | ✅ | ✅ |
 | Islamic calendar + Hijri | ✅ | ✅ |
 | Ramadan mode | ✅ | ✅ |
 | Zakat & Giving tracker | ✅ | ✅ |
-| Halal Investment tracker | ✅ | ✅ |
-| Bill reminders | ✅ | ✅ |
+| Halal Investment tracker | ✅ | ❌ stub screen only (see audit/phase7 notes) |
+| Bill reminders | ✅ | ❌ stub screen only |
+| Financial Dashboard | ✅ | ❌ stub screen only |
+| Receipt Scanner | ⚠️ fake OCR (mock data, no real scanning) | ❌ stub screen only |
+| Savings Challenges | ✅ | ❌ stub screen only |
 | Progress analytics | ✅ | ✅ |
 | Document vault | ✅ | ⚠️ not confirmed ported |
-| Family dashboard + shared goals | ✅ | ✅ |
+| Family dashboard + shared goals | ⚠️ real screen, but "invites" don't sync — fake local record with randomized stats | ❌ stub screen only |
 | Data Backup & Restore | ✅ (Supabase-backed) | ✅ (AsyncStorage-backed, same UX) |
 | Motivational Quotes (daily rotation) | ✅ | ✅ |
 | Dark/Light auto-switch (sunrise/sunset) | ✅ | ✅ |
@@ -77,6 +80,11 @@ Handoff document for the full AmanahLife project (web + Android). Last updated 2
 3. Founder photo on About page — placeholder in place (`TODO(Huzaifa):` marker in code), Huzaifa to provide professional photo.
 4. Play Store screenshots — captured from device by Huzaifa, committed to `assets/play-store/screenshots/`.
 5. ~~Atoms Dev migration~~ — **done 2026-07-04.** Web app now runs on the Hostinger VPS via Coolify, fully independent of Atoms Dev. See `MIGRATION-COMPLETE.md` and `DEPLOYMENT.md` in the `AmanahLifeapp` repo.
+6. **Decision needed from Huzaifa: what to do with the 6 Android placeholder screens** (Bill Reminders, Financial Dashboard, Halal Investment, Savings Challenges, Family Dashboard, Receipt Scanner — currently 40-line stub screens in `amanahlife-rn`, each literally reading "Migrate from: ..."). Per-screen build-effort breakdown written up during the critical-audit-2026-07 branch's Phase 7 research:
+   - **Bill Reminders, Financial Dashboard, Savings Challenges** — cheap, honest ports. Local CRUD / read-only aggregation, no backend needed (Savings Challenges needs the `app_11941c8fec_savings_tips` Edge Function deployed, same pattern as the AI Life Coach fix).
+   - **Halal Investment** — quick/moderate. Local portfolio CRUD + pure-math Murabaha/Ijara calculators, no backend.
+   - **Family Dashboard** — needs a real decision, not just a port. The web version's "invite a family member" doesn't send any invite or sync anything — it creates a local fake record with a *randomly generated* prayer streak and Quran-pages count, and the "accountability score"/"streak comparison" are built on that fabricated data. A real version needs an actual invite flow + shared-data model (new Supabase table, cross-device sync) — meaningfully bigger scope than a port.
+   - **Receipt Scanner** — the one to think hardest about. It's **100% fake on web right now**: "scanning" is a `setTimeout` + a random pick from 4 hardcoded mock receipts, while the UI says "AI analyzing receipt." Building it for real needs actual OCR (on-device library + native module work, or a cloud OCR API with ongoing per-call cost) — the most expensive of the six by a wide margin.
 
 ---
 
@@ -103,6 +111,16 @@ Project `nyhsnvjdgifphwkqzwel` (region eu-west-1, Postgres 17.6). **No formal mi
 | `push_subscriptions` | ✅ | 1 |
 | `notification_preferences` | ✅ | 1 |
 
+⚠️ **Table names above are shorthand — the actual physical table name always
+carries the full `app_11941c8fec_` prefix** (e.g. `app_11941c8fec_subscriptions`,
+not `subscriptions`). This bit us for real on 2026-07-22: the RN app's
+`SubscriptionContext.tsx` was querying bare `subscriptions`, which doesn't
+exist — every RN user's tier/status/trial data had been silently unreadable
+since launch, falling back to the free-tier default every time. Fixed in
+`amanahlife-rn` commit `eb1f751`; the `app_11941c8fec_subscriptions.trial_started_at`
+/ `trial_used` migration was applied the same day. **When writing or
+reviewing any `supabase.from(...)` call, always use the full prefixed name.**
+
 **Security advisories (non-blocking, worth addressing):**
 - `notification_preferences` and `push_subscriptions` each have a `service_role_all_*` policy with `USING (true)` / `WITH CHECK (true)` for `ALL` commands — likely an intentional service-role backend-access pattern (edge functions manage these tables), but worth double-checking it's scoped only to the service role and not exposed to anon/authenticated users.
 - Leaked password protection (HaveIBeenPwned check) is disabled in Supabase Auth settings — free to enable, recommended.
@@ -122,10 +140,15 @@ Project `nyhsnvjdgifphwkqzwel` (region eu-west-1, Postgres 17.6). **No formal mi
 ## 0g. Known Issues
 
 - **Android subscriptions still use Lemon Squeezy via in-app browser**, not native Google Play Billing — see Pending Items #1.
-- Auto-deploy on push is not yet configured for the web app (manual redeploy via Coolify dashboard for now) — see `DEPLOYMENT.md` in the `AmanahLifeapp` repo.
+- ~~Auto-deploy on push is not yet configured for the web app~~ — **confirmed working, 2026-07** (verified repeatedly by inspecting the live production JS bundle immediately after pushing to `main`; Coolify auto-deploys with no manual step needed).
 - Full auth flow and subscription checkout were not explicitly re-tested end-to-end immediately after the Coolify migration (structure/routing/SSL were verified) — worth a quick pass.
 - Document Vault feature not confirmed ported to Android (web has it, Android status unclear as of this writing).
 - Two Google Cloud project numbers are involved in OAuth (`792822759216` and `405525965488`) due to historical setup by a previous builder — both are correctly authorized in Supabase's Google provider config, but this dual-project setup is worth consolidating into one project eventually for cleanliness (not urgent, currently working correctly).
+- **Lemon Squeezy checkout may still be broken on web** — the variant-ID environment variables (`APP_11941c8fec_LEMONSQUEEZY_<TIER>_<BILLING>_VARIANT_ID`) that the hardened checkout function looks up were flagged earlier as possibly unconfigured. Not re-verified this session — worth confirming in the Supabase Edge Functions secrets panel.
+- **6 Android placeholder screens still need a decision** (Bill Reminders, Financial Dashboard, Halal Investment, Savings Challenges, Family Dashboard, Receipt Scanner) — see Pending Items #6 for the per-screen breakdown.
+- **Web's Receipt Scanner and Family Dashboard ship fake functionality today** — Receipt Scanner's "AI scanning" is a hardcoded mock-data timeout with no real OCR; Family Dashboard's "invite a family member" creates a local-only fake record with randomized prayer-streak/Quran-pages stats, no real invite or cross-device sync. Both predate this session and were only *discovered*, not fixed, while researching the Android Phase 7 decision — worth deciding whether to fix web too, independent of the Android build.
+- ~~RN's `SubscriptionContext.tsx` queried a nonexistent `subscriptions` table~~ — **fixed 2026-07-22**, see the Supabase schema section above. Every RN user's tier/trial data had been silently unreadable before this fix.
+- ~~Web's testimonials and AI Life Coach were fake~~ — **fixed 2026-07-22** to match the RN fixes (real testimonials removed entirely pending real reviews; AI Life Coach now calls the real Edge Function).
 
 ---
 
