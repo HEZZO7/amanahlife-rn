@@ -437,6 +437,10 @@ export default function DashboardScreen() {
     { icon: '🌙', title: language === 'ar' ? 'رمضان' : 'Ramadan', path: '/(tabs)/ramadan-planner' },
     { icon: '📊', title: language === 'ar' ? 'التحليلات' : 'Analytics', path: '/(tabs)/progress-analytics' },
     { icon: '🏠', title: language === 'ar' ? 'الميزانية' : 'Family Budget', path: '/(tabs)/family-budget' },
+    { icon: '🔔', title: language === 'ar' ? 'الفواتير' : 'Bill Reminders', path: '/(tabs)/bill-reminders' },
+    { icon: '📊', title: language === 'ar' ? 'اللوحة المالية' : 'Financial Dashboard', path: '/(tabs)/financial-dashboard' },
+    { icon: '📈', title: language === 'ar' ? 'الاستثمار الحلال' : 'Halal Investment', path: '/(tabs)/halal-investment' },
+    { icon: '🏆', title: language === 'ar' ? 'تحديات الادخار' : 'Savings Challenges', path: '/(tabs)/savings-challenges' },
     { icon: '⚙️', title: language === 'ar' ? 'الإعدادات' : 'Settings', path: '/(tabs)/settings' },
   ];
 
