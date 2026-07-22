@@ -1,18 +1,24 @@
 /**
  * AI Life Coach — migrated from app/frontend/src/pages/AILifeCoach.tsx
- * Coaching-area buttons generate advice chat, goals-based tips (from
- * 'amanah-goals'), habit suggestions, daily-wisdom reveal. localStorage →
- * AsyncStorage. (Web PremiumGate omitted — no RN equivalent.) Bilingual/RTL.
+ * Coaching-area buttons + free-text questions call a real Supabase Edge
+ * Function (app_11941c8fec_ai_life_coach) backed by Anthropic's API,
+ * personalized with the user's goals (from 'amanah-goals'). Also: habit
+ * suggestions, daily-wisdom reveal. localStorage → AsyncStorage. (Web
+ * PremiumGate omitted — no RN equivalent.) Bilingual/RTL.
  */
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
+import { supabase } from '../../src/lib/supabase';
+import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
+
+const AI_COACH_ENDPOINT = 'https://nyhsnvjdgifphwkqzwel.supabase.co/functions/v1/app_11941c8fec_ai_life_coach';
 
 interface Goal { id: string; title: string; category?: string; progress?: number; }
 interface CoachMessage { id: string; type: 'user' | 'coach'; text: string; timestamp: number; }
@@ -20,20 +26,6 @@ interface CoachMessage { id: string; type: 'user' | 'coach'; text: string; times
 const CATEGORIES = {
   en: ['Spiritual Growth', 'Health & Fitness', 'Financial Wisdom', 'Relationships'],
   ar: ['النمو الروحي', 'الصحة واللياقة', 'الحكمة المالية', 'العلاقات'],
-};
-const COACHING_RESPONSES = {
-  en: {
-    'Spiritual Growth': ['Based on your prayer streak, try adding 10 minutes of Quran reflection after Fajr. Small consistent acts are more beloved to Allah than large sporadic ones.', 'Consider setting a weekly goal to memorize 3 new ayahs. Your consistency in dhikr shows you have the discipline for it.', 'Your spiritual growth is on track! Try incorporating dua during your commute to maximize blessed moments.'],
-    'Health & Fitness': ["I notice you haven't logged wellness data recently. Start with just 5 minutes of stretching after Fajr prayer.", 'Hydration is key! Try drinking water at each prayer time - that\'s 5 glasses minimum throughout the day.', 'Consider fasting Mondays and Thursdays - it combines spiritual reward with proven health benefits.'],
-    'Financial Wisdom': ['Your savings rate could improve. Try the 50/30/20 rule: 50% needs, 30% wants, 20% savings & charity.', 'Review your subscriptions this week. Even small recurring expenses add up over a year.', 'Consider setting up automatic transfers to your savings on payday - pay yourself first!'],
-    'Relationships': ['Schedule a weekly family activity. Quality time strengthens bonds more than expensive gifts.', "Reach out to a friend you haven't spoken to in a while. The Prophet ﷺ emphasized maintaining ties.", 'Practice active listening today. Put your phone away during conversations with loved ones.'],
-  },
-  ar: {
-    'النمو الروحي': ['بناءً على سلسلة صلواتك، حاول إضافة 10 دقائق من تدبر القرآن بعد الفجر. الأعمال الصغيرة المستمرة أحب إلى الله من الكبيرة المنقطعة.', 'فكر في تحديد هدف أسبوعي لحفظ 3 آيات جديدة. التزامك بالذكر يدل على أن لديك الانضباط لذلك.', 'نموك الروحي على المسار الصحيح! حاول دمج الدعاء أثناء تنقلك لتعظيم اللحظات المباركة.'],
-    'الصحة واللياقة': ['ألاحظ أنك لم تسجل بيانات صحية مؤخراً. ابدأ بـ 5 دقائق فقط من التمدد بعد صلاة الفجر.', 'الترطيب مهم! حاول شرب الماء عند كل صلاة - هذا 5 أكواب كحد أدنى خلال اليوم.', 'فكر في صيام الاثنين والخميس - يجمع بين الأجر الروحي والفوائد الصحية المثبتة.'],
-    'الحكمة المالية': ['معدل ادخارك يمكن أن يتحسن. جرب قاعدة 50/30/20: 50% احتياجات، 30% رغبات، 20% ادخار وصدقة.', 'راجع اشتراكاتك هذا الأسبوع. حتى المصاريف المتكررة الصغيرة تتراكم على مدار العام.', 'فكر في إعداد تحويلات تلقائية لمدخراتك يوم الراتب - ادفع لنفسك أولاً!'],
-    'العلاقات': ['خصص نشاطاً عائلياً أسبوعياً. الوقت الجيد يقوي الروابط أكثر من الهدايا الغالية.', 'تواصل مع صديق لم تتحدث معه منذ فترة. النبي ﷺ أكد على صلة الرحم.', 'مارس الاستماع الفعال اليوم. ضع هاتفك جانباً أثناء المحادثات مع أحبائك.'],
-  },
 };
 const WISDOM_QUOTES = {
   en: [
@@ -80,6 +72,8 @@ export default function AILifeCoach() {
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [showWisdom, setShowWisdom] = useState(false);
+  const [question, setQuestion] = useState('');
+  const [coachLoading, setCoachLoading] = useState(false);
 
   useEffect(() => {
     migrateLegacyKeyIfNeeded('amanah-goals', userId).then(() => {
@@ -91,15 +85,53 @@ export default function AILifeCoach() {
   const wisdom = isAr ? WISDOM_QUOTES.ar : WISDOM_QUOTES.en;
   const habits = isAr ? HABIT_SUGGESTIONS.ar : HABIT_SUGGESTIONS.en;
 
-  const askCoach = (category: string) => {
+  // Calls the real ai_life_coach Edge Function (Anthropic-backed) instead of
+  // picking a random string from a fixed array - see Phase 4 audit notes.
+  const askCoach = async (text: string) => {
+    if (!text.trim() || coachLoading) return;
+    if (!user) { toast.error(isAr ? 'يرجى تسجيل الدخول أولاً' : 'Please sign in first'); return; }
+
+    const userMsg: CoachMessage = { id: Date.now().toString(), type: 'user', text, timestamp: Date.now() };
+    const historyForRequest = [...messages, userMsg].slice(-6);
+    setMessages((prev) => [...prev, userMsg]);
+    setCoachLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error(isAr ? 'يرجى تسجيل الدخول أولاً' : 'Please sign in first'); return; }
+
+      const response = await fetch(AI_COACH_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          message: text,
+          language: isAr ? 'ar' : 'en',
+          goals: goals.slice(0, 5),
+          history: historyForRequest,
+        }),
+      });
+      const data = await response.json();
+      if (data.reply) {
+        setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), type: 'coach', text: data.reply, timestamp: Date.now() + 100 }]);
+      } else {
+        toast.error(isAr ? 'المدرب الذكي غير متاح حالياً' : 'AI coach is currently unavailable');
+      }
+    } catch {
+      toast.error(isAr ? 'حدث خطأ في الاتصال' : 'Connection error occurred');
+    } finally {
+      setCoachLoading(false);
+    }
+  };
+
+  const askCategoryCoach = (category: string) => {
     setSelectedCategory(category);
-    const lang = isAr ? 'ar' : 'en';
-    const responses = (COACHING_RESPONSES[lang] as Record<string, string[]>)[category] || [];
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-    setMessages((prev) => [...prev,
-      { id: Date.now().toString(), type: 'user', text: isAr ? `أحتاج نصيحة حول: ${category}` : `I need advice on: ${category}`, timestamp: Date.now() },
-      { id: (Date.now() + 1).toString(), type: 'coach', text: randomResponse || (isAr ? 'استمر في العمل الجيد!' : 'Keep up the great work!'), timestamp: Date.now() + 100 },
-    ]);
+    askCoach(isAr ? `أحتاج نصيحة حول: ${category}` : `I need advice on: ${category}`);
+  };
+
+  const sendQuestion = () => {
+    const text = question.trim();
+    if (!text) return;
+    setQuestion('');
+    askCoach(text);
   };
 
   const randomQuote = wisdom[Math.floor(Math.random() * wisdom.length)];
@@ -127,7 +159,8 @@ export default function AILifeCoach() {
                 <TouchableOpacity
                   key={i}
                   style={[styles.catBtn, { backgroundColor: active ? gold + '33' : colors.bg, borderColor: active ? gold : colors.border }]}
-                  onPress={() => askCoach(cat)}
+                  onPress={() => askCategoryCoach(cat)}
+                  disabled={coachLoading}
                 >
                   <Text style={{ color: active ? gold : colors.text, fontSize: 13, fontFamily: FONT_UI_MEDIUM, textAlign: 'center' }}>
                     {['🕌', '💪', '💰', '❤️'][i]} {cat}
@@ -139,10 +172,10 @@ export default function AILifeCoach() {
         </Card>
 
         {/* Chat */}
-        {messages.length > 0 && (
-          <Card style={{ marginBottom: 14 }}>
-            <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>💬 {isAr ? 'محادثة المدرب' : 'Coach Chat'}</Text>
-            <View style={{ gap: 10 }}>
+        <Card style={{ marginBottom: 14 }}>
+          <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>💬 {isAr ? 'محادثة المدرب' : 'Coach Chat'}</Text>
+          {messages.length > 0 && (
+            <View style={{ gap: 10, marginBottom: 12 }}>
               {messages.slice(-6).map((msg) => (
                 <View
                   key={msg.id}
@@ -158,9 +191,34 @@ export default function AILifeCoach() {
                   <Text style={{ color: colors.text, fontSize: 13, fontFamily: FONT_UI, lineHeight: 19, textAlign: isRTL ? 'right' : 'left' }}>{msg.text}</Text>
                 </View>
               ))}
+              {coachLoading && (
+                <View style={[styles.msg, { backgroundColor: gold + '1A', borderColor: gold + '33', marginRight: isRTL ? 0 : 16, marginLeft: isRTL ? 16 : 0, flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }]}>
+                  <ActivityIndicator size="small" color={gold} />
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: FONT_UI }}>{isAr ? 'المدرب يكتب...' : 'Coach is thinking...'}</Text>
+                </View>
+              )}
             </View>
-          </Card>
-        )}
+          )}
+          <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8, alignItems: 'center' }}>
+            <TextInput
+              value={question}
+              onChangeText={setQuestion}
+              placeholder={isAr ? 'اسأل مدربك الذكي...' : 'Ask your AI coach...'}
+              placeholderTextColor={colors.textSecondary}
+              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.bg, textAlign: isRTL ? 'right' : 'left' }]}
+              editable={!coachLoading}
+              onSubmitEditing={sendQuestion}
+              returnKeyType="send"
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, { backgroundColor: gold, opacity: coachLoading || !question.trim() ? 0.5 : 1 }]}
+              onPress={sendQuestion}
+              disabled={coachLoading || !question.trim()}
+            >
+              <Text style={{ fontSize: 16 }}>➤</Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
 
         {/* Goals-based advice */}
         {goals.length > 0 && (
@@ -239,4 +297,6 @@ const styles = StyleSheet.create({
   goalPct: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   habitRow: { alignItems: 'center', gap: 12, padding: 8, borderRadius: 12 },
   wisdomBtn: { borderRadius: 12, borderWidth: 1, padding: 16 },
+  input: { flex: 1, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 13, fontFamily: FONT_UI },
+  sendBtn: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
 });

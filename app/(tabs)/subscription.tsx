@@ -1,7 +1,7 @@
 /**
  * Subscription — migrated from app/frontend/src/pages/Subscription.tsx
  * 3 plan cards (Free / Balanced Life / Family Plan), monthly/yearly billing toggle,
- * live FX rates via open.er-api.com, 7-day free trial CTA, testimonials,
+ * live FX rates via open.er-api.com, 7-day free trial CTA,
  * upgrade via Lemon Squeezy checkout endpoint, manage portal for paid users.
  * localStorage → AsyncStorage, window.location → expo-web-browser.
  */
@@ -43,13 +43,6 @@ const PLANS = [
     featuresAr: ['كل ما في خطة الحياة المتوازنة', 'حتى 6 أفراد من العائلة', 'لوحة عائلية مشتركة', 'مخطط ميزانية العائلة', 'نقاط المساءلة', 'أهداف وتحديات مشتركة', 'تتابعات صلاة العائلة', 'دعم عائلي مخصص'],
     featuresEn: ['Everything in Balanced', 'Up to 6 family members', 'Shared family dashboard', 'Family budget planner', 'Accountability scores', 'Shared goals & challenges', 'Family prayer streaks', 'Dedicated family support'],
   },
-];
-
-const TESTIMONIALS = [
-  { nameAr: 'أحمد الراشدي', nameEn: 'Ahmed Al-Rashidi', locationAr: 'الرياض، السعودية', locationEn: 'Riyadh, Saudi Arabia', quoteAr: 'أمانة غيّرت طريقة تنظيم حياتي. أصبحت أحافظ على صلواتي وأذكاري بانتظام.', quoteEn: 'AmanahLife changed how I organize my life. I now maintain my prayers and adhkar regularly.', rating: 5 },
-  { nameAr: 'فاطمة المنصوري', nameEn: 'Fatima Al-Mansouri', locationAr: 'دبي، الإمارات', locationEn: 'Dubai, UAE', quoteAr: 'التخطيط الذكي بالذكاء الاصطناعي ساعدني على تحقيق أهدافي. تطبيق رائع!', quoteEn: 'The AI planning helped me achieve my goals. Amazing app!', rating: 5 },
-  { nameAr: 'عمر حسين', nameEn: 'Omar Hussein', locationAr: 'عمّان، الأردن', locationEn: 'Amman, Jordan', quoteAr: 'أفضل تطبيق استخدمته لتنظيم حياتي. أنصح به بشدة.', quoteEn: 'Best lifestyle app I have used. Highly recommend.', rating: 5 },
-  { nameAr: 'نورة الحربي', nameEn: 'Noura Al-Harbi', locationAr: 'جدة، السعودية', locationEn: 'Jeddah, Saudi Arabia', quoteAr: 'ميزة تتبع الأهداف والعادات ممتازة. أصبحت أقرأ القرآن يومياً.', quoteEn: 'The goals tracker is excellent. I now read Quran daily.', rating: 4 },
 ];
 
 const FALLBACK_RATES: Record<string, number> = {
@@ -339,40 +332,6 @@ export default function SubscriptionScreen() {
           </View>
         </Card>
 
-        {/* Testimonials */}
-        <Card>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left', marginBottom: 4 }]}>
-            {tr('What Our Users Say', 'ماذا يقول مستخدمونا')}
-          </Text>
-          <Text style={[styles.manageSub, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left', marginBottom: 14 }]}>
-            {tr('Reviews from users worldwide', 'آراء المستخدمين حول العالم')}
-          </Text>
-          <View style={{ gap: 10 }}>
-            {TESTIMONIALS.map((t, i) => (
-              <View key={i} style={[styles.testimonialCard, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 3, marginBottom: 8 }}>
-                  {Array.from({ length: 5 }).map((_, si) => (
-                    <Text key={si} style={{ color: si < t.rating ? colors.gold : colors.border, fontSize: 12 }}>★</Text>
-                  ))}
-                </View>
-                <Text style={[styles.quoteText, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-                  "{isAr ? t.quoteAr : t.quoteEn}"
-                </Text>
-                <View style={[styles.reviewerRow, { flexDirection: isRTL ? 'row-reverse' : 'row', marginTop: 10 }]}>
-                  <View style={[styles.reviewerAvatar, { backgroundColor: colors.teal + '25' }]}>
-                    <Text style={{ color: colors.gold, fontSize: 12, fontFamily: FONT_UI_BOLD }}>
-                      {(isAr ? t.nameAr : t.nameEn).charAt(0)}
-                    </Text>
-                  </View>
-                  <View style={{ marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
-                    <Text style={[styles.reviewerName, { color: colors.text }]}>{isAr ? t.nameAr : t.nameEn}</Text>
-                    <Text style={[styles.reviewerLoc, { color: colors.textSecondary }]}>{isAr ? t.locationAr : t.locationEn}</Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-        </Card>
       </ScrollView>
     </View>
   );
@@ -417,10 +376,4 @@ const styles = StyleSheet.create({
   currentBadgeText: { fontSize: 13, fontFamily: FONT_UI_BOLD },
   upgradeBtn: { paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
   upgradeBtnText: { fontSize: 14, fontFamily: FONT_UI_BOLD },
-  testimonialCard: { padding: 14, borderRadius: 14, borderWidth: 1 },
-  quoteText: { fontSize: 13, fontFamily: FONT_UI, lineHeight: 20 },
-  reviewerRow: { flexDirection: 'row', alignItems: 'center' },
-  reviewerAvatar: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  reviewerName: { fontSize: 12, fontFamily: FONT_UI_BOLD },
-  reviewerLoc: { fontSize: 10, fontFamily: FONT_UI },
 });
