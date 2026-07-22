@@ -9,7 +9,8 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
@@ -43,10 +44,12 @@ const STATUS_LABELS: Record<string, { en: string; ar: string }> = {
 };
 
 export default function Goals() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
   const L = (m: { en: string; ar: string }) => (language === 'ar' ? m.ar : m.en);
+  const userId = user?.id ?? null;
 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tasksRaw, setTasksRaw] = useState<{ title?: string; category?: string }[]>([]);
@@ -56,10 +59,18 @@ export default function Goals() {
   const [newGoal, setNewGoal] = useState({ title: '', category: 'Personal' as Goal['category'], targetDate: '', progress: 0 });
 
   useEffect(() => {
-    AsyncStorage.getItem('amanah-goals').then((s) => { if (s) setGoals(JSON.parse(s)); });
-    AsyncStorage.getItem('amanah-tasks').then((s) => { if (s) { try { setTasksRaw(JSON.parse(s)); } catch {} } });
-  }, []);
-  useEffect(() => { AsyncStorage.setItem('amanah-goals', JSON.stringify(goals)); }, [goals]);
+    migrateLegacyKeyIfNeeded('amanah-goals', userId).then(() => {
+      getUserItem('amanah-goals', userId).then((s) => { if (s) setGoals(JSON.parse(s)); });
+    });
+    // Note: 'amanah-tasks' (dash) is read here as a cross-file dependency for
+    // linked-task counts, but tasks.tsx actually writes under 'amanah_tasks'
+    // (underscore) — a pre-existing key-name mismatch independent of this
+    // user-scoping pass, not fixed here. See audit/phase1-summary.md.
+    migrateLegacyKeyIfNeeded('amanah-tasks', userId).then(() => {
+      getUserItem('amanah-tasks', userId).then((s) => { if (s) { try { setTasksRaw(JSON.parse(s)); } catch {} } });
+    });
+  }, [userId]);
+  useEffect(() => { setUserItem('amanah-goals', userId, JSON.stringify(goals)); }, [goals, userId]);
 
   const addGoal = () => {
     if (!newGoal.title.trim()) return;

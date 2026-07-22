@@ -7,6 +7,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
@@ -40,9 +42,11 @@ function getWeekStart(): string {
 }
 
 export default function WeeklyLifeScore() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const isAr = language === 'ar';
+  const userId = user?.id ?? null;
 
   const [dimensions, setDimensions] = useState<DimensionScore[]>([]);
   const [weeklyHistory, setWeeklyHistory] = useState<WeeklyRecord[]>([]);
@@ -50,33 +54,46 @@ export default function WeeklyLifeScore() {
 
   useEffect(() => {
     (async () => {
-      // Spiritual — prayer completions this week
+      await Promise.all([
+        migrateLegacyKeyIfNeeded('amanah-wellness', userId),
+        migrateLegacyKeyIfNeeded('amanah-transactions', userId),
+        migrateLegacyKeyIfNeeded('amanah-goals', userId),
+        migrateLegacyKeyIfNeeded('amanah-tasks', userId),
+        migrateLegacyKeyIfNeeded(STORAGE_KEY, userId),
+      ]);
+
+      // Spiritual — prayer completions this week. 'prayer_completed_<date>' is
+      // owned/written elsewhere (not one of this phase's 16 files), so this
+      // reads the scoped entry first and falls back to the pre-scoping
+      // legacy entry (read-only) rather than migrating a key it doesn't own.
       let spiritualScore = 0;
       const today = new Date();
       for (let i = 0; i < 7; i++) {
         const date = new Date(today); date.setDate(date.getDate() - i);
-        const prayerData = await AsyncStorage.getItem(`prayer_completed_${date.toDateString()}`);
+        const key = `prayer_completed_${date.toDateString()}`;
+        let prayerData = await getUserItem(key, userId);
+        if (prayerData === null) prayerData = await AsyncStorage.getItem(key);
         if (prayerData) spiritualScore += (JSON.parse(prayerData).length / 5) * (100 / 7);
       }
       // Health — wellness logs
       let healthScore = 50;
-      const wellnessData = await AsyncStorage.getItem('amanah-wellness');
+      const wellnessData = await getUserItem('amanah-wellness', userId);
       if (wellnessData) { try { const logs = JSON.parse(wellnessData).slice(-7); if (logs.length > 0) healthScore = Math.min(100, logs.length * 14 + 10); } catch {} }
       // Financial — savings rate
       let financialScore = 50;
-      const transactions = JSON.parse((await AsyncStorage.getItem('amanah-transactions')) || '[]');
+      const transactions = JSON.parse((await getUserItem('amanah-transactions', userId)) || '[]');
       if (transactions.length > 0) {
         const income = transactions.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + (t.amount || 0), 0);
         const expenses = transactions.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + (t.amount || 0), 0);
         if (income > 0) financialScore = Math.min(100, Math.max(0, ((income - expenses) / income) * 100 + 30));
       }
       // Social — family goals
-      const goals = JSON.parse((await AsyncStorage.getItem('amanah-goals')) || '[]');
+      const goals = JSON.parse((await getUserItem('amanah-goals', userId)) || '[]');
       const familyGoals = goals.filter((g: any) => g.category === 'Family' || g.category === 'Social');
       const socialScore = familyGoals.length > 0
         ? Math.min(100, familyGoals.reduce((s: number, g: any) => s + (g.progress || 0), 0) / familyGoals.length + 20) : 40;
       // Growth — tasks completed
-      const tasks = JSON.parse((await AsyncStorage.getItem('amanah-tasks')) || '[]');
+      const tasks = JSON.parse((await getUserItem('amanah-tasks', userId)) || '[]');
       const completedTasks = tasks.filter((t: any) => t.completed);
       const growthScore = tasks.length > 0 ? Math.min(100, (completedTasks.length / Math.max(tasks.length, 1)) * 100) : 30;
 
@@ -91,15 +108,15 @@ export default function WeeklyLifeScore() {
       const overall = Math.round(scores.reduce((s, d) => s + d.score, 0) / scores.length);
       setOverallScore(overall);
 
-      const stored: WeeklyRecord[] = JSON.parse((await AsyncStorage.getItem(STORAGE_KEY)) || '[]');
+      const stored: WeeklyRecord[] = JSON.parse((await getUserItem(STORAGE_KEY, userId)) || '[]');
       const thisWeekStart = getWeekStart();
       const idx = stored.findIndex((r) => r.weekStart === thisWeekStart);
       const record: WeeklyRecord = { weekStart: thisWeekStart, scores: scores.map((s) => s.score), overall };
       if (idx >= 0) stored[idx] = record; else { stored.push(record); if (stored.length > 8) stored.shift(); }
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+      await setUserItem(STORAGE_KEY, userId, JSON.stringify(stored));
       setWeeklyHistory(stored.slice(-4));
     })();
-  }, []);
+  }, [userId]);
 
   const scoreColor = (s: number) => (s >= 70 ? colors.green : s >= 50 ? colors.gold : colors.red);
   const scoreBg = (s: number) => (s >= 70 ? { bg: colors.green + '1A', bd: colors.green + '4D' } : s >= 50 ? { bg: colors.gold + '1A', bd: colors.gold + '4D' } : { bg: colors.red + '1A', bd: colors.red + '4D' });

@@ -7,7 +7,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Rect, Circle, Polyline, Line as SvgLine } from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
@@ -20,9 +21,11 @@ const GOLD = '#C9A96E';
 const CHART_W = Dimensions.get('window').width - 64;
 
 export default function ProgressAnalytics() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const isAr = language === 'ar';
+  const userId = user?.id ?? null;
 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -31,12 +34,19 @@ export default function ProgressAnalytics() {
 
   useEffect(() => {
     (async () => {
-      try { setGoals(JSON.parse((await AsyncStorage.getItem('amanah-goals')) || '[]')); } catch {}
-      try { setTasks(JSON.parse((await AsyncStorage.getItem('amanah-tasks')) || '[]')); } catch {}
-      setDhikrCount(parseInt((await AsyncStorage.getItem(`dhikr_total_${new Date().toDateString()}`)) || '0', 10));
-      try { const d = JSON.parse((await AsyncStorage.getItem('amanah-streaks')) || '{}'); setStreakData({ currentStreak: d.currentStreak || 0, longestStreak: d.longestStreak || 0 }); } catch {}
+      const today = new Date().toDateString();
+      await Promise.all([
+        migrateLegacyKeyIfNeeded('amanah-goals', userId),
+        migrateLegacyKeyIfNeeded('amanah-tasks', userId),
+        migrateLegacyKeyIfNeeded(`dhikr_total_${today}`, userId),
+        migrateLegacyKeyIfNeeded('amanah-streaks', userId),
+      ]);
+      try { setGoals(JSON.parse((await getUserItem('amanah-goals', userId)) || '[]')); } catch {}
+      try { setTasks(JSON.parse((await getUserItem('amanah-tasks', userId)) || '[]')); } catch {}
+      setDhikrCount(parseInt((await getUserItem(`dhikr_total_${today}`, userId)) || '0', 10));
+      try { const d = JSON.parse((await getUserItem('amanah-streaks', userId)) || '{}'); setStreakData({ currentStreak: d.currentStreak || 0, longestStreak: d.longestStreak || 0 }); } catch {}
     })();
-  }, []);
+  }, [userId]);
 
   const catLabels: Record<string, { ar: string; en: string }> = {
     Personal: { ar: 'شخصي', en: 'Personal' }, Financial: { ar: 'مالي', en: 'Financial' },

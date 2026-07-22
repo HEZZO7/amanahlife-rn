@@ -7,7 +7,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
@@ -68,10 +69,12 @@ const HABIT_SUGGESTIONS = {
 };
 
 export default function AILifeCoach() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const isAr = language === 'ar';
   const gold = '#C9A96E';
+  const userId = user?.id ?? null;
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [messages, setMessages] = useState<CoachMessage[]>([]);
@@ -79,8 +82,10 @@ export default function AILifeCoach() {
   const [showWisdom, setShowWisdom] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem('amanah-goals').then((s) => { if (s) { try { setGoals(JSON.parse(s)); } catch {} } });
-  }, []);
+    migrateLegacyKeyIfNeeded('amanah-goals', userId).then(() => {
+      getUserItem('amanah-goals', userId).then((s) => { if (s) { try { setGoals(JSON.parse(s)); } catch {} } });
+    });
+  }, [userId]);
 
   const categories = isAr ? CATEGORIES.ar : CATEGORIES.en;
   const wisdom = isAr ? WISDOM_QUOTES.ar : WISDOM_QUOTES.en;

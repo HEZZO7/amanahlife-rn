@@ -7,7 +7,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card, ProgressBar } from '../../src/components/ui';
@@ -39,18 +40,22 @@ const DEFAULT_DATA: RamadanData = {
 type Tab = 'calendar' | 'meals' | 'budget' | 'eid' | 'charity';
 
 export default function RamadanPlanner() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const isAr = language === 'ar';
+  const userId = user?.id ?? null;
 
   const [data, setData] = useState<RamadanData>(DEFAULT_DATA);
   const [ready, setReady] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('calendar');
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((s) => { if (s) { try { setData(JSON.parse(s)); } catch {} } setReady(true); });
-  }, []);
-  useEffect(() => { if (ready) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }, [data, ready]);
+    migrateLegacyKeyIfNeeded(STORAGE_KEY, userId).then(() => {
+      getUserItem(STORAGE_KEY, userId).then((s) => { if (s) { try { setData(JSON.parse(s)); } catch {} } setReady(true); });
+    });
+  }, [userId]);
+  useEffect(() => { if (ready) setUserItem(STORAGE_KEY, userId, JSON.stringify(data)); }, [data, ready, userId]);
 
   const toggleFast = (day: number) => setData((p) => ({ ...p, days: p.days.map((d) => d.day === day ? { ...d, fasted: !d.fasted } : d) }));
   const updateQuranPages = (day: number, pages: number) => setData((p) => ({ ...p, days: p.days.map((d) => d.day === day ? { ...d, quranPages: pages } : d) }));

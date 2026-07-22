@@ -91,8 +91,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Do NOT clear AsyncStorage — nearly all user content (goals, tasks,
     // finance, wellness, fasting, dhikr, quran progress, family budget, etc.)
     // lives only here with no server copy, so a full clear() here
-    // permanently destroys it. Nothing account-specific is cached outside
-    // what supabase.auth.signOut() already clears itself.
+    // permanently destroys it. Every screen now reads/writes through
+    // userStorage.ts, scoped to user.id, so a different account signing in
+    // on this device simply can't see this account's data.
+    //
+    // The one remaining gap: `user`/`session` here normally update via the
+    // async onAuthStateChange listener below, which has a small delay.
+    // Since Expo Router tabs can stay mounted across navigation, a screen
+    // that read `userId` from useAuth() a moment before this state update
+    // lands could still show a brief flash of the previous account's data
+    // (its own effect depends on [userId], so it recovers as soon as this
+    // state settles — this just closes that timing gap explicitly instead
+    // of waiting on the listener round-trip).
+    setUser(null);
+    setSession(null);
     router.replace('/(auth)/landing');
   };
 

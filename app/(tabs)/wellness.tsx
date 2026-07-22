@@ -8,7 +8,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
@@ -68,9 +69,11 @@ function Stepper({ label, value, min, max, onChange, accent }: {
 }
 
 export default function Wellness() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
+  const userId = user?.id ?? null;
 
   const [entries, setEntries] = useState<WellnessEntry[]>([]);
   const [mood, setMood] = useState(3);
@@ -84,9 +87,11 @@ export default function Wellness() {
   const todayEntry = entries.find((e) => e.date === todayStr);
 
   useEffect(() => {
-    AsyncStorage.getItem('amanah-wellness').then((s) => { if (s) setEntries(JSON.parse(s)); });
-  }, []);
-  useEffect(() => { AsyncStorage.setItem('amanah-wellness', JSON.stringify(entries)); }, [entries]);
+    migrateLegacyKeyIfNeeded('amanah-wellness', userId).then(() => {
+      getUserItem('amanah-wellness', userId).then((s) => { if (s) setEntries(JSON.parse(s)); });
+    });
+  }, [userId]);
+  useEffect(() => { setUserItem('amanah-wellness', userId, JSON.stringify(entries)); }, [entries, userId]);
 
   const openFormFor = (date: string) => {
     const existing = entries.find((e) => e.date === date);

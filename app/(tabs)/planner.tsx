@@ -8,7 +8,8 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Pressable,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useTimeFormat } from '../../src/contexts/TimeFormatContext';
@@ -20,11 +21,13 @@ interface Task { id: string; title: string; category: string; priority: string; 
 type ViewMode = 'agenda' | 'weekly' | 'monthly';
 
 export default function Planner() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const { formatTime } = useTimeFormat();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
   const locale = language === 'ar' ? 'ar' : 'en';
+  const userId = user?.id ?? null;
 
   const [view, setView] = useState<ViewMode>('agenda');
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -34,11 +37,18 @@ export default function Planner() {
   const [newItem, setNewItem] = useState({ title: '', date: '', time: '', description: '' });
 
   useEffect(() => {
-    AsyncStorage.getItem('amanah-tasks').then((s) => { if (s) setTasks(JSON.parse(s)); });
-    AsyncStorage.getItem('amanah-agenda').then((s) => { if (s) setAgendaItems(JSON.parse(s)); });
-  }, []);
+    // Note: 'amanah-tasks' (dash) is a pre-existing key-name mismatch with
+    // tasks.tsx's actual 'amanah_tasks' (underscore) key — not fixed here,
+    // see audit/phase1-summary.md.
+    migrateLegacyKeyIfNeeded('amanah-tasks', userId).then(() => {
+      getUserItem('amanah-tasks', userId).then((s) => { if (s) setTasks(JSON.parse(s)); });
+    });
+    migrateLegacyKeyIfNeeded('amanah-agenda', userId).then(() => {
+      getUserItem('amanah-agenda', userId).then((s) => { if (s) setAgendaItems(JSON.parse(s)); });
+    });
+  }, [userId]);
 
-  useEffect(() => { AsyncStorage.setItem('amanah-agenda', JSON.stringify(agendaItems)); }, [agendaItems]);
+  useEffect(() => { setUserItem('amanah-agenda', userId, JSON.stringify(agendaItems)); }, [agendaItems, userId]);
 
   useEffect(() => {
     (async () => {

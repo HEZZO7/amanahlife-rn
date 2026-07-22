@@ -6,6 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
@@ -14,10 +16,12 @@ import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BLACK } from '../../src/theme/fonts';
 interface DayStatus { date: string; fasted: boolean; }
 
 export default function FastingTracker() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
   const today = new Date().toDateString();
+  const userId = user?.id ?? null;
 
   const [suhoor, setSuhoor] = useState(false);
   const [fasting, setFasting] = useState(false);
@@ -26,7 +30,8 @@ export default function FastingTracker() {
 
   useEffect(() => {
     (async () => {
-      const storedToday = await AsyncStorage.getItem(`fasting_today_${today}`);
+      await migrateLegacyKeyIfNeeded(`fasting_today_${today}`, userId);
+      const storedToday = await getUserItem(`fasting_today_${today}`, userId);
       if (storedToday) {
         const data = JSON.parse(storedToday);
         setSuhoor(!!data.suhoor); setFasting(!!data.fasting); setIftar(!!data.iftar);
@@ -36,15 +41,19 @@ export default function FastingTracker() {
       for (let i = 29; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
         const dateStr = d.toDateString();
-        const dayData = await AsyncStorage.getItem(`fasting_today_${dateStr}`);
+        // Historical days: read this user's scoped entry first; fall back to
+        // the pre-scoping legacy entry (read-only) so existing 30-day
+        // history isn't lost without bulk-migrating every past day.
+        let dayData = await getUserItem(`fasting_today_${dateStr}`, userId);
+        if (dayData === null) dayData = await AsyncStorage.getItem(`fasting_today_${dateStr}`);
         days.push({ date: dateStr, fasted: dayData ? JSON.parse(dayData).fasting === true : false });
       }
       setMonthDays(days);
     })();
-  }, [today]);
+  }, [today, userId]);
 
   const saveToday = (s: boolean, f: boolean, i: boolean) =>
-    AsyncStorage.setItem(`fasting_today_${today}`, JSON.stringify({ suhoor: s, fasting: f, iftar: i }));
+    setUserItem(`fasting_today_${today}`, userId, JSON.stringify({ suhoor: s, fasting: f, iftar: i }));
 
   const toggleSuhoor = () => { const v = !suhoor; setSuhoor(v); saveToday(v, fasting, iftar); };
   const toggleFasting = () => {

@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Pressable,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader } from '../../src/components/ui';
@@ -28,10 +29,12 @@ const PRIO_LABELS: Record<Priority, { en: string; ar: string }> = {
 };
 
 export default function TaskManager() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
   const L = (m: { en: string; ar: string }) => (language === 'ar' ? m.ar : m.en);
+  const userId = user?.id ?? null;
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -47,9 +50,13 @@ export default function TaskManager() {
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const dayNamesAr = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
-  useEffect(() => { AsyncStorage.getItem('amanah_tasks').then((s) => { if (s) setTasks(JSON.parse(s)); }); }, []);
+  useEffect(() => {
+    migrateLegacyKeyIfNeeded('amanah_tasks', userId).then(() => {
+      getUserItem('amanah_tasks', userId).then((s) => { if (s) setTasks(JSON.parse(s)); });
+    });
+  }, [userId]);
 
-  const saveTasks = (updated: Task[]) => { setTasks(updated); AsyncStorage.setItem('amanah_tasks', JSON.stringify(updated)); };
+  const saveTasks = (updated: Task[]) => { setTasks(updated); setUserItem('amanah_tasks', userId, JSON.stringify(updated)); };
 
   const addTask = () => {
     if (!title.trim()) return;

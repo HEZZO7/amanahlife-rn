@@ -5,7 +5,8 @@
  */
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Vibration } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, ProgressBar } from '../../src/components/ui';
@@ -50,24 +51,28 @@ const ADHKAR_DATA: AdhkarCategory[] = [
 ];
 
 export default function Adhkar() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
+  const userId = user?.id ?? null;
 
   const [selectedCategory, setSelectedCategory] = useState('morning');
   const [progress, setProgress] = useState<Record<string, number>>({});
   const today = new Date().toDateString();
 
   useEffect(() => {
-    AsyncStorage.getItem(`adhkar_progress_${today}`).then((s) => { if (s) setProgress(JSON.parse(s)); });
-  }, [today]);
+    migrateLegacyKeyIfNeeded(`adhkar_progress_${today}`, userId).then(() => {
+      getUserItem(`adhkar_progress_${today}`, userId).then((s) => { if (s) setProgress(JSON.parse(s)); });
+    });
+  }, [today, userId]);
 
   const increment = (id: string, maxCount: number) => {
     const current = progress[id] || 0;
     if (current < maxCount) {
       const updated = { ...progress, [id]: current + 1 };
       setProgress(updated);
-      AsyncStorage.setItem(`adhkar_progress_${today}`, JSON.stringify(updated));
+      setUserItem(`adhkar_progress_${today}`, userId, JSON.stringify(updated));
       Vibration.vibrate(8);
     }
   };

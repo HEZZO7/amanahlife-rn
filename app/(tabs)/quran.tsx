@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -36,21 +36,28 @@ export default function QuranReader() {
   const [lastRead, setLastRead] = useState<{ surah: number; name: string } | null>(null);
   const todayKey = new Date().toDateString();
   const [quranPages, setQuranPages] = useState(0);
+  const userId = user?.id ?? null;
 
   useEffect(() => { if (!authLoading && !user) router.replace('/(auth)/landing'); }, [user, authLoading]);
 
   useEffect(() => {
-    AsyncStorage.getItem('quran_bookmarks').then((s) => { if (s) setBookmarks(new Set(JSON.parse(s))); });
-    AsyncStorage.getItem('quran_last_read').then((s) => { if (s) setLastRead(JSON.parse(s)); });
-    AsyncStorage.getItem(`quran_pages_${todayKey}`).then((s) => { if (s) setQuranPages(parseInt(s, 10)); });
-  }, []);
+    Promise.all([
+      migrateLegacyKeyIfNeeded('quran_bookmarks', userId),
+      migrateLegacyKeyIfNeeded('quran_last_read', userId),
+      migrateLegacyKeyIfNeeded(`quran_pages_${todayKey}`, userId),
+    ]).then(() => {
+      getUserItem('quran_bookmarks', userId).then((s) => { if (s) setBookmarks(new Set(JSON.parse(s))); });
+      getUserItem('quran_last_read', userId).then((s) => { if (s) setLastRead(JSON.parse(s)); });
+      getUserItem(`quran_pages_${todayKey}`, userId).then((s) => { if (s) setQuranPages(parseInt(s, 10)); });
+    });
+  }, [userId]);
 
   const addPages = (n: number) => {
     const newVal = Math.max(0, quranPages + n);
     setQuranPages(newVal);
-    AsyncStorage.setItem(`quran_pages_${todayKey}`, String(newVal));
+    setUserItem(`quran_pages_${todayKey}`, userId, String(newVal));
   };
-  useEffect(() => { AsyncStorage.setItem('quran_bookmarks', JSON.stringify([...bookmarks])); }, [bookmarks]);
+  useEffect(() => { setUserItem('quran_bookmarks', userId, JSON.stringify([...bookmarks])); }, [bookmarks, userId]);
 
   useEffect(() => {
     (async () => {
@@ -68,7 +75,7 @@ export default function QuranReader() {
     setLoading(true);
     setSelectedSurah(surah);
     setLastRead({ surah: surah.number, name: surah.englishName });
-    AsyncStorage.setItem('quran_last_read', JSON.stringify({ surah: surah.number, name: surah.englishName }));
+    setUserItem('quran_last_read', userId, JSON.stringify({ surah: surah.number, name: surah.englishName }));
     try {
       const [arabicRes, englishRes] = await Promise.all([
         fetch(`https://api.alquran.cloud/v1/surah/${surah.number}`),

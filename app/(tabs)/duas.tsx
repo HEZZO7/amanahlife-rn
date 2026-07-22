@@ -8,7 +8,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -83,9 +83,15 @@ export default function DuasCollection() {
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
+  const userId = user?.id ?? null;
+
   useEffect(() => { if (!authLoading && !user) router.replace('/(auth)/landing'); }, [user, authLoading]);
-  useEffect(() => { AsyncStorage.getItem('dua_favorites').then((s) => { if (s) setFavorites(new Set(JSON.parse(s))); }); }, []);
-  useEffect(() => { AsyncStorage.setItem('dua_favorites', JSON.stringify([...favorites])); }, [favorites]);
+  useEffect(() => {
+    migrateLegacyKeyIfNeeded('dua_favorites', userId).then(() => {
+      getUserItem('dua_favorites', userId).then((s) => { if (s) setFavorites(new Set(JSON.parse(s))); });
+    });
+  }, [userId]);
+  useEffect(() => { setUserItem('dua_favorites', userId, JSON.stringify([...favorites])); }, [favorites, userId]);
 
   const toggleFavorite = (id: string) => setFavorites((prev) => {
     const next = new Set(prev);

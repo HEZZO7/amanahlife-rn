@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Pressable,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card, ProgressBar } from '../../src/components/ui';
@@ -51,9 +52,11 @@ const CATEGORY_LABELS: Record<Category, { ar: string; en: string }> = {
 };
 
 export default function Finance() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
+  const userId = user?.id ?? null;
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -66,14 +69,16 @@ export default function Finance() {
   const categoryOptions = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   useEffect(() => {
-    AsyncStorage.getItem('amanah_finance').then((stored) => {
-      if (stored) setTransactions(JSON.parse(stored));
+    migrateLegacyKeyIfNeeded('amanah_finance', userId).then(() => {
+      getUserItem('amanah_finance', userId).then((stored) => {
+        if (stored) setTransactions(JSON.parse(stored));
+      });
     });
-  }, []);
+  }, [userId]);
 
   const saveTransactions = (updated: Transaction[]) => {
     setTransactions(updated);
-    AsyncStorage.setItem('amanah_finance', JSON.stringify(updated));
+    setUserItem('amanah_finance', userId, JSON.stringify(updated));
   };
 
   const resetForm = () => {

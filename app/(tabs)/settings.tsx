@@ -18,6 +18,7 @@ import { useRTL } from '../../src/hooks/useRTL';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded, getScopedKey } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -79,12 +80,15 @@ export default function Settings() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [reminders, setReminders] = useState<PrayerReminderSettings>(DEFAULT_REMINDER_SETTINGS);
+  const userId = user?.id ?? null;
 
   useEffect(() => {
-    AsyncStorage.getItem('amanah-settings').then((s) => { if (s) { try { setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(s) }); } catch {} } setReady(true); });
+    migrateLegacyKeyIfNeeded('amanah-settings', userId).then(() => {
+      getUserItem('amanah-settings', userId).then((s) => { if (s) { try { setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(s) }); } catch {} } setReady(true); });
+    });
     getReminderSettings().then(setReminders);
-  }, []);
-  useEffect(() => { if (ready) AsyncStorage.setItem('amanah-settings', JSON.stringify(settings)); }, [settings, ready]);
+  }, [userId]);
+  useEffect(() => { if (ready) setUserItem('amanah-settings', userId, JSON.stringify(settings)); }, [settings, ready, userId]);
 
   const updateReminders = async (next: PrayerReminderSettings) => {
     setReminders(next);
@@ -108,14 +112,14 @@ export default function Settings() {
     catch { toast.error(isAr ? 'فشل التصدير' : 'Export failed'); }
   };
   const exportFinanceCSV = async () => {
-    const transactions = JSON.parse((await AsyncStorage.getItem('amanah_finance')) || '[]');
+    const transactions = JSON.parse((await getUserItem('amanah_finance', userId)) || '[]');
     if (transactions.length === 0) { toast.info(isAr ? 'لا توجد معاملات' : 'No transactions'); return; }
     const headers = 'Date,Type,Category,Amount,Description\n';
     const rows = transactions.map((t: any) => `${t.date || ''},${t.type || ''},${t.category || ''},${t.amount || 0},${t.description || ''}`).join('\n');
     exportCSV(headers + rows, 'amanah-finance-export.csv', 'finance');
   };
   const exportGoalsCSV = async () => {
-    const goals = JSON.parse((await AsyncStorage.getItem('amanah-goals')) || '[]');
+    const goals = JSON.parse((await getUserItem('amanah-goals', userId)) || '[]');
     if (goals.length === 0) { toast.info(isAr ? 'لا توجد أهداف' : 'No goals'); return; }
     const headers = 'Title,Category,Status,Progress,Target Date\n';
     const rows = goals.map((g: any) => `${g.title || ''},${g.category || ''},${g.status || ''},${g.progress || 0}%,${g.targetDate || ''}`).join('\n');
@@ -133,9 +137,14 @@ export default function Settings() {
   const exportAllData = async () => {
     setBackupBusy(true);
     try {
-      const entries = await AsyncStorage.multiGet(BACKUP_KEYS);
+      // Fetch this user's scoped copy of each key, but store the backup
+      // file itself under the original base key names — keeps the backup
+      // format stable/portable (matches older backups and the web app's
+      // export) regardless of which account or device restores it later.
+      const scopedKeys = BACKUP_KEYS.map((k) => getScopedKey(k, userId));
+      const entries = await AsyncStorage.multiGet(scopedKeys);
       const data: Record<string, string | null> = {};
-      entries.forEach(([key, value]) => { data[key] = value; });
+      entries.forEach(([, value], i) => { data[BACKUP_KEYS[i]] = value; });
       const payload = {
         timestamp: new Date().toISOString(),
         appVersion: Constants.expoConfig?.version || '1.0.0',
@@ -163,9 +172,13 @@ export default function Settings() {
       const doRestore = async () => {
         setBackupBusy(true);
         try {
+          // Restore into the CURRENT signed-in user's scoped keys, not the
+          // raw base keys from the backup file — otherwise a restore would
+          // write unscoped legacy keys that could leak to a different
+          // account signed in later on the same device.
           const pairs: [string, string][] = Object.entries(payload.data)
             .filter(([, v]) => typeof v === 'string')
-            .map(([k, v]) => [k, v as string]);
+            .map(([k, v]) => [getScopedKey(k, userId), v as string]);
           await AsyncStorage.multiSet(pairs);
           toast.success(isAr ? 'تم استعادة البيانات. أعد تشغيل التطبيق لتطبيق التغييرات.' : 'Data restored. Restart the app to apply changes.');
         } finally {
@@ -204,7 +217,16 @@ export default function Settings() {
       });
       if (!response.ok) { const e = await response.json().catch(() => ({})); throw new Error(e.error || 'Failed to delete account'); }
       toast.success(isAr ? 'تم حذف الحساب بنجاح' : 'Account deleted successfully');
-      await AsyncStorage.clear();
+      // Only remove THIS user's scoped local data, not the whole device's
+      // AsyncStorage — a blanket clear() here would also delete any other
+      // signed-in account's data on a shared device.
+      try {
+        const allKeys = await AsyncStorage.getAllKeys();
+        const ownKeys = allKeys.filter((k) => k.endsWith(`:${userId}`));
+        if (ownKeys.length > 0) await AsyncStorage.multiRemove(ownKeys);
+      } catch {
+        // Best-effort — account is already deleted server-side regardless.
+      }
       await signOut();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : (isAr ? 'فشل حذف الحساب' : 'Failed to delete account'));

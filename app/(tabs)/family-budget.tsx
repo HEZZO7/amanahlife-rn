@@ -6,8 +6,9 @@
  */
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useSubscription } from '../../src/contexts/SubscriptionContext';
@@ -49,10 +50,12 @@ const DEFAULT_DATA: FamilyBudgetData = {
 type Tab = 'family' | 'budget' | 'income' | 'expenses';
 
 export default function FamilyBudget() {
+  const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const router = useRouter();
   const { tier, isTrialActive, loading: subLoading } = useSubscription();
+  const userId = user?.id ?? null;
   const hasAccess = tier === 'family' || isTrialActive;
   const [lockedModalOpen, setLockedModalOpen] = useState(true);
   const isAr = language === 'ar';
@@ -64,8 +67,12 @@ export default function FamilyBudget() {
   const [newIncome, setNewIncome] = useState({ source: '', amount: '', currency: 'USD' });
   const [newExpense, setNewExpense] = useState({ category: 'Housing', description: '', amount: '', currency: 'USD' });
 
-  useEffect(() => { AsyncStorage.getItem(STORAGE_KEY).then((s) => { if (s) { try { setData(JSON.parse(s)); } catch {} } setReady(true); }); }, []);
-  useEffect(() => { if (ready) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }, [data, ready]);
+  useEffect(() => {
+    migrateLegacyKeyIfNeeded(STORAGE_KEY, userId).then(() => {
+      getUserItem(STORAGE_KEY, userId).then((s) => { if (s) { try { setData(JSON.parse(s)); } catch {} } setReady(true); });
+    });
+  }, [userId]);
+  useEffect(() => { if (ready) setUserItem(STORAGE_KEY, userId, JSON.stringify(data)); }, [data, ready, userId]);
 
   const addMember = () => {
     if (!newMember.name) return;

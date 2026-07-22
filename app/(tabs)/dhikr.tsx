@@ -8,7 +8,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Vibration } from 
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -41,25 +41,37 @@ export default function DhikrCounter() {
   const [dailyTotal, setDailyTotal] = useState(0);
   const [showPresets, setShowPresets] = useState(false);
 
+  const userId = user?.id ?? null;
+
   useEffect(() => {
     if (!authLoading && !user) router.replace('/(auth)/landing');
   }, [user, authLoading]);
 
+  // Mount-only legacy migration (not repeated on every preset switch below) —
+  // covers all 6 presets' today counts plus today's total.
   useEffect(() => {
     const today = new Date().toDateString();
-    (async () => {
-      const savedCount = await AsyncStorage.getItem(`dhikr_count_${selectedPreset.id}_${today}`);
-      const savedTotal = await AsyncStorage.getItem(`dhikr_total_${today}`);
-      setCount(savedCount ? parseInt(savedCount) : 0);
-      if (savedTotal) setDailyTotal(parseInt(savedTotal));
-    })();
-  }, [selectedPreset]);
+    Promise.all([
+      ...PRESETS.map((p) => migrateLegacyKeyIfNeeded(`dhikr_count_${p.id}_${today}`, userId)),
+      migrateLegacyKeyIfNeeded(`dhikr_total_${today}`, userId),
+    ]);
+  }, [userId]);
 
   useEffect(() => {
     const today = new Date().toDateString();
-    AsyncStorage.setItem(`dhikr_count_${selectedPreset.id}_${today}`, count.toString());
-    AsyncStorage.setItem(`dhikr_total_${today}`, dailyTotal.toString());
-  }, [count, dailyTotal, selectedPreset]);
+    (async () => {
+      const savedCount = await getUserItem(`dhikr_count_${selectedPreset.id}_${today}`, userId);
+      const savedTotal = await getUserItem(`dhikr_total_${today}`, userId);
+      setCount(savedCount ? parseInt(savedCount) : 0);
+      if (savedTotal) setDailyTotal(parseInt(savedTotal));
+    })();
+  }, [selectedPreset, userId]);
+
+  useEffect(() => {
+    const today = new Date().toDateString();
+    setUserItem(`dhikr_count_${selectedPreset.id}_${today}`, userId, count.toString());
+    setUserItem(`dhikr_total_${today}`, userId, dailyTotal.toString());
+  }, [count, dailyTotal, selectedPreset, userId]);
 
   const increment = () => {
     setCount((c) => c + 1);
