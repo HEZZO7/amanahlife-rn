@@ -40,25 +40,28 @@ restart a "free" 7-day trial as many times as the device allows a fresh install.
   never even sees the button — the error toast is a safety net for the race
   where local `trialUsed` hasn't caught up with the server yet.
 
-## ⚠️ Not executed — no Supabase access
+## ✅ Applied 2026-07-22 — table name corrected first
 
-The migration SQL was written but **not applied** to the real database. I do
-not have Supabase MCP access to the production project
-(`nyhsnvjdgifphwkqzwel`) in this session — confirmed via a permission-denied
-`get_project` call earlier in this engagement. Before this phase does
-anything, someone with dashboard/CLI access needs to:
+The migration was run manually via the Supabase SQL editor on 2026-07-22
+("Success. No rows returned"). Before running it, Huzaifa confirmed the
+real table name by querying `information_schema.tables` — it turned out
+`public.subscriptions` (what this migration and `SubscriptionContext.tsx`
+originally targeted) **does not exist**; running the original migration
+against it failed with `relation "public.subscriptions" does not exist`.
 
-1. Confirm the actual table name — this migration (and
-   `SubscriptionContext.tsx`) targets `public.subscriptions`, but the **web
-   app** queries `app_11941c8fec_subscriptions` instead (a pre-existing,
-   still-unresolved discrepancy flagged in an earlier phase). If the RN app's
-   table name is wrong, the trial check silently no-ops against a
-   nonexistent/empty table and the old exploit (reinstall = new trial) is
-   NOT actually fixed by this code.
-2. Apply `supabase/migrations/20260720000000_add_trial_columns.sql`.
-3. If both table names turn out to be real, separate tables — that means web
-   and Android subscriptions are entirely unsynced, a bigger problem than this
-   migration, and should be escalated to Huzaifa before proceeding further.
+The real table is **`app_11941c8fec_subscriptions`**, matching the web
+app's naming convention. This means every RN user's tier/status/trial data
+had been silently unreadable since this app launched — `fetchSubscription`'s
+query would have errored and fallen back to the free-tier default
+regardless of what a user actually paid for. Fixed in commit `eb1f751`:
+`SubscriptionContext.tsx`'s three query sites (`fetchSubscription`,
+`startTrial`'s `trial_used` check, `startTrial`'s upsert) and this migration
+file now all target `app_11941c8fec_subscriptions`. The two table names are
+NOT both real — there's only ever been one table, just misnamed in the RN
+client code.
+
+`trial_started_at` and `trial_used` columns are now live on
+`app_11941c8fec_subscriptions`.
 
 ## Typecheck
 
