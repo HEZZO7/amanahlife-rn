@@ -60,7 +60,7 @@ const FALLBACK_RATES: Record<string, number> = {
 export default function SubscriptionScreen() {
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
-  const { tier: currentTier, billingCycle, isTrialActive, trialDaysRemaining, startTrial, refetch } = useSubscription();
+  const { tier: currentTier, billingCycle, isTrialActive, trialDaysRemaining, trialUsed, startTrial, refetch } = useSubscription();
   const { user } = useAuth();
   const isAr = language === 'ar';
   const tr = (en: string, ar: string) => isAr ? ar : en;
@@ -68,6 +68,7 @@ export default function SubscriptionScreen() {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>(billingCycle);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [trialLoading, setTrialLoading] = useState(false);
   const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES);
   const [currency, setCurrency] = useState('USD');
   const isFreeTier = currentTier === 'free' && !isTrialActive;
@@ -141,6 +142,20 @@ export default function SubscriptionScreen() {
     }
   }, [currentTier, user, isAr]);
 
+  const handleStartTrial = async () => {
+    setTrialLoading(true);
+    try {
+      const { error } = await startTrial();
+      if (error === 'trial_already_used') {
+        toast.error(tr('You already used your free trial on this account.', 'لقد استخدمت التجربة المجانية بالفعل لهذا الحساب.'));
+      } else if (error) {
+        toast.error(tr('Something went wrong. Please try again.', 'حدث خطأ ما. حاول مرة أخرى.'));
+      }
+    } finally {
+      setTrialLoading(false);
+    }
+  };
+
   const CURRENCIES = ['USD', 'SAR', 'AED', 'KWD', 'QAR', 'EGP', 'EUR', 'GBP', 'TRY', 'MYR', 'PKR', 'INR'];
 
   return (
@@ -172,15 +187,15 @@ export default function SubscriptionScreen() {
           </Card>
         )}
 
-        {/* Free trial CTA */}
-        {isFreeTier && (
+        {/* Free trial CTA — hidden once the account has already used its trial */}
+        {isFreeTier && !trialUsed && (
           <View style={[styles.trialCta, { borderColor: colors.gold + '50', backgroundColor: colors.gold + '08' }]}>
             <Text style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>🎁</Text>
             <Text style={[styles.ctaTitle, { color: colors.text }]}>{tr('Try Premium Free', 'جرّب المميز مجاناً')}</Text>
             <Text style={[styles.ctaSub, { color: colors.textSecondary }]}>
               {tr('Get all premium features for 7 days, no payment required', 'احصل على جميع المميزات لمدة 7 أيام بدون دفع')}
             </Text>
-            <TouchableOpacity style={[styles.ctaBtn, { backgroundColor: colors.gold }]} onPress={startTrial} activeOpacity={0.85}>
+            <TouchableOpacity style={[styles.ctaBtn, { backgroundColor: colors.gold }]} onPress={handleStartTrial} disabled={trialLoading} activeOpacity={0.85}>
               <Text style={[styles.ctaBtnText, { color: '#1A1200' }]}>🚀 {tr('Start 7-Day Free Trial', 'ابدأ تجربة 7 أيام مجانية')}</Text>
             </TouchableOpacity>
           </View>
