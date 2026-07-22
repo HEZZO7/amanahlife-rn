@@ -6,13 +6,15 @@
  */
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Modal,
-  Pressable, Platform, I18nManager,
+  View, Text, TouchableOpacity, StyleSheet,
+  Pressable, Platform, I18nManager, LayoutChangeEvent,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useSetNavBarHeight } from '../../contexts/NavBarHeightContext';
+import { useBackToClose } from '../../lib/useBackToClose';
 import Svg, { Path, Rect, Line, Circle } from 'react-native-svg';
 
 // SVG icons matching web app exactly
@@ -79,6 +81,16 @@ export default function BottomNav() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const setNavBarHeight = useSetNavBarHeight();
+  const [navHeight, setNavHeight] = useState(0);
+
+  const handleNavLayout = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    setNavHeight(h);
+    setNavBarHeight(h);
+  };
+
+  useBackToClose(showSearchModal, () => setShowSearchModal(false));
 
   const getLabel = (id: string) => {
     const labels: Record<string, string> = {
@@ -104,12 +116,15 @@ export default function BottomNav() {
 
   return (
     <>
-      <View style={[styles.nav, {
-        backgroundColor: colors.bg,
-        borderTopColor: colors.border,
-        paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 12),
-        flexDirection: isRTL ? 'row-reverse' : 'row',
-      }]}>
+      <View
+        onLayout={handleNavLayout}
+        style={[styles.nav, {
+          backgroundColor: colors.bg,
+          borderTopColor: colors.border,
+          paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 12),
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+        }]}
+      >
         {NAV_ITEMS.map((item) => {
           const isSearchModal = item.path === 'search-modal';
           const isActive = !isSearchModal && (
@@ -136,10 +151,21 @@ export default function BottomNav() {
         })}
       </View>
 
-      {/* Search Modal — matches web app exactly */}
-      <Modal visible={showSearchModal} transparent animationType="slide" onRequestClose={() => setShowSearchModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setShowSearchModal(false)}>
-          <Pressable onPress={() => {}} style={[styles.sheet, { backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
+      {/* Search sheet — plain positioned View, NOT <Modal>. RN's <Modal> opens
+          its own native window that captures every touch within its bounds
+          even where nothing is drawn, so a Modal-based sheet here would
+          block taps to the real nav bar underneath no matter how it's sized
+          (unlike web's CSS stacking, where an element outside an overlay's
+          bounds is simply untouched). Rendering it as a normal sibling View,
+          offset by the nav's own measured height, lets taps below the sheet
+          fall through to the nav exactly like the web fix for this bug. */}
+      {showSearchModal && (
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+          <Pressable
+            style={[StyleSheet.absoluteFillObject, { bottom: navHeight, backgroundColor: 'rgba(0,0,0,0.5)' }]}
+            onPress={() => setShowSearchModal(false)}
+          />
+          <Pressable onPress={() => {}} style={[styles.sheet, { position: 'absolute', left: 0, right: 0, bottom: navHeight, backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
             <Text style={[styles.sheetTitle, { color: colors.text, textAlign: language === 'ar' ? 'right' : 'center' }]}>
               {language === 'ar' ? 'اختر نوع البحث' : 'Choose Search Type'}
@@ -189,8 +215,8 @@ export default function BottomNav() {
               </View>
             </TouchableOpacity>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+      )}
     </>
   );
 }
@@ -211,7 +237,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   label: { fontSize: 10, fontWeight: '500', marginTop: 2 },
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
   handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   sheetTitle: { fontSize: 17, fontWeight: '600', textAlign: 'center', marginBottom: 16 },

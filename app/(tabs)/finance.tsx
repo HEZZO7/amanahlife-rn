@@ -5,12 +5,14 @@
  */
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Pressable,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Pressable,
 } from 'react-native';
 import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useNavBarHeight } from '../../src/contexts/NavBarHeightContext';
+import { useBackToClose } from '../../src/lib/useBackToClose';
 import { PageHeader, Card, ProgressBar } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
@@ -89,6 +91,9 @@ export default function Finance() {
     setDescription('');
     setShowForm(false);
   };
+
+  const navBarHeight = useNavBarHeight();
+  useBackToClose(showForm, resetForm);
 
   const submitTransaction = () => {
     if (!amount || parseFloat(amount) <= 0) return;
@@ -220,9 +225,15 @@ export default function Finance() {
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
-      {/* Add/Edit transaction modal */}
-      <Modal visible={showForm} transparent animationType="fade" onRequestClose={resetForm}>
-        <Pressable style={styles.overlay} onPress={resetForm}>
+      {/* Add/Edit transaction sheet — plain positioned View, not <Modal>: RN's
+          Modal opens a native window that blocks touches to whatever's
+          behind it everywhere within its bounds (even fully transparent
+          areas), so it always covers the nav bar regardless of content
+          size. Stopping this overlay above the measured nav height instead
+          lets the nav stay visible and tappable, matching the web fix. */}
+      {showForm && (
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+          <Pressable style={[styles.overlay, { position: 'absolute', top: 0, left: 0, right: 0, bottom: navBarHeight }]} onPress={resetForm}>
           <Pressable style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {editingId ? tr('Edit Transaction', 'تعديل المعاملة') : tr('Add Transaction', 'إضافة معاملة')}
@@ -286,8 +297,9 @@ export default function Finance() {
               </TouchableOpacity>
             </View>
           </Pressable>
-        </Pressable>
-      </Modal>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }

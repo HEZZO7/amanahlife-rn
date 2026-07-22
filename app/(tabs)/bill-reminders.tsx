@@ -6,12 +6,14 @@
  */
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal, Pressable,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Pressable,
 } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { usePersistedState } from '../../src/lib/usePersistedState';
+import { useNavBarHeight } from '../../src/contexts/NavBarHeightContext';
+import { useBackToClose } from '../../src/lib/useBackToClose';
 import { PageHeader, Card } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
@@ -52,6 +54,7 @@ export default function BillReminders() {
   const [bills, setBills] = usePersistedState<Bill[]>('amanah-bills', userId, []);
   const [showForm, setShowForm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const navBarHeight = useNavBarHeight();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -61,6 +64,7 @@ export default function BillReminders() {
   const resetForm = () => {
     setName(''); setAmount(''); setDueDate(''); setFrequency('monthly'); setCategory('utilities');
   };
+  useBackToClose(showForm, () => { resetForm(); setShowForm(false); });
 
   const handleAdd = () => {
     if (!name.trim() || !amount || !dueDate) return;
@@ -229,9 +233,12 @@ export default function BillReminders() {
         )}
       </ScrollView>
 
-      {/* Add Bill Modal */}
-      <Modal visible={showForm} transparent animationType="fade" onRequestClose={() => setShowForm(false)}>
-        <Pressable style={styles.overlay} onPress={() => setShowForm(false)}>
+      {/* Add Bill sheet — plain positioned View, not <Modal> (see finance.tsx
+          for why): stops above the measured nav height instead of blocking
+          it. */}
+      {showForm && (
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+          <Pressable style={[styles.overlay, { position: 'absolute', top: 0, left: 0, right: 0, bottom: navBarHeight }]} onPress={() => setShowForm(false)}>
           <Pressable style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
             <Text style={[styles.modalTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{tr('Add New Bill', 'إضافة فاتورة جديدة')}</Text>
             <TextInput
@@ -291,8 +298,9 @@ export default function BillReminders() {
               </TouchableOpacity>
             </View>
           </Pressable>
-        </Pressable>
-      </Modal>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }

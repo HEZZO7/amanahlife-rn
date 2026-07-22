@@ -25,6 +25,7 @@ import { LanguageProvider } from '../src/contexts/LanguageContext';
 import { TimeFormatProvider } from '../src/contexts/TimeFormatContext';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { SubscriptionProvider } from '../src/contexts/SubscriptionContext';
+import { NavBarHeightProvider } from '../src/contexts/NavBarHeightContext';
 
 const queryClient = new QueryClient();
 
@@ -63,7 +64,9 @@ export default function RootLayout() {
               <TimeFormatProvider>
                 <AuthProvider>
                   <SubscriptionProvider>
-                    <AppShell />
+                    <NavBarHeightProvider>
+                      <AppShell />
+                    </NavBarHeightProvider>
                   </SubscriptionProvider>
                 </AuthProvider>
               </TimeFormatProvider>

@@ -6,13 +6,15 @@
  */
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Pressable,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Pressable,
 } from 'react-native';
 import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useTimeFormat } from '../../src/contexts/TimeFormatContext';
+import { useNavBarHeight } from '../../src/contexts/NavBarHeightContext';
+import { useBackToClose } from '../../src/lib/useBackToClose';
 import { PageHeader, Card } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
@@ -36,6 +38,8 @@ export default function Planner() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState({ title: '', date: '', time: '', description: '' });
   const [selectedDay, setSelectedDay] = useState(new Date());
+  const navBarHeight = useNavBarHeight();
+  useBackToClose(showAddForm, () => setShowAddForm(false));
 
   useEffect(() => {
     // Note: 'amanah-tasks' (dash) is a pre-existing key-name mismatch with
@@ -330,9 +334,13 @@ export default function Planner() {
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
-      {/* Add event modal */}
-      <Modal visible={showAddForm} transparent animationType="fade" onRequestClose={() => setShowAddForm(false)}>
-        <Pressable style={styles.overlay} onPress={() => setShowAddForm(false)}>
+      {/* Add event sheet — this is the exact sheet the nav-overlap bug was
+          reported against. Plain positioned View, not <Modal> (see
+          finance.tsx for why): stops above the measured nav height instead
+          of blocking it. */}
+      {showAddForm && (
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+          <Pressable style={[styles.overlay, { position: 'absolute', top: 0, left: 0, right: 0, bottom: navBarHeight }]} onPress={() => setShowAddForm(false)}>
           <Pressable style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
             <Text style={[styles.modalTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{tr('Add New Event', 'إضافة موعد جديد')}</Text>
             <TextInput
@@ -375,8 +383,9 @@ export default function Planner() {
               </TouchableOpacity>
             </View>
           </Pressable>
-        </Pressable>
-      </Modal>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
