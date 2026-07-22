@@ -52,11 +52,11 @@ Handoff document for the full AmanahLife project (web + Android). Last updated 2
 | Islamic calendar + Hijri | ✅ | ✅ |
 | Ramadan mode | ✅ | ✅ |
 | Zakat & Giving tracker | ✅ | ✅ |
-| Halal Investment tracker | ✅ | ❌ stub screen only (see audit/phase7 notes) |
-| Bill reminders | ✅ | ❌ stub screen only |
-| Financial Dashboard | ✅ | ❌ stub screen only |
-| Receipt Scanner | ⚠️ fake OCR (mock data, no real scanning) | ❌ stub screen only |
-| Savings Challenges | ✅ | ❌ stub screen only |
+| Halal Investment tracker | ✅ | ✅ built 2026-07-23 (portfolio + Murabaha/Ijara calculators) |
+| Bill reminders | ✅ | ✅ built 2026-07-23 |
+| Financial Dashboard | ✅ | ✅ built 2026-07-23 (read-only rollup) |
+| Receipt Scanner | ⚠️ fake OCR (mock data, no real scanning) | ❌ stub screen only — held, needs real OCR |
+| Savings Challenges | ⚠️ daily tip silently broken (Edge Function never existed) until fixed 2026-07-23 | ✅ built 2026-07-23, daily tip fixed on both platforms |
 | Progress analytics | ✅ | ✅ |
 | Document vault | ✅ | ⚠️ not confirmed ported |
 | Family dashboard + shared goals | ⚠️ real screen, but "invites" don't sync — fake local record with randomized stats | ❌ stub screen only |
@@ -80,9 +80,7 @@ Handoff document for the full AmanahLife project (web + Android). Last updated 2
 3. Founder photo on About page — placeholder in place (`TODO(Huzaifa):` marker in code), Huzaifa to provide professional photo.
 4. Play Store screenshots — captured from device by Huzaifa, committed to `assets/play-store/screenshots/`.
 5. ~~Atoms Dev migration~~ — **done 2026-07-04.** Web app now runs on the Hostinger VPS via Coolify, fully independent of Atoms Dev. See `MIGRATION-COMPLETE.md` and `DEPLOYMENT.md` in the `AmanahLifeapp` repo.
-6. **Decision needed from Huzaifa: what to do with the 6 Android placeholder screens** (Bill Reminders, Financial Dashboard, Halal Investment, Savings Challenges, Family Dashboard, Receipt Scanner — currently 40-line stub screens in `amanahlife-rn`, each literally reading "Migrate from: ..."). Per-screen build-effort breakdown written up during the critical-audit-2026-07 branch's Phase 7 research:
-   - **Bill Reminders, Financial Dashboard, Savings Challenges** — cheap, honest ports. Local CRUD / read-only aggregation, no backend needed (Savings Challenges needs the `app_11941c8fec_savings_tips` Edge Function deployed, same pattern as the AI Life Coach fix).
-   - **Halal Investment** — quick/moderate. Local portfolio CRUD + pure-math Murabaha/Ijara calculators, no backend.
+6. **6 Android placeholder screens — 4 built 2026-07-23, 2 held on purpose.** Per Huzaifa's decision, Bill Reminders, Financial Dashboard, Halal Investment, and Savings Challenges are now real (see `audit/phase7-screens-summary.md`). Still pending, deliberately:
    - **Family Dashboard** — needs a real decision, not just a port. The web version's "invite a family member" doesn't send any invite or sync anything — it creates a local fake record with a *randomly generated* prayer streak and Quran-pages count, and the "accountability score"/"streak comparison" are built on that fabricated data. A real version needs an actual invite flow + shared-data model (new Supabase table, cross-device sync) — meaningfully bigger scope than a port.
    - **Receipt Scanner** — the one to think hardest about. It's **100% fake on web right now**: "scanning" is a `setTimeout` + a random pick from 4 hardcoded mock receipts, while the UI says "AI analyzing receipt." Building it for real needs actual OCR (on-device library + native module work, or a cloud OCR API with ongoing per-call cost) — the most expensive of the six by a wide margin.
 
