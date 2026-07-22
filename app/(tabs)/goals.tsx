@@ -9,7 +9,8 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { getUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { usePersistedState } from '../../src/lib/usePersistedState';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -51,7 +52,7 @@ export default function Goals() {
   const L = (m: { en: string; ar: string }) => (language === 'ar' ? m.ar : m.en);
   const userId = user?.id ?? null;
 
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goals, setGoals] = usePersistedState<Goal[]>('amanah-goals', userId, []);
   const [tasksRaw, setTasksRaw] = useState<{ title?: string; category?: string }[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [filterCategory, setFilterCategory] = useState('All');
@@ -59,18 +60,16 @@ export default function Goals() {
   const [newGoal, setNewGoal] = useState({ title: '', category: 'Personal' as Goal['category'], targetDate: '', progress: 0 });
 
   useEffect(() => {
-    migrateLegacyKeyIfNeeded('amanah-goals', userId).then(() => {
-      getUserItem('amanah-goals', userId).then((s) => { if (s) setGoals(JSON.parse(s)); });
-    });
-    // Note: 'amanah-tasks' (dash) is read here as a cross-file dependency for
+    // 'amanah-tasks' (dash) is read here as a cross-file dependency for
     // linked-task counts, but tasks.tsx actually writes under 'amanah_tasks'
     // (underscore) — a pre-existing key-name mismatch independent of this
     // user-scoping pass, not fixed here. See audit/phase1-summary.md.
+    // Read-only and not this screen's own key, so it stays a plain effect
+    // rather than usePersistedState (which always pairs load with write-back).
     migrateLegacyKeyIfNeeded('amanah-tasks', userId).then(() => {
       getUserItem('amanah-tasks', userId).then((s) => { if (s) { try { setTasksRaw(JSON.parse(s)); } catch {} } });
     });
   }, [userId]);
-  useEffect(() => { setUserItem('amanah-goals', userId, JSON.stringify(goals)); }, [goals, userId]);
 
   const addGoal = () => {
     if (!newGoal.title.trim()) return;

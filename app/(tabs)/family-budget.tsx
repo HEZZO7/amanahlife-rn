@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { usePersistedState } from '../../src/lib/usePersistedState';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
@@ -60,19 +60,11 @@ export default function FamilyBudget() {
   const [lockedModalOpen, setLockedModalOpen] = useState(true);
   const isAr = language === 'ar';
 
-  const [data, setData] = useState<FamilyBudgetData>(DEFAULT_DATA);
-  const [ready, setReady] = useState(false);
+  const [data, setData] = usePersistedState<FamilyBudgetData>(STORAGE_KEY, userId, DEFAULT_DATA);
   const [activeTab, setActiveTab] = useState<Tab>('budget');
   const [newMember, setNewMember] = useState({ name: '', role: '' });
   const [newIncome, setNewIncome] = useState({ source: '', amount: '', currency: 'USD' });
   const [newExpense, setNewExpense] = useState({ category: 'Housing', description: '', amount: '', currency: 'USD' });
-
-  useEffect(() => {
-    migrateLegacyKeyIfNeeded(STORAGE_KEY, userId).then(() => {
-      getUserItem(STORAGE_KEY, userId).then((s) => { if (s) { try { setData(JSON.parse(s)); } catch {} } setReady(true); });
-    });
-  }, [userId]);
-  useEffect(() => { if (ready) setUserItem(STORAGE_KEY, userId, JSON.stringify(data)); }, [data, ready, userId]);
 
   const addMember = () => {
     if (!newMember.name) return;

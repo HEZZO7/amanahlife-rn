@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
-import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { usePersistedState } from '../../src/lib/usePersistedState';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -75,7 +75,7 @@ export default function Wellness() {
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
   const userId = user?.id ?? null;
 
-  const [entries, setEntries] = useState<WellnessEntry[]>([]);
+  const [entries, setEntries] = usePersistedState<WellnessEntry[]>('amanah-wellness', userId, []);
   const [mood, setMood] = useState(3);
   const [sleepHours, setSleepHours] = useState(7);
   const [hydration, setHydration] = useState(6);
@@ -85,13 +85,6 @@ export default function Wellness() {
   const todayStr = new Date().toISOString().split('T')[0];
   const [editingDate, setEditingDate] = useState(todayStr);
   const todayEntry = entries.find((e) => e.date === todayStr);
-
-  useEffect(() => {
-    migrateLegacyKeyIfNeeded('amanah-wellness', userId).then(() => {
-      getUserItem('amanah-wellness', userId).then((s) => { if (s) setEntries(JSON.parse(s)); });
-    });
-  }, [userId]);
-  useEffect(() => { setUserItem('amanah-wellness', userId, JSON.stringify(entries)); }, [entries, userId]);
 
   const openFormFor = (date: string) => {
     const existing = entries.find((e) => e.date === date);

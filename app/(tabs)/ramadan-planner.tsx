@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { usePersistedState } from '../../src/lib/usePersistedState';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -46,16 +46,8 @@ export default function RamadanPlanner() {
   const isAr = language === 'ar';
   const userId = user?.id ?? null;
 
-  const [data, setData] = useState<RamadanData>(DEFAULT_DATA);
-  const [ready, setReady] = useState(false);
+  const [data, setData] = usePersistedState<RamadanData>(STORAGE_KEY, userId, DEFAULT_DATA);
   const [activeTab, setActiveTab] = useState<Tab>('calendar');
-
-  useEffect(() => {
-    migrateLegacyKeyIfNeeded(STORAGE_KEY, userId).then(() => {
-      getUserItem(STORAGE_KEY, userId).then((s) => { if (s) { try { setData(JSON.parse(s)); } catch {} } setReady(true); });
-    });
-  }, [userId]);
-  useEffect(() => { if (ready) setUserItem(STORAGE_KEY, userId, JSON.stringify(data)); }, [data, ready, userId]);
 
   const toggleFast = (day: number) => setData((p) => ({ ...p, days: p.days.map((d) => d.day === day ? { ...d, fasted: !d.fasted } : d) }));
   const updateQuranPages = (day: number, pages: number) => setData((p) => ({ ...p, days: p.days.map((d) => d.day === day ? { ...d, quranPages: pages } : d) }));
