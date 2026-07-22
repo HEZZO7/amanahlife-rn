@@ -16,10 +16,11 @@ import { useSubscription } from '../../src/contexts/SubscriptionContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { PageHeader, Card } from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
+import { functionUrl } from '../../src/lib/config';
 import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK } from '../../src/theme/fonts';
 
-const CHECKOUT_ENDPOINT = 'https://nyhsnvjdgifphwkqzwel.supabase.co/functions/v1/app_11941c8fec_lemonsqueezy_checkout';
+const CHECKOUT_ENDPOINT = functionUrl('app_11941c8fec_lemonsqueezy_checkout');
 
 const PLANS = [
   {

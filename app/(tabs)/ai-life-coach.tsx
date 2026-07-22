@@ -15,10 +15,11 @@ import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
+import { functionUrl } from '../../src/lib/config';
 import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
-const AI_COACH_ENDPOINT = 'https://nyhsnvjdgifphwkqzwel.supabase.co/functions/v1/app_11941c8fec_ai_life_coach';
+const AI_COACH_ENDPOINT = functionUrl('app_11941c8fec_ai_life_coach');
 
 interface Goal { id: string; title: string; category?: string; progress?: number; }
 interface CoachMessage { id: string; type: 'user' | 'coach'; text: string; timestamp: number; }

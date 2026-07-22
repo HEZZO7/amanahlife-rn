@@ -13,10 +13,11 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useRTL } from '../../src/hooks/useRTL';
 import { supabase } from '../../src/lib/supabase';
+import { functionUrl } from '../../src/lib/config';
 import { PageHeader } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK, FONT_ARABIC } from '../../src/theme/fonts';
 
-const AI_ENDPOINT = 'https://nyhsnvjdgifphwkqzwel.supabase.co/functions/v1/ai_search';
+const AI_ENDPOINT = functionUrl('ai_search');
 
 // ── Local fallback knowledge base ──────────────────────────────────────────────
 const KB: { keywords: string[]; answer: { en: string; ar: string } }[] = [

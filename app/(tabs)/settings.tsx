@@ -24,6 +24,7 @@ import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useTimeFormat } from '../../src/contexts/TimeFormatContext';
 import { supabase } from '../../src/lib/supabase';
+import { functionUrl } from '../../src/lib/config';
 import {
   PrayerName, PrayerReminderSettings, DEFAULT_REMINDER_SETTINGS,
   getReminderSettings, saveReminderSettings, schedulePrayerNotifications,
@@ -210,7 +211,7 @@ export default function Settings() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error(isAr ? 'يرجى تسجيل الدخول أولاً' : 'Please sign in first'); setDeleteLoading(false); return; }
-      const response = await fetch('https://nyhsnvjdgifphwkqzwel.supabase.co/functions/v1/app_11941c8fec_delete_account', {
+      const response = await fetch(functionUrl('app_11941c8fec_delete_account'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ confirm: true }),
