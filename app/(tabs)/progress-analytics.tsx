@@ -37,12 +37,15 @@ export default function ProgressAnalytics() {
       const today = new Date().toDateString();
       await Promise.all([
         migrateLegacyKeyIfNeeded('amanah-goals', userId),
-        migrateLegacyKeyIfNeeded('amanah-tasks', userId),
+        // 'amanah_tasks' (underscore) is tasks.tsx's real key. This used to
+        // read 'amanah-tasks' (dash), a pre-existing mismatch that meant the
+        // task count here was always 0. Fixed 2026-07-23.
+        migrateLegacyKeyIfNeeded('amanah_tasks', userId),
         migrateLegacyKeyIfNeeded(`dhikr_total_${today}`, userId),
         migrateLegacyKeyIfNeeded('amanah-streaks', userId),
       ]);
       try { setGoals(JSON.parse((await getUserItem('amanah-goals', userId)) || '[]')); } catch {}
-      try { setTasks(JSON.parse((await getUserItem('amanah-tasks', userId)) || '[]')); } catch {}
+      try { setTasks(JSON.parse((await getUserItem('amanah_tasks', userId)) || '[]')); } catch {}
       setDhikrCount(parseInt((await getUserItem(`dhikr_total_${today}`, userId)) || '0', 10));
       try { const d = JSON.parse((await getUserItem('amanah-streaks', userId)) || '{}'); setStreakData({ currentStreak: d.currentStreak || 0, longestStreak: d.longestStreak || 0 }); } catch {}
     })();

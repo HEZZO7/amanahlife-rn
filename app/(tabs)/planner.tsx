@@ -1,6 +1,6 @@
 /**
  * Planner — migrated from app/frontend/src/pages/Planner.tsx
- * Agenda / Weekly / Monthly views. Tasks ('amanah-tasks') + agenda
+ * Agenda / Weekly / Monthly views. Tasks ('amanah_tasks') + agenda
  * ('amanah-agenda') from AsyncStorage. Hijri date in header, FAB + add-event
  * modal. HTML date/time inputs → plain text inputs (YYYY-MM-DD / HH:MM).
  */
@@ -42,11 +42,12 @@ export default function Planner() {
   useBackToClose(showAddForm, () => setShowAddForm(false));
 
   useEffect(() => {
-    // Note: 'amanah-tasks' (dash) is a pre-existing key-name mismatch with
-    // tasks.tsx's actual 'amanah_tasks' (underscore) key — not fixed here,
-    // see audit/phase1-summary.md.
-    migrateLegacyKeyIfNeeded('amanah-tasks', userId).then(() => {
-      getUserItem('amanah-tasks', userId).then((s) => { if (s) setTasks(JSON.parse(s)); });
+    // Was reading 'amanah-tasks' (dash), a pre-existing key-name mismatch
+    // with tasks.tsx's actual 'amanah_tasks' (underscore) key - meant
+    // today's task list here was always empty regardless of real data.
+    // Fixed 2026-07-23.
+    migrateLegacyKeyIfNeeded('amanah_tasks', userId).then(() => {
+      getUserItem('amanah_tasks', userId).then((s) => { if (s) setTasks(JSON.parse(s)); });
     });
     migrateLegacyKeyIfNeeded('amanah-agenda', userId).then(() => {
       getUserItem('amanah-agenda', userId).then((s) => { if (s) setAgendaItems(JSON.parse(s)); });

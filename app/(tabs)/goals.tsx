@@ -2,7 +2,7 @@
  * Goals — migrated from app/frontend/src/pages/Goals.tsx
  * localStorage('amanah-goals') → AsyncStorage. Category/status filters, inline
  * add form, gradient progress bars, quick-set progress buttons, linked-task
- * count (from 'amanah-tasks'). Bilingual/RTL.
+ * count (from 'amanah_tasks'). Bilingual/RTL.
  */
 import React, { useState, useEffect } from 'react';
 import {
@@ -60,14 +60,14 @@ export default function Goals() {
   const [newGoal, setNewGoal] = useState({ title: '', category: 'Personal' as Goal['category'], targetDate: '', progress: 0 });
 
   useEffect(() => {
-    // 'amanah-tasks' (dash) is read here as a cross-file dependency for
-    // linked-task counts, but tasks.tsx actually writes under 'amanah_tasks'
-    // (underscore) — a pre-existing key-name mismatch independent of this
-    // user-scoping pass, not fixed here. See audit/phase1-summary.md.
-    // Read-only and not this screen's own key, so it stays a plain effect
-    // rather than usePersistedState (which always pairs load with write-back).
-    migrateLegacyKeyIfNeeded('amanah-tasks', userId).then(() => {
-      getUserItem('amanah-tasks', userId).then((s) => { if (s) { try { setTasksRaw(JSON.parse(s)); } catch {} } });
+    // Cross-file dependency: tasks.tsx owns 'amanah_tasks' (underscore) and
+    // writes there. This used to read 'amanah-tasks' (dash) instead - a
+    // pre-existing key-name mismatch that meant linked-task counts were
+    // always 0 regardless of real data. Fixed 2026-07-23. Read-only and not
+    // this screen's own key, so it stays a plain effect rather than
+    // usePersistedState (which always pairs load with write-back).
+    migrateLegacyKeyIfNeeded('amanah_tasks', userId).then(() => {
+      getUserItem('amanah_tasks', userId).then((s) => { if (s) { try { setTasksRaw(JSON.parse(s)); } catch {} } });
     });
   }, [userId]);
 

@@ -206,7 +206,7 @@ export default function DashboardScreen() {
   // Daily summary — Tasks/Prayer/Goals/Savings, mirrors web dailySummary useMemo
   const loadDailySummary = useCallback(async () => {
     const [tasksRaw, prayerRaw, goalsRaw, txRaw] = await Promise.all([
-      AsyncStorage.getItem('amanah-tasks'),
+      AsyncStorage.getItem('amanah_tasks'), // was 'amanah-tasks' (dash) - key-name mismatch with tasks.tsx's real key, fixed 2026-07-23
       AsyncStorage.getItem(`prayer_completed_${new Date().toDateString()}`),
       AsyncStorage.getItem('amanah-goals'),
       AsyncStorage.getItem('amanah-transactions'),
@@ -334,7 +334,7 @@ export default function DashboardScreen() {
     const [txRaw, budgetRaw, tasksRaw] = await Promise.all([
       AsyncStorage.getItem('amanah-transactions'),
       AsyncStorage.getItem('amanah_family_budget'),
-      AsyncStorage.getItem('amanah-tasks'),
+      AsyncStorage.getItem('amanah_tasks'), // was 'amanah-tasks' (dash) - key-name mismatch with tasks.tsx's real key, fixed 2026-07-23
     ]);
     const transactions = JSON.parse(txRaw || '[]');
     const todayStr = new Date().toISOString().split('T')[0];

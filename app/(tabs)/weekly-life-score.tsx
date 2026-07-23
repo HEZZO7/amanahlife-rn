@@ -58,7 +58,11 @@ export default function WeeklyLifeScore() {
         migrateLegacyKeyIfNeeded('amanah-wellness', userId),
         migrateLegacyKeyIfNeeded('amanah-transactions', userId),
         migrateLegacyKeyIfNeeded('amanah-goals', userId),
-        migrateLegacyKeyIfNeeded('amanah-tasks', userId),
+        // 'amanah_tasks' (underscore) is tasks.tsx's real key - this used to
+        // read 'amanah-tasks' (dash), a pre-existing mismatch that meant the
+        // growth score below was always computed from an empty task list.
+        // Fixed 2026-07-23.
+        migrateLegacyKeyIfNeeded('amanah_tasks', userId),
         migrateLegacyKeyIfNeeded(STORAGE_KEY, userId),
       ]);
 
@@ -93,7 +97,7 @@ export default function WeeklyLifeScore() {
       const socialScore = familyGoals.length > 0
         ? Math.min(100, familyGoals.reduce((s: number, g: any) => s + (g.progress || 0), 0) / familyGoals.length + 20) : 40;
       // Growth — tasks completed
-      const tasks = JSON.parse((await getUserItem('amanah-tasks', userId)) || '[]');
+      const tasks = JSON.parse((await getUserItem('amanah_tasks', userId)) || '[]');
       const completedTasks = tasks.filter((t: any) => t.completed);
       const growthScore = tasks.length > 0 ? Math.min(100, (completedTasks.length / Math.max(tasks.length, 1)) * 100) : 30;
 
