@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Pressable, Platform, I18nManager, LayoutChangeEvent,
+  Pressable, Platform, I18nManager, LayoutChangeEvent, Animated,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSetNavBarHeight } from '../../contexts/NavBarHeightContext';
 import { useBackToClose } from '../../lib/useBackToClose';
+import { useSheetAnimation } from '../../lib/useSheetAnimation';
 import Svg, { Path, Rect, Line, Circle } from 'react-native-svg';
 
 // SVG icons matching web app exactly
@@ -91,6 +92,7 @@ export default function BottomNav() {
   };
 
   useBackToClose(showSearchModal, () => setShowSearchModal(false));
+  const sheetAnim = useSheetAnimation(showSearchModal, 60);
 
   const getLabel = (id: string) => {
     const labels: Record<string, string> = {
@@ -165,7 +167,10 @@ export default function BottomNav() {
             style={[StyleSheet.absoluteFillObject, { bottom: navHeight, backgroundColor: 'rgba(0,0,0,0.5)' }]}
             onPress={() => setShowSearchModal(false)}
           />
-          <Pressable onPress={() => {}} style={[styles.sheet, { position: 'absolute', left: 0, right: 0, bottom: navHeight, backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
+          <Animated.View
+            style={{ position: 'absolute', left: 0, right: 0, bottom: navHeight, opacity: sheetAnim.opacity, transform: [{ translateY: sheetAnim.translateY }] }}
+          >
+          <Pressable onPress={() => {}} style={[styles.sheet, { backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
             <Text style={[styles.sheetTitle, { color: colors.text, textAlign: language === 'ar' ? 'right' : 'center' }]}>
               {language === 'ar' ? 'اختر نوع البحث' : 'Choose Search Type'}
@@ -215,6 +220,7 @@ export default function BottomNav() {
               </View>
             </TouchableOpacity>
           </Pressable>
+          </Animated.View>
         </View>
       )}
     </>

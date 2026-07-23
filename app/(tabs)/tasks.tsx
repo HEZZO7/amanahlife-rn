@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Pressable,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Pressable, Animated,
 } from 'react-native';
 import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -13,6 +13,7 @@ import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useNavBarHeight } from '../../src/contexts/NavBarHeightContext';
 import { useBackToClose } from '../../src/lib/useBackToClose';
+import { useSheetAnimation } from '../../src/lib/useSheetAnimation';
 import { PageHeader } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
@@ -47,6 +48,7 @@ export default function TaskManager() {
   const [selectedDate, setSelectedDate] = useState(new Date().toDateString());
   const navBarHeight = useNavBarHeight();
   useBackToClose(showForm, () => setShowForm(false));
+  const sheetAnim = useSheetAnimation(showForm);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - d.getDay() + i); return d;
@@ -164,6 +166,7 @@ export default function TaskManager() {
       {showForm && (
         <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
           <Pressable style={[styles.overlay, { position: 'absolute', top: 0, left: 0, right: 0, bottom: navBarHeight }]} onPress={() => setShowForm(false)}>
+          <Animated.View style={{ opacity: sheetAnim.opacity, transform: [{ translateY: sheetAnim.translateY }] }}>
           <Pressable style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>{tr('Add Task', 'إضافة مهمة')}</Text>
             <TextInput
@@ -206,6 +209,7 @@ export default function TaskManager() {
               </TouchableOpacity>
             </View>
           </Pressable>
+          </Animated.View>
           </Pressable>
         </View>
       )}

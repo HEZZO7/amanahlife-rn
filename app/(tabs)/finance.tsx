@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Pressable,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Pressable, Animated,
 } from 'react-native';
 import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -13,6 +13,7 @@ import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useNavBarHeight } from '../../src/contexts/NavBarHeightContext';
 import { useBackToClose } from '../../src/lib/useBackToClose';
+import { useSheetAnimation } from '../../src/lib/useSheetAnimation';
 import { PageHeader, Card, ProgressBar } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
@@ -94,6 +95,7 @@ export default function Finance() {
 
   const navBarHeight = useNavBarHeight();
   useBackToClose(showForm, resetForm);
+  const sheetAnim = useSheetAnimation(showForm);
 
   const submitTransaction = () => {
     if (!amount || parseFloat(amount) <= 0) return;
@@ -234,6 +236,7 @@ export default function Finance() {
       {showForm && (
         <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
           <Pressable style={[styles.overlay, { position: 'absolute', top: 0, left: 0, right: 0, bottom: navBarHeight }]} onPress={resetForm}>
+          <Animated.View style={{ opacity: sheetAnim.opacity, transform: [{ translateY: sheetAnim.translateY }] }}>
           <Pressable style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {editingId ? tr('Edit Transaction', 'تعديل المعاملة') : tr('Add Transaction', 'إضافة معاملة')}
@@ -297,6 +300,7 @@ export default function Finance() {
               </TouchableOpacity>
             </View>
           </Pressable>
+          </Animated.View>
           </Pressable>
         </View>
       )}
