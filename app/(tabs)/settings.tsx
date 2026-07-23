@@ -133,6 +133,16 @@ export default function Settings() {
     'amanah_finance', 'amanah_language', 'amanah_tasks', 'dua_favorites', 'quran_bookmarks', 'quran_last_read',
   ];
 
+  // Per-day/per-preset keys (date or preset id templated into the name) —
+  // can't be listed statically like BACKUP_KEYS above, so export/import
+  // sweeps AsyncStorage for this user's scoped keys starting with one of
+  // these prefixes instead. Each key's exact date/preset suffix is kept
+  // as part of its name in the export file, so restore lands on the same
+  // date it was recorded for.
+  const DYNAMIC_KEY_PREFIXES = [
+    'fasting_today_', 'dhikr_count_', 'dhikr_total_', 'adhkar_progress_', 'quran_pages_', 'prayer_completed_',
+  ];
+
   const [backupBusy, setBackupBusy] = useState(false);
 
   const exportAllData = async () => {
@@ -140,14 +150,25 @@ export default function Settings() {
     try {
       // Fetch this user's scoped copy of each key, but store the backup
       // file itself under the original base key names — keeps the backup
-      // format stable/portable (matches older backups and the web app's
-      // export) regardless of which account or device restores it later.
-      const scopedKeys = BACKUP_KEYS.map((k) => getScopedKey(k, userId));
-      const entries = await AsyncStorage.multiGet(scopedKeys);
+      // format stable/portable (matches older backups) regardless of which
+      // account or device restores it later.
+      const scopeSuffix = getScopedKey('', userId); // '' + ':<userId|guest>' => ':<userId|guest>'
+      const allKeys = await AsyncStorage.getAllKeys();
+      const dynamicScopedKeys = allKeys.filter((k) => {
+        if (!k.endsWith(scopeSuffix)) return false;
+        const base = k.slice(0, -scopeSuffix.length);
+        return DYNAMIC_KEY_PREFIXES.some((p) => base.startsWith(p));
+      });
+      const staticScopedKeys = BACKUP_KEYS.map((k) => getScopedKey(k, userId));
+      const entries = await AsyncStorage.multiGet([...staticScopedKeys, ...dynamicScopedKeys]);
       const data: Record<string, string | null> = {};
-      entries.forEach(([, value], i) => { data[BACKUP_KEYS[i]] = value; });
+      entries.forEach(([scopedKey, value]) => {
+        const base = scopedKey.endsWith(scopeSuffix) ? scopedKey.slice(0, -scopeSuffix.length) : scopedKey;
+        data[base] = value;
+      });
       const payload = {
-        timestamp: new Date().toISOString(),
+        exportedAt: new Date().toISOString(),
+        schemaVersion: 2,
         appVersion: Constants.expoConfig?.version || '1.0.0',
         data,
       };
