@@ -21,6 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRTL } from '../hooks/useRTL';
+import { getUserItem } from '../lib/userStorage';
 
 const DAILY_VERSES = [
   { arabic: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا', translation: 'Indeed, with hardship comes ease.', reference: 'Quran 94:6' },
@@ -119,6 +120,7 @@ export default function DashboardScreen() {
   const { colors } = useTheme();
   const { rtlView, rtlText } = useRTL();
   const router = useRouter();
+  const userId = user?.id ?? null;
 
   const [hijriDate, setHijriDate] = useState<HijriInfo | null>(null);
   const [nextPrayer, setNextPrayer] = useState<NextPrayer | null>(null);
@@ -191,7 +193,10 @@ export default function DashboardScreen() {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = `prayer_completed_${d.toDateString()}`;
-      const val = await AsyncStorage.getItem(key);
+      // prayer-times.tsx owns/scopes this key; read scoped first, fall back
+      // to the pre-scoping legacy entry (read-only, not our key to migrate).
+      let val = await getUserItem(key, userId);
+      if (val === null) val = await AsyncStorage.getItem(key);
       if (val) {
         const completed = JSON.parse(val);
         if (completed.length >= 1) { s++; } else { break; }
@@ -201,16 +206,20 @@ export default function DashboardScreen() {
       }
     }
     setStreak(s);
-  }, []);
+  }, [userId]);
 
   // Daily summary — Tasks/Prayer/Goals/Savings, mirrors web dailySummary useMemo
   const loadDailySummary = useCallback(async () => {
-    const [tasksRaw, prayerRaw, goalsRaw, txRaw] = await Promise.all([
+    const prayerKey = `prayer_completed_${new Date().toDateString()}`;
+    const [tasksRaw, prayerScoped, goalsRaw, txRaw] = await Promise.all([
       AsyncStorage.getItem('amanah_tasks'), // was 'amanah-tasks' (dash) - key-name mismatch with tasks.tsx's real key, fixed 2026-07-23
-      AsyncStorage.getItem(`prayer_completed_${new Date().toDateString()}`),
+      getUserItem(prayerKey, userId),
       AsyncStorage.getItem('amanah-goals'),
       AsyncStorage.getItem('amanah-transactions'),
     ]);
+    // prayer-times.tsx owns/scopes this key; fall back to the pre-scoping
+    // legacy entry (read-only) if nothing scoped exists yet.
+    const prayerRaw = prayerScoped !== null ? prayerScoped : await AsyncStorage.getItem(prayerKey);
     const tasks = JSON.parse(tasksRaw || '[]');
     const todayStr = new Date().toISOString().split('T')[0];
     const todayTasks = tasks.filter((tk: { date?: string }) => !tk.date || tk.date === todayStr);
@@ -233,7 +242,7 @@ export default function DashboardScreen() {
       balance,
       overdueCount: overdueTasks.length,
     });
-  }, []);
+  }, [userId]);
 
   // Achievements — mirrors web Streaks.tsx exactly (app/prayer/quran/savings streaks, XP, badges)
   const loadStreaks = useCallback(async () => {
@@ -258,7 +267,9 @@ export default function DashboardScreen() {
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const val = await AsyncStorage.getItem(`prayer_completed_${d.toDateString()}`);
+      const prayerKey = `prayer_completed_${d.toDateString()}`;
+      let val = await getUserItem(prayerKey, userId);
+      if (val === null) val = await AsyncStorage.getItem(prayerKey);
       if (val) {
         const completed = JSON.parse(val);
         if (completed.length >= 5) { prayerStreak++; } else { break; }
@@ -321,7 +332,7 @@ export default function DashboardScreen() {
     ];
 
     setStreakData({ appStreak, prayerStreak, quranStreak, savingsStreak, xp, level, title, badges });
-  }, [language]);
+  }, [language, userId]);
 
   // Smart Briefing — mirrors web SmartBriefing.tsx (greeting, spending, streak, tasks left, quote)
   const loadBriefing = useCallback(async () => {
@@ -350,7 +361,9 @@ export default function DashboardScreen() {
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const val = await AsyncStorage.getItem(`prayer_completed_${d.toDateString()}`);
+      const prayerKey = `prayer_completed_${d.toDateString()}`;
+      let val = await getUserItem(prayerKey, userId);
+      if (val === null) val = await AsyncStorage.getItem(prayerKey);
       if (val) {
         const completed = JSON.parse(val);
         if (completed.length >= 1) { briefingStreak++; } else { break; }
@@ -372,7 +385,7 @@ export default function DashboardScreen() {
     };
 
     setBriefing({ greeting, dailySpending, dailyBudget, streak: briefingStreak, tasksCount, quote });
-  }, [language]);
+  }, [language, userId]);
 
   useEffect(() => {
     AsyncStorage.getItem(DUA_NOTIF_KEY).then((v) => {
@@ -397,13 +410,13 @@ export default function DashboardScreen() {
     loadDailySummary();
     loadStreaks();
     loadBriefing();
-  }, [fetchHijri, loadStreaks, loadBriefing]);
+  }, [fetchHijri, calcStreak, loadDailySummary, loadStreaks, loadBriefing]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([fetchHijri(), fetchPrayerTimes(), calcStreak(), loadDailySummary(), loadStreaks(), loadBriefing()]);
     setRefreshing(false);
-  }, [fetchHijri, loadStreaks, loadBriefing]);
+  }, [fetchHijri, fetchPrayerTimes, calcStreak, loadDailySummary, loadStreaks, loadBriefing]);
 
   if (authLoading) {
     return (

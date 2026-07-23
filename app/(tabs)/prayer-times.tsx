@@ -9,8 +9,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTimeFormat } from '../../src/contexts/TimeFormatContext';
@@ -32,6 +32,7 @@ export default function PrayerTimes() {
   const { formatTime } = useTimeFormat();
   const { colors } = useTheme();
   const router = useRouter();
+  const userId = user?.id ?? null;
 
   const [prayers, setPrayers] = useState<PrayerTime[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,20 +119,29 @@ export default function PrayerTimes() {
     return () => clearInterval(interval);
   }, [prayers, updateNextPrayer]);
 
-  // Load completed from storage
+  // Load completed from storage — was raw, unscoped AsyncStorage before
+  // (a privacy gap: any account signed in on this device could see/edit
+  // another account's prayer record). Now scoped per user, same
+  // getUserItem/setUserItem/migrateLegacyKeyIfNeeded pattern as Phase 1.
+  // This is the OWNER of prayer_completed_<date> (the only file that writes
+  // it) - weekly-life-score.tsx and DashboardScreen.tsx only read it.
   useEffect(() => {
     const today = new Date().toDateString();
-    AsyncStorage.getItem(`prayer_completed_${today}`).then((saved) => {
-      if (saved) setCompleted(new Set(JSON.parse(saved)));
+    const key = `prayer_completed_${today}`;
+    migrateLegacyKeyIfNeeded(key, userId).then(() => {
+      getUserItem(key, userId).then((saved) => {
+        if (saved) setCompleted(new Set(JSON.parse(saved)));
+        else setCompleted(new Set());
+      });
     });
-  }, []);
+  }, [userId]);
 
   const toggleCompleted = (name: string) => {
     setCompleted((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name); else next.add(name);
       const today = new Date().toDateString();
-      AsyncStorage.setItem(`prayer_completed_${today}`, JSON.stringify([...next]));
+      setUserItem(`prayer_completed_${today}`, userId, JSON.stringify([...next]));
       return next;
     });
   };
