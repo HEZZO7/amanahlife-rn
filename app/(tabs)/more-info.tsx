@@ -44,7 +44,6 @@ export default function MoreInfo() {
         { label: isAr ? 'المميزات' : 'Features', onPress: () => openWeb('/landing#features') },
         { label: isAr ? 'الأسعار' : 'Pricing', onPress: () => router.push('/(tabs)/subscription' as any) },
         { label: isAr ? 'العرض' : 'Showcase', onPress: () => openWeb('/landing#showcase') },
-        { label: isAr ? 'آراء المستخدمين' : 'Testimonials', onPress: () => openWeb('/landing#testimonials') },
       ],
     },
     {
