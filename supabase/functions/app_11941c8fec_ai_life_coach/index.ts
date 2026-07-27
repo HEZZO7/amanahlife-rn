@@ -1,5 +1,15 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// NOTE (Round 3, 2026-07): this Edge Function is intentionally duplicated
+// verbatim in both repos - amanahlife-rn (here, the original) and the web
+// repo (AmanahLifeapp) at app/frontend/supabase/functions/app_11941c8fec_ai_life_coach/.
+// It's one project-level Supabase Edge Function serving both clients, not
+// something owned by either platform, but each repo needs its own committed
+// copy for contributors to actually find it. If you fix a bug or change
+// behavior here, apply the same change to the other repo's copy too - they
+// must stay identical. Don't rediscover "why are there two copies" from
+// scratch; this is why.
+
 // Phase 4 (critical-audit-2026-07): the "AI Life Coach" screen previously
 // picked a random string out of a fixed, hardcoded array per category -
 // there was no AI involved at all, despite the name and UI implying a real,
