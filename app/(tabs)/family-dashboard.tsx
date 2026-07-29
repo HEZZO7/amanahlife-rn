@@ -20,11 +20,14 @@ export default function Screen() {
           Migrate from:{'\n'}app/frontend/src/pages/{name.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}.tsx
         </Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={{ color: colors.teal, fontWeight: '700', marginBottom: 6 }}>Connected to Supabase ✓</Text>
+          {/* This card previously claimed "Connected to Supabase ✓" and listed
+              real auth/data wiring. None of that is true - this screen is an
+              unmigrated scaffold with no Supabase import, no useAuth, and no
+              data fetching of any kind. It also isn't reachable from any nav.
+              Stating that plainly rather than shipping a false status claim. */}
+          <Text style={{ color: colors.textSecondary, fontWeight: '700', marginBottom: 6 }}>Not implemented yet</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 20 }}>
-            • Real auth: useAuth(){'\n'}
-            • Real data: supabase.from('table').select(){'\n'}
-            • Same APIs as web app
+            This screen is a placeholder. It has no backend connection and shows no real data.
           </Text>
         </View>
       </View>
