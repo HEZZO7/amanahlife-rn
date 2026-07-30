@@ -1,6 +1,8 @@
 # FamilyBudget Phase B step 2 — conflict-resolution options
 
-**Status:** for review during the Phase B step 1 soak period. Options only — nothing here is implemented, and no option has been chosen.
+**Status:** for review during the Phase B step 1 soak period. The conflict-resolution *option* is still open — nothing below is implemented.
+
+**One thing is now settled (2026-07-30):** mirroring deletion is the **first task of step 2**, ahead of choosing any conflict-resolution option. It is a correctness gap that exists today, not a race to guard against, and it is a prerequisite for everything else — there is no point reasoning about which writer wins a conflict while deleted rows silently come back regardless. **Soft delete is the leaning** (see the deletion section below), on the grounds that this is shared financial data where an audit trail of who removed what has real value. Not implemented; recorded here as the confirmed starting point for when the soak ends.
 
 **Decide before starting step 2** (flipping reads from local storage to the server), because the choice changes how much of the client gets rewritten.
 
@@ -65,18 +67,25 @@ Mentioned only to dismiss: for a household budget with a few members, "Fatima is
 
 ---
 
-## Sub-decision required regardless of option: deletion semantics
+## Deletion semantics — the confirmed first task of step 2
 
-- **Hard delete** — simple, and correct once reads are server-authoritative and pushes are per-row (Option A). A stale client cannot resurrect anything because it no longer pushes rows it did not touch.
-- **Soft delete (`deleted_at`)** — defensive: even a misbehaving or old client cannot bring a row back, and it leaves an audit trail of who removed what, which is arguably desirable for shared *financial* data. Costs a column and a filter on every read.
+This is no longer a sub-decision to be taken alongside the conflict option. It comes **first**, because it is the one defect here that is already real: `mirrorToServer()` only upserts, so a locally deleted expense persists on the server indefinitely and would reappear the moment reads flip over.
 
-Given this is money and multiple people, soft delete deserves genuine consideration rather than defaulting to hard delete.
+- **Hard delete** — simple, and correct once reads are server-authoritative and pushes are per-row (Option A). A stale client cannot resurrect anything because it no longer pushes rows it did not touch. But it depends on that rewrite landing first, and it leaves no record.
+- **Soft delete (`deleted_at`)** — **the current leaning.** Defensive in a way hard delete is not: even a misbehaving, offline-for-a-week, or not-yet-updated client cannot bring a row back, because the row's deleted state is data rather than an absence. It also leaves an audit trail of who removed what and when — genuinely useful for a shared household budget, where "where did that 3,000 go?" is a question people actually ask each other. Costs a column and a filter on every read.
+
+Leaning soft delete unless something during the soak argues otherwise. Worth noting it also decouples this task from Option A: soft delete is correct even while the client still pushes whole blobs, so it can ship before the larger client rewrite rather than depending on it.
 
 ---
 
-## Suggested shape (for review, not a decision)
+## Suggested shape (deletion now settled; the rest still for review)
 
-**A + D**, with deletion semantics settled explicitly:
+Order of work when the soak ends:
+
+1. **Mirror deletion (soft delete).** Confirmed first task — see above.
+2. **Then** choose and implement a conflict-resolution option from the below.
+
+**A + D** is the suggestion for step 2 proper:
 
 - **A** because it is the only option that fixes the gap that actually exists today (2), and it removes the *mechanism* behind (1) rather than detecting its damage after the fact.
 - **D** because the realistic trigger for staleness is an idle open client, and Realtime addresses that directly for little effort.
