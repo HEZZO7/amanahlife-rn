@@ -20,7 +20,54 @@ import { functionUrl } from '../../src/lib/config';
 import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK } from '../../src/theme/fonts';
 
+// CHECKOUT_ENDPOINT is used for "Manage Subscription" and for starting a new
+// subscription when the signed-in user has already used their trial (see
+// handleUpgrade) - that case needs the API-based checkout so
+// checkout_options.skip_trial can actually suppress Lemon Squeezy's own
+// native trial offer, which a static buy-link cannot do. A first-time-
+// trial-eligible user skips this endpoint entirely and goes straight to
+// Lemon Squeezy's hosted buy-links instead (BUY_LINKS/buildCheckoutUrl
+// below). Mirrors app/frontend/src/pages/Subscription.tsx exactly.
 const CHECKOUT_ENDPOINT = functionUrl('app_11941c8fec_lemonsqueezy_checkout');
+
+// One buy-link per (tier, billing) variant - same 4 URLs as the web app,
+// confirmed live to each show a single fixed price with no interval
+// selector. The `?enabled=<variant_id>` query param restricts the buy-link
+// to that one variant, matching what Lemon Squeezy itself generated.
+const BUY_LINKS: Record<'balanced' | 'family', Record<'monthly' | 'yearly', string>> = {
+  balanced: {
+    monthly: 'https://amanahlife.lemonsqueezy.com/checkout/buy/648ef373-e4f9-4a53-8837-3c42306acf48?enabled=1959952',
+    yearly: 'https://amanahlife.lemonsqueezy.com/checkout/buy/134fbb9c-1a72-4cfa-a3cb-8d90d733bcf1?enabled=1959859',
+  },
+  family: {
+    monthly: 'https://amanahlife.lemonsqueezy.com/checkout/buy/0d44ea94-b1db-450e-bf8b-47a39fd304f0?enabled=1959970',
+    yearly: 'https://amanahlife.lemonsqueezy.com/checkout/buy/008ffbea-25d1-47dc-a1ec-8acc17e56c96?enabled=1959954',
+  },
+};
+
+/**
+ * Builds a Lemon Squeezy checkout URL for the given plan, pre-filled with
+ * the signed-in user's email and carrying their user_id (+ this app's fixed
+ * app_id) in custom_data so the webhook can attribute the resulting
+ * subscription to the right account. app_id is NOT optional here - the
+ * webhook rejects any payload where custom_data.app_id !== "11941c8fec".
+ */
+function buildCheckoutUrl(
+  tier: 'balanced' | 'family',
+  billing: 'monthly' | 'yearly',
+  user: { id: string; email?: string | null }
+): string {
+  if (!user?.id) {
+    throw new Error('buildCheckoutUrl requires an authenticated user');
+  }
+  const base = BUY_LINKS[tier][billing];
+  const params = new URLSearchParams();
+  if (user.email) params.set('checkout[email]', user.email);
+  params.set('checkout[custom][user_id]', user.id);
+  params.set('checkout[custom][app_id]', '11941c8fec');
+  const separator = base.includes('?') ? '&' : '?';
+  return `${base}${separator}${params.toString()}`;
+}
 
 const PLANS = [
   {
@@ -54,7 +101,7 @@ const FALLBACK_RATES: Record<string, number> = {
 export default function SubscriptionScreen() {
   const { language, isRTL } = useLanguage();
   const { colors } = useTheme();
-  const { tier: currentTier, billingCycle, isTrialActive, trialDaysRemaining, trialUsed, startTrial, refetch } = useSubscription();
+  const { tier: currentTier, status: currentStatus, billingCycle, currentPeriodEnd, isTrialActive, trialDaysRemaining, trialUsed, startTrial, refetch } = useSubscription();
   const { user } = useAuth();
   const isAr = language === 'ar';
   const tr = (en: string, ar: string) => isAr ? ar : en;
@@ -92,18 +139,34 @@ export default function SubscriptionScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session');
-      const response = await fetch(CHECKOUT_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ tier: planId, billing, successUrl: 'amanahlife://subscription?success=true', cancelUrl: 'amanahlife://subscription?canceled=true' }),
-      });
-      const data = await response.json();
-      if (data.url) {
-        await WebBrowser.openBrowserAsync(data.url);
-        refetch();
-      } else {
-        toast.error(tr('Error creating checkout session', 'حدث خطأ أثناء إنشاء جلسة الدفع'));
+
+      // A trial-used account is routed through the API-based checkout
+      // instead of the static buy-link, because only the API can set
+      // checkout_options.skip_trial - genuinely suppressing Lemon Squeezy's
+      // own native trial offer, rather than just disclosing it. Everyone
+      // else goes straight to the buy-link. (The Edge Function
+      // independently re-derives trial_used from the database - this
+      // branch is purely an optimization, not the source of enforcement.)
+      // Mirrors app/frontend/src/pages/Subscription.tsx exactly.
+      if (trialUsed) {
+        const response = await fetch(CHECKOUT_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ tier: planId, billing, successUrl: 'amanahlife://subscription?success=true', cancelUrl: 'amanahlife://subscription?canceled=true' }),
+        });
+        const data = await response.json();
+        if (data.url) {
+          await WebBrowser.openBrowserAsync(data.url);
+          refetch();
+        } else {
+          toast.error(tr('Error creating checkout session', 'حدث خطأ أثناء إنشاء جلسة الدفع'));
+        }
+        return;
       }
+
+      const url = buildCheckoutUrl(planId, billing, { id: session.user.id, email: session.user.email });
+      await WebBrowser.openBrowserAsync(url);
+      refetch();
     } catch {
       toast.error(tr('Connection error occurred', 'حدث خطأ في الاتصال'));
     } finally {
@@ -210,6 +273,18 @@ export default function SubscriptionScreen() {
               <Text style={[styles.currentBilling, { color: colors.textSecondary }]}>
                 {billingCycle === 'yearly' ? tr('Yearly Plan', 'اشتراك سنوي') : tr('Monthly Plan', 'اشتراك شهري')}
               </Text>
+              {/* Renewal/expiry date. null for free/trial users and for any
+                  provider whose webhook doesn't populate current_period_end
+                  yet - shown only when we genuinely have it, never a
+                  guessed date. Mirrors web's Subscription.tsx. */}
+              {!isTrialActive && currentPeriodEnd && (
+                <Text style={[styles.currentBilling, { color: colors.textSecondary, marginTop: 2 }]}>
+                  {currentStatus === 'canceled'
+                    ? tr('Access ends ', 'ينتهي الوصول في ')
+                    : tr('Renews ', 'يتجدد في ')}
+                  {new Date(currentPeriodEnd).toLocaleDateString(isAr ? 'ar' : 'en', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </Text>
+              )}
             </View>
           </View>
         </Card>

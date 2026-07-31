@@ -39,6 +39,11 @@ interface SubscriptionContextType {
   tier: SubscriptionTier;
   status: SubscriptionStatus;
   billingCycle: BillingCycle;
+  // ISO date string, or null. Populated by the Stripe/Lemon Squeezy webhooks
+  // (never fabricated) - mirrors web's SubscriptionContext.tsx. Null for
+  // free/trial users and for any provider whose webhook doesn't populate
+  // current_period_end yet.
+  currentPeriodEnd: string | null;
   loading: boolean;
   isTrialActive: boolean;
   trialDaysRemaining: number;
@@ -55,6 +60,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [tier, setTier] = useState<SubscriptionTier>('free');
   const [status, setStatus] = useState<SubscriptionStatus>('active');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTrialActive, setIsTrialActive] = useState(false);
   const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
@@ -75,6 +81,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setTier('free');
       setStatus('active');
       setBillingCycle('monthly');
+      setCurrentPeriodEnd(null);
       setIsTrialActive(false);
       setTrialDaysRemaining(0);
       setTrialUsed(false);
@@ -88,7 +95,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       // leaving whatever tier was last fetched stuck in state.
       const { data } = await supabase
         .from('app_11941c8fec_subscriptions')
-        .select('tier, status, billing_cycle, trial_started_at, trial_used')
+        .select('tier, status, billing_cycle, current_period_end, trial_started_at, trial_used')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -97,6 +104,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         setTier(ENTITLING_STATUSES.has(fetchedStatus) ? (data.tier as SubscriptionTier) : 'free');
         setStatus(fetchedStatus);
         setBillingCycle(data.billing_cycle as BillingCycle);
+        setCurrentPeriodEnd(data.current_period_end ?? null);
         setTrialUsed(!!data.trial_used);
         const computed = computeTrialState(data.trial_started_at ?? null);
         setIsTrialActive(computed.isTrialActive);
@@ -109,6 +117,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         setTier('free');
         setStatus('active');
         setBillingCycle('monthly');
+        setCurrentPeriodEnd(null);
         setIsTrialActive(false);
         setTrialDaysRemaining(0);
         setTrialUsed(false);
@@ -167,7 +176,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   return (
     <SubscriptionContext.Provider value={{
-      tier, status, billingCycle, loading,
+      tier, status, billingCycle, currentPeriodEnd, loading,
       isTrialActive, trialDaysRemaining, trialUsed, isPremium,
       startTrial, refetch: fetchSubscription,
     }}>
@@ -182,6 +191,7 @@ export function useSubscription() {
     tier: 'free' as SubscriptionTier,
     status: 'active' as SubscriptionStatus,
     billingCycle: 'monthly' as BillingCycle,
+    currentPeriodEnd: null,
     loading: false,
     isTrialActive: false,
     trialDaysRemaining: 0,
