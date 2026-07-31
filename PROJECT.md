@@ -1,6 +1,6 @@
 # AmanahLife — Project Documentation
 
-Handoff document for the full AmanahLife project (web + Android). Last updated 2026-07-31.
+Handoff document for the full AmanahLife project (web + Android). Last updated 2026-07-31 (Lemon Squeezy session + feature-parity audit).
 
 ---
 
@@ -70,6 +70,27 @@ Handoff document for the full AmanahLife project (web + Android). Last updated 2
 | PWA / offline mode | ✅ (web only, by design) | N/A — not applicable to native app |
 | More/Info screen (footer sitemap) | N/A (web has footer) | ✅ new screen added |
 | About/Founder page | ✅ | ✅ |
+
+---
+
+## 0c-2. Web vs Android Feature-Parity Audit (2026-07-31)
+
+Full systematic comparison, triggered by Huzaifa noticing Android was missing entire web features (flagged: no Blog, incomplete task-reminders in Settings). Built from actual code — every route in web's `App.tsx` + every entry in `Index.tsx`'s feature grid + every Settings sub-section, cross-referenced against every file under RN's `app/(tabs)/` + RN's Settings screen — not from memory of what was assumed to exist.
+
+| Feature | Web | Android | Status |
+|---|---|---|---|
+| **Daily Routine** | Real feature (`DailyRoutine.tsx`) — 5 fixed routine checklists (Morning, Weekly Review, Health Day, Deep Focus, Learning), per-item streak tracking, all local storage | **No file exists at all** | **Missing entirely.** Simple, self-contained port — no server dependency, same pattern as the 4 screens already ported in an earlier phase (Bill Reminders, Financial Dashboard, Halal Investment, Savings Challenges). |
+| **Blog** | Native route `/blog/*`, full entry in main feature grid | No native screen. Reachable only via More → Support → "Blog" → opens `app.amanahlife.com/blog` in an in-app browser tab (a deliberate, documented design choice in `more-info.tsx`'s own header comment — not an oversight). Not in the dashboard's feature grid at all | **Missing as a real feature** — web-view fallback only, buried 2 taps deep in a secondary menu, not discoverable from the main dashboard like on web. Port complexity: simple if just mirroring web's blog content (already static markdown in `public/blog-content/*.md`) as native screens — needs Huzaifa's decision on whether the current web-view link is actually sufficient. |
+| **Notification preferences (Settings)** | Two separate sections: general "Notifications" panel (`NotificationSettings.tsx` — push subscription + 6 category toggles: prayer/bill/habit-goal/fasting/savings/general activity) AND "Smart Prayer Reminders" (`PrayerReminderSettings.tsx` — per-prayer minutes-before config) | **Only the prayer-specific reminders exist** (`settings.tsx:383-407` — global enable + per-prayer on/off toggle, via `prayerNotifications.ts`). No equivalent category toggles for bill/habit-goal/fasting/savings/general reminders anywhere in Settings | **Partial** — this is almost certainly what Huzaifa meant by "task-reminders isn't fully present." Medium port complexity: needs RN preference storage + wiring into the existing `app_11941c8fec_push_notify` function and local `expo-notifications` scheduling per category — the prayer-only scheduling pattern already proven in `prayerNotifications.ts` is the template. |
+| Family Dashboard | Real screen, but "invite a family member" is fabricated data — local-only fake record with randomized streak/Quran stats, no real invite or sync (already documented, unfixed) | File exists (`family-dashboard.tsx`) but **not linked from anywhere** in the app (not in the dashboard grid, not referenced by any other screen — confirmed via grep across the whole repo) — unreachable in practice even though the file exists | **Placeholder on both**, for different reasons — web's is fake-functional; Android's is a genuinely orphaned file. **Do not build a fake/placeholder Android version** — depends on the same unfinished real invite + shared-data backend (new Supabase table, cross-device sync) already flagged as bigger-scope work. |
+| Receipt Scanner | 100% fake — `setTimeout` + random pick from 4 hardcoded mock receipts, UI claims "AI analyzing" | File exists (`receipt-scanner.tsx`) but **not linked from anywhere** — same orphaned-file situation as Family Dashboard | **Placeholder on both.** **Do not build a fake/placeholder Android version.** Needs real OCR (on-device library or a paid cloud API with ongoing per-call cost) — the most expensive gap here by a wide margin. |
+| Google Play Billing | N/A (Lemon Squeezy) | Lemon Squeezy via in-app browser, not native Play Billing | Already-documented hard blocker (see Pending Items #1) — re-confirmed still open, nothing new. |
+| The other 20 feature-grid screens (Prayer, Quran, Duas, Dhikr, Fasting, Tasks, Adhkar, Finance, Qibla, Zakat, Calendar, Goals, Wellness, Planner, Family Budget, Financial Dashboard, Halal Investment, Ramadan Planner, Progress Analytics, Bill Reminders, AI Life Coach, Life Score, Savings Challenges) | ✅ | ✅ | Matches. |
+| Settings: Subscription, Profile, Theme, Language, Regional, Islamic toggles, Time Format, Backup/Restore, Export CSV, Delete Account, Sign Out | ✅ | ✅ | Matches. |
+| About / Privacy / Refund | Native pages | Native pages | Matches. |
+| Terms / Contact | Native pages | Opens the web page in-browser (deliberate, documented design choice in `more-info.tsx`) | Matches functionally, not a gap. |
+
+**Reported to Huzaifa 2026-07-31; no implementation started pending his decision on scope/order** — same discipline as every other scope-affecting decision in this project (Family Dashboard, Receipt Scanner, tasks-key unification, backup-format unification all followed the same "report, don't silently build" pattern).
 
 ---
 
