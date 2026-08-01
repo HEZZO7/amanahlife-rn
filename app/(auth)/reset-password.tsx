@@ -51,6 +51,18 @@ export default function ResetPasswordScreen() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // If no deep-link URL ever resolves at all (as opposed to one that
+  // resolves but fails verification, which the effect below already
+  // handles), don't leave the user staring at a spinner forever - fail
+  // clearly after a reasonable wait instead of hanging silently.
+  useEffect(() => {
+    if (sessionReady) return;
+    const timer = setTimeout(() => {
+      if (!handledUrl.current) setVerifyFailed(true);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [sessionReady]);
+
   useEffect(() => {
     if (!url || sessionReady || handledUrl.current === url) return;
     handledUrl.current = url;
@@ -143,6 +155,11 @@ export default function ResetPasswordScreen() {
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: FONT_UI, marginTop: 12 }}>
               {isAr ? 'جاري التحقق من الرابط...' : 'Verifying your reset link...'}
             </Text>
+            <TouchableOpacity style={[styles.ghostBtn, { marginTop: 8 }]} onPress={() => router.replace('/(auth)/login' as any)}>
+              <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: FONT_UI_MEDIUM }}>
+                {isAr ? 'العودة لتسجيل الدخول' : 'Back to Login'}
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <>
