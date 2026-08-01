@@ -435,6 +435,7 @@ export default function DashboardScreen() {
     { icon: '📖', title: language === 'ar' ? 'القرآن' : 'Quran', path: '/(tabs)/quran' },
     { icon: '🤲', title: language === 'ar' ? 'الدعاء' : 'Duas', path: '/(tabs)/duas' },
     { icon: '📿', title: language === 'ar' ? 'الذكر' : 'Dhikr', path: '/(tabs)/dhikr' },
+    { icon: '🌅', title: language === 'ar' ? 'الروتين اليومي' : 'Daily Routine', path: '/(tabs)/daily-routine' },
     { icon: '⏱️', title: language === 'ar' ? 'الصيام' : 'Fasting', path: '/(tabs)/fasting' },
     { icon: '✅', title: language === 'ar' ? 'المهام' : 'Tasks', path: '/(tabs)/tasks' },
     { icon: '🍃', title: language === 'ar' ? 'الأذكار' : 'Adhkar', path: '/(tabs)/adhkar' },
