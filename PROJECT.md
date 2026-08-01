@@ -1,6 +1,6 @@
 # AmanahLife — Project Documentation
 
-Handoff document for the full AmanahLife project (web + Android). Last updated 2026-07-31 (Lemon Squeezy session + feature-parity audit).
+Handoff document for the full AmanahLife project (web + Android). Last updated 2026-08-01 (paid-feature parity sweep + Android production build).
 
 ---
 
@@ -91,6 +91,62 @@ Full systematic comparison, triggered by Huzaifa noticing Android was missing en
 | Terms / Contact | Native pages | Opens the web page in-browser (deliberate, documented design choice in `more-info.tsx`) | Matches functionally, not a gap. |
 
 **Reported to Huzaifa 2026-07-31; no implementation started pending his decision on scope/order** — same discipline as every other scope-affecting decision in this project (Family Dashboard, Receipt Scanner, tasks-key unification, backup-format unification all followed the same "report, don't silently build" pattern).
+
+---
+
+## 0c-3. Paid-Feature Audit (2026-08-01)
+
+Full audit of entitlement gating, Lemon Squeezy configuration, and webhook lifecycle-event coverage across both platforms, ahead of fixing paid-feature parity.
+
+### Entitlement gating
+
+| Feature | Web | RN | Status |
+|---|---|---|---|
+| AI Life Coach | Gated via `PremiumGate requiredTier="balanced"` (`AILifeCoach.tsx:147`) | **Not gated.** Comment in `ai-life-coach.tsx` explicitly says "PremiumGate omitted — no RN equivalent" | **Gap — free access to a paid feature on Android.** |
+| AI Planning / Smart Planning | Gated (`AIPlanning.tsx:62`), **but the `/ai-planning` route isn't linked from anywhere in web's own UI** — an orphaned gated feature on web itself, confirmed via grep across the whole repo | **No RN screen exists at all** | Web: orphaned but real. RN: doesn't exist. Neither is a live user-facing gap right now (unreachable either way), but worth a decision on whether to build the RN screen or quietly retire the whole feature. |
+| AI Search / Smart Search | Gated (`AISearch.tsx:80`) | **Not gated** (`ai-search.tsx` has zero premium-check code) | **Gap.** |
+| Financial Dashboard | Gated (`FinancialDashboard.tsx:75`) | **Not gated.** Same "PremiumGate omitted" comment pattern in `financial-dashboard.tsx` | **Gap.** |
+| Receipt Scanner | Gated (`ReceiptScanner.tsx:174`) — but the feature itself is 100% fake (mock OCR) | Not gated, and the screen is orphaned/unreachable (see 0c-2) | Not a live gap (unreachable), but see the marketing-copy finding below. |
+| Savings Challenges | Gated (`SmartSavingsChallenges.tsx:238`) | **Not gated at all** — fully reachable, fully functional, free on Android | **Gap — the most concrete real-money-impact one:** any free Android user gets full Savings Challenges access today. |
+| Weekly Life Score | Gated (`WeeklyLifeScore.tsx:171`) | **Not gated.** Same comment pattern in `weekly-life-score.tsx` | **Gap.** |
+| Family Budget | Bespoke check: `tier === 'family' \|\| isTrialActive` (`FamilyBudget.tsx:56`) | Same bespoke check, same logic (`family-budget.tsx:57,59`) | **Matches — the one screen RN gates correctly.** |
+| Family Dashboard | Same bespoke `tier === 'family' \|\| isTrialActive` check, but the feature itself is fake data (see 0c-2) | Not gated, and the screen is orphaned/unreachable | Not a live gap (unreachable), but see the marketing-copy finding below. |
+
+**Architectural gap underneath all of this**: web's `SubscriptionContext.tsx` exposes `tier` as `effectiveTier` — trial floors it to `'family'`, a non-entitled status (`canceled`/`expired`/`paused`) floors it to `'free'` — so *any* tier-level check (like `PremiumGate`'s `TIER_LEVELS[tier] >= TIER_LEVELS[requiredTier]`) automatically handles trial and lapsed subscriptions correctly. RN's `SubscriptionContext.tsx` sets `tier` straight from the DB row (status-checked, but **not** trial-elevated) — only the separate `isPremium` boolean reflects trial. Porting web's `PremiumGate` pattern to RN verbatim using tier-level comparison would silently deny access to trialing users. The fix (Phase 2) is to make RN's exposed `tier` compute the same trial floor web's does, so one comparison pattern works identically on both platforms.
+
+**Displayed pricing mismatch, found while checking this**: RN's yearly prices are wrong — Balanced shows `$4.89`/mo (web: `$4.99`), Family shows `$9.09`/mo (web: `$9.99`) (`subscription.tsx:83,90` vs web `Subscription.tsx:80-91`). Looks like a copy error from the original port, not an intentional difference — the actual charge is whatever Lemon Squeezy's configured variant price is regardless of this display bug, but a user comparing prices across platforms would see a mismatch.
+
+### Lemon Squeezy variant IDs referenced by RN
+
+**Already correct — no gap here.** `subscription.tsx`'s `BUY_LINKS` has all 4: Balanced monthly (`1959952`), Balanced yearly (`1959859`), Family monthly (`1959970`), Family yearly (`1959954`), and the Monthly/Yearly billing toggle is a real, working UI control (`subscription.tsx:318-326`) — this was completed in the 2026-07-31 RN Lemon Squeezy port session, verified still present now.
+
+### Webhook lifecycle-event coverage
+
+`app_11941c8fec_lemonsqueezy_webhook/index.ts`, re-read fresh (not from memory):
+- **Signature verification: real.** Constant-time HMAC-SHA256 comparison (`verifySignature`, lines 8-32).
+- **Registered for 8 events** (per the 2026-07-31 registration, webhook ID 123234) but **`handledEvents` only processes 4**: `subscription_created`, `subscription_updated`, `subscription_cancelled`, `subscription_expired` (line 93). `subscription_resumed`, `subscription_paused`, `subscription_unpaused`, `subscription_payment_failed` are all silently acknowledged (`{received:true, message:"Event not handled"}`) without touching the database at all.
+- Notably, the status-mapping logic just below (lines 140-151) **already has branches for `paused` and `past_due`** (`subscriptionData.status === "paused"` / `"past_due"`) — code that's currently unreachable because the event-name allowlist filters those events out before this logic ever runs. Widening `handledEvents` unlocks logic that's already written, not something needing new logic from scratch (aside from `resumed`, which needs an explicit `status = "active"` branch, and `payment_failed`, which should be covered by the existing `past_due` fallback if LS's payload reports that status).
+- **`refunded` isn't a real Lemon Squeezy *subscription* lifecycle event** — refunds are an order-level concept (`order_refunded`) in LS's model, not a subscription-level one. Flagging this rather than fabricating a `subscription_refunded` handler for an event type that doesn't exist; if order-level refund handling is wanted, that's a separate event registration and a different code path (an order isn't a subscription row), worth a explicit decision rather than guessing at a mapping.
+- Writes on match: `user_id, payment_provider, tier, billing_cycle, status, current_period_end, lemonsqueezy_customer_id, lemonsqueezy_subscription_id, updated_at` — `current_period_start` deliberately left null (no equivalent LS field, not fabricated).
+
+### RN purchase/upgrade entry points (file:line)
+
+- `subscription.tsx:136` — `handleUpgrade`, the actual checkout-initiation function (buy-link direct for fresh users, API+skip_trial for trial-used users)
+- `subscription.tsx:397` — the "Upgrade" button calling it
+- `family-budget.tsx:125` — `LockedFeatureModal`'s onClose navigates to `/subscription`
+- `more-info.tsx:47` — "Pricing" menu item
+- `settings.tsx:296` — "Manage" button (Subscription section)
+- `GlobalHeader.tsx:156` — header menu item
+
+### Family Dashboard / Receipt Scanner advertised as paid benefits
+
+**Yes, on web — a real product-integrity finding.** `PricingPage.tsx` (separate from `Subscription.tsx`, the public marketing pricing page) explicitly lists both in its plan comparison table:
+- Line 63: `{ name: 'Receipt Scanner', free: false, balanced: true, family: true }`
+- Line 66: `{ name: 'Family Dashboard', free: false, balanced: false, family: true }` (family-exclusive)
+- Line 48: the Family plan's own feature bullets include "Shared Family Dashboard"
+- Line 38: the Balanced plan's feature bullets include "Receipt Scanner"
+
+Both features are confirmed 100% fake (mock OCR with hardcoded receipts; randomized fake family-invite data — see 0c-2). **This means web is actively selling paying customers two features that don't work.** Not something to silently patch by building fake RN parity — flagging for Huzaifa's decision alongside the existing Family Dashboard/Receipt Scanner scoping question (Phase 5).
 
 ---
 
