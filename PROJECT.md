@@ -116,6 +116,13 @@ Full audit of entitlement gating, Lemon Squeezy configuration, and webhook lifec
 
 **Displayed pricing mismatch, found while checking this**: RN's yearly prices are wrong — Balanced shows `$4.89`/mo (web: `$4.99`), Family shows `$9.09`/mo (web: `$9.99`) (`subscription.tsx:83,90` vs web `Subscription.tsx:80-91`). Looks like a copy error from the original port, not an intentional difference — the actual charge is whatever Lemon Squeezy's configured variant price is regardless of this display bug, but a user comparing prices across platforms would see a mismatch.
 
+**Fixed 2026-08-01 (RN repo, commit `1f2a0eb`):**
+- `SubscriptionContext.tsx` now exposes an `effectiveTier` (trial floors to `'family'`) as `tier`, mirroring web's `effectiveTier` exactly — the architectural gap above is closed.
+- New `src/components/PremiumGate.tsx` (mirrors web's tier-level `TIER_LEVELS` comparison, using RN's existing `LockedFeatureModal` for the locked UI instead of web's blurred overlay) wired into AI Life Coach, AI Search, Financial Dashboard, Weekly Life Score, and Savings Challenges — all 5 are now gated `requiredTier="balanced"`, matching web.
+- RN's yearly pricing display corrected to `$4.99`/`$9.99`, matching web.
+- AI Planning (RN has no screen) and Receipt Scanner/Family Dashboard (orphaned on RN) intentionally left as-is — not live gaps, no gating to add to a screen that doesn't exist or isn't reachable.
+- **Still open, blocked pending Huzaifa's confirmation of the web repo's Coolify deploy status** (see 0d): widening the Lemon Squeezy webhook's `handledEvents`, and the end-to-end throwaway-account test across both platforms. Both require a web-repo push, which is being held until the Coolify question below is resolved.
+
 ### Lemon Squeezy variant IDs referenced by RN
 
 **Already correct — no gap here.** `subscription.tsx`'s `BUY_LINKS` has all 4: Balanced monthly (`1959952`), Balanced yearly (`1959859`), Family monthly (`1959970`), Family yearly (`1959954`), and the Monthly/Yearly billing toggle is a real, working UI control (`subscription.tsx:318-326`) — this was completed in the 2026-07-31 RN Lemon Squeezy port session, verified still present now.
