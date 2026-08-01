@@ -16,6 +16,7 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { usePersistedState } from '../../src/lib/usePersistedState';
 import { getUserItem, setUserItem } from '../../src/lib/userStorage';
 import { requestNotificationPermission } from '../../src/lib/prayerNotifications';
+import { getLocalPreferences, updatePreference } from '../../src/lib/notificationPreferences';
 import { supabase } from '../../src/lib/supabase';
 import { functionUrl } from '../../src/lib/config';
 import { toast } from '../../src/lib/toast';
@@ -35,7 +36,6 @@ interface JoinedChallenge { challengeId: string; joinedAt: string; savedAmount: 
 
 const STORAGE_KEY = 'amanah-savings-challenges';
 const TIP_CACHE_KEY = 'amanah-daily-savings-tip';
-const NOTIFICATIONS_ENABLED_KEY = 'amanah-savings-notifications-enabled';
 
 const CHALLENGES: Challenge[] = [
   { id: '52-week', titleEn: '52-Week Challenge', titleAr: 'تحدي 52 أسبوع', descEn: 'Save incrementally each week. Week 1 = $1, Week 2 = $2... Week 52 = $52. Total: $1,378!', descAr: 'ادخر بشكل تصاعدي كل أسبوع. الأسبوع 1 = 1$، الأسبوع 2 = 2$... الأسبوع 52 = 52$. المجموع: 1,378$!', duration: 364, targetAmount: 1378, icon: '📅', milestones: [25, 50, 75, 100] },
@@ -61,7 +61,10 @@ export default function SavingsChallenges() {
   const userId = user?.id ?? null;
 
   const [joined, setJoined] = usePersistedState<JoinedChallenge[]>(STORAGE_KEY, userId, []);
-  const [notificationsEnabled, setNotificationsEnabled] = usePersistedState<boolean>(NOTIFICATIONS_ENABLED_KEY, userId, false);
+  // Reads/writes the same shared savings_reminders preference Settings'
+  // Notifications panel shows - one source of truth, not a private
+  // screen-local duplicate (this used to be its own persisted key).
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [addAmountId, setAddAmountId] = useState<string | null>(null);
   const [addValue, setAddValue] = useState('');
   const [celebrating, setCelebrating] = useState<{ title: string; milestone: number } | null>(null);
@@ -115,12 +118,17 @@ export default function SavingsChallenges() {
   };
 
   useEffect(() => { fetchTip(); }, [tipChallenges.length, language, userId]);
+  useEffect(() => { getLocalPreferences(userId).then((p) => setNotificationsEnabled(p.savings_reminders)); }, [userId]);
 
   const toggleNotifications = async () => {
-    if (notificationsEnabled) { setNotificationsEnabled(false); return; }
-    const granted = await requestNotificationPermission();
-    if (!granted) { toast.error(tr('Notification permission denied', 'تم رفض إذن الإشعارات')); return; }
-    setNotificationsEnabled(true);
+    const next = !notificationsEnabled;
+    if (next) {
+      const granted = await requestNotificationPermission();
+      if (!granted) { toast.error(tr('Notification permission denied', 'تم رفض إذن الإشعارات')); return; }
+    }
+    setNotificationsEnabled(next);
+    const { data: { session } } = await supabase.auth.getSession();
+    await updatePreference(session?.access_token ?? null, userId, 'savings_reminders', next, isAr);
   };
 
   const joinChallenge = (challengeId: string) => {

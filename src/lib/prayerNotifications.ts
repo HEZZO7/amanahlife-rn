@@ -69,8 +69,8 @@ function stripTimezoneSuffix(time: string): string {
   return time.split(' ')[0];
 }
 
-/** Fetch prayer timings for each of the next `days` days (today included), keyed by Date#toDateString(). */
-async function fetchUpcomingTimings(days: number): Promise<Map<string, Record<PrayerName, string>>> {
+/** Fetch prayer timings for each of the next `days` days (today included), keyed by Date#toDateString(). Exported so other reminder categories (e.g. fasting Suhoor/Iftar) can reuse the same Aladhan-backed timing data instead of duplicating the API call. */
+export async function fetchUpcomingTimings(days: number): Promise<Map<string, Record<PrayerName, string>>> {
   const result = new Map<string, Record<PrayerName, string>>();
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();

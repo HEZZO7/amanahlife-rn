@@ -2,7 +2,9 @@ import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { getReminderSettings, schedulePrayerNotifications } from '../src/lib/prayerNotifications';
+import { getLocalPreferences, refreshAllCategoryReminders } from '../src/lib/notificationPreferences';
 import { useLanguage } from '../src/contexts/LanguageContext';
+import { useAuth } from '../src/contexts/AuthContext';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -34,12 +36,17 @@ const queryClient = new QueryClient();
 // time AppShell renders the native RTL state is already correct.
 function AppShell() {
   const { language } = useLanguage();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
 
   useEffect(() => {
     getReminderSettings().then((settings) => {
       if (settings.enabled) schedulePrayerNotifications(settings, language === 'ar');
     });
-  }, [language]);
+    getLocalPreferences(userId).then((prefs) => {
+      refreshAllCategoryReminders(userId, prefs, language === 'ar');
+    });
+  }, [language, userId]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

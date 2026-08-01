@@ -29,6 +29,10 @@ import {
   PrayerName, PrayerReminderSettings, DEFAULT_REMINDER_SETTINGS,
   getReminderSettings, saveReminderSettings, schedulePrayerNotifications,
 } from '../../src/lib/prayerNotifications';
+import {
+  NotificationPreferences, DEFAULT_NOTIFICATION_PREFERENCES,
+  getLocalPreferences, syncPreferencesFromServer, updatePreference,
+} from '../../src/lib/notificationPreferences';
 import { PageHeader, Card } from '../../src/components/ui';
 import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
@@ -81,6 +85,7 @@ export default function Settings() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [reminders, setReminders] = useState<PrayerReminderSettings>(DEFAULT_REMINDER_SETTINGS);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
   const userId = user?.id ?? null;
 
   useEffect(() => {
@@ -88,6 +93,12 @@ export default function Settings() {
       getUserItem('amanah-settings', userId).then((s) => { if (s) { try { setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(s) }); } catch {} } setReady(true); });
     });
     getReminderSettings().then(setReminders);
+    // Instant local cache first, then reconcile with the server's copy so
+    // preferences stay consistent across devices for the same account.
+    getLocalPreferences(userId).then(setNotifPrefs);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      syncPreferencesFromServer(session?.access_token ?? null, userId).then(setNotifPrefs);
+    });
   }, [userId]);
   useEffect(() => { if (ready) setUserItem('amanah-settings', userId, JSON.stringify(settings)); }, [settings, ready, userId]);
 
@@ -98,6 +109,14 @@ export default function Settings() {
   };
   const togglePrayerReminder = (prayer: PrayerName) =>
     updateReminders({ ...reminders, perPrayer: { ...reminders.perPrayer, [prayer]: !reminders.perPrayer[prayer] } });
+
+  const toggleNotifPref = async (key: keyof NotificationPreferences) => {
+    const nextValue = !notifPrefs[key];
+    setNotifPrefs((p) => ({ ...p, [key]: nextValue }));
+    const { data: { session } } = await supabase.auth.getSession();
+    const updated = await updatePreference(session?.access_token ?? null, userId, key, nextValue, isAr);
+    setNotifPrefs(updated);
+  };
 
   const updateSetting = (key: keyof AppSettings, value: boolean | string) => setSettings((p) => ({ ...p, [key]: value }));
   const handleCountryChange = (code: string) => {
@@ -378,6 +397,20 @@ export default function Settings() {
             <Text style={{ fontSize: 16 }}>⬆️</Text>
             <View><Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI, textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'استعادة البيانات' : 'Import Data'}</Text><Text style={{ color: colors.textSecondary, fontSize: 10, fontFamily: FONT_UI }}>{isAr ? 'استعادة من ملف JSON' : 'Restore from JSON file'}</Text></View>
           </TouchableOpacity>
+        </Card>
+
+        {/* Notifications - general category preferences, separate from the
+            granular per-prayer settings below (mirrors web's structure:
+            NotificationSettings.tsx is its own section before
+            PrayerReminderSettings). */}
+        <Card style={{ marginBottom: 14, gap: 12 }}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? '🔔 الإشعارات' : '🔔 Notifications'}</Text>
+          <ToggleRow icon="🕌" label={isAr ? 'تذكير الصلاة' : 'Prayer Reminders'} value={notifPrefs.prayer_reminders} onChange={() => toggleNotifPref('prayer_reminders')} colors={colors} isAr={isAr} />
+          <ToggleRow icon="💳" label={isAr ? 'تذكير دفع الفواتير' : 'Bill Payment Reminders'} value={notifPrefs.bill_reminders} onChange={() => toggleNotifPref('bill_reminders')} colors={colors} isAr={isAr} />
+          <ToggleRow icon="🎯" label={isAr ? 'تذكير العادات والأهداف' : 'Habit & Goal Reminders'} value={notifPrefs.habit_reminders} onChange={() => toggleNotifPref('habit_reminders')} colors={colors} isAr={isAr} />
+          <ToggleRow icon="🌙" label={isAr ? 'تذكير الصيام' : 'Fasting Reminders'} value={notifPrefs.fasting_reminders} onChange={() => toggleNotifPref('fasting_reminders')} colors={colors} isAr={isAr} />
+          <ToggleRow icon="💰" label={isAr ? 'تذكير تحديات الادخار' : 'Savings Challenge Reminders'} value={notifPrefs.savings_reminders} onChange={() => toggleNotifPref('savings_reminders')} colors={colors} isAr={isAr} />
+          <ToggleRow icon="📱" label={isAr ? 'النشاط العام' : 'General Activity'} value={notifPrefs.general_activity} onChange={() => toggleNotifPref('general_activity')} colors={colors} isAr={isAr} />
         </Card>
 
         {/* Prayer Reminders */}
