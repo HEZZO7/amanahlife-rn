@@ -80,14 +80,14 @@ const PLANS = [
   {
     id: 'balanced' as const,
     nameAr: 'الحياة المتوازنة', nameEn: 'Balanced Life',
-    monthlyPrice: 6.99, yearlyPrice: 4.89, icon: '⭐',
+    monthlyPrice: 6.99, yearlyPrice: 4.99, icon: '⭐',
     featuresAr: ['كل ما في الخطة المجانية', 'المدرب الذكي (بلا حدود)', 'ماسح الإيصالات', 'تحديات الادخار الذكية', 'نقاط الحياة الأسبوعية', 'أهداف بلا حدود', 'تحليلات متقدمة', 'دعم متعدد العملات', 'دعم ذو أولوية'],
     featuresEn: ['Everything in Free', 'AI Life Coach (unlimited)', 'Receipt scanner', 'Smart savings challenges', 'Weekly life score', 'Unlimited goals', 'Advanced analytics', 'Multi-currency support', 'Priority support'],
   },
   {
     id: 'family' as const,
     nameAr: 'أمانة العائلة', nameEn: 'Family Plan',
-    monthlyPrice: 12.99, yearlyPrice: 9.09, icon: '👑',
+    monthlyPrice: 12.99, yearlyPrice: 9.99, icon: '👑',
     featuresAr: ['كل ما في خطة الحياة المتوازنة', 'حتى 6 أفراد من العائلة', 'لوحة عائلية مشتركة', 'مخطط ميزانية العائلة', 'نقاط المساءلة', 'أهداف وتحديات مشتركة', 'تتابعات صلاة العائلة', 'دعم عائلي مخصص'],
     featuresEn: ['Everything in Balanced', 'Up to 6 family members', 'Shared family dashboard', 'Family budget planner', 'Accountability scores', 'Shared goals & challenges', 'Family prayer streaks', 'Dedicated family support'],
   },

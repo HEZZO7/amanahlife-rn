@@ -3,9 +3,8 @@
  * Read-only rollup: net worth, savings rate, expense-by-category bars, 6-month
  * income/expense trend, savings-goal progress — all computed from data already
  * stored by finance.tsx ('amanah_finance') and family-budget.tsx
- * ('amanah_family_budget'). No new data model, no writes. (Web PremiumGate
- * requiredTier="balanced" omitted — no RN equivalent, matching the same
- * decision already made for ai-life-coach.tsx / weekly-life-score.tsx.)
+ * ('amanah_family_budget'). No new data model, no writes. Gated
+ * "balanced"-tier via PremiumGate, matching web's PremiumGate requiredTier.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
@@ -14,6 +13,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
+import PremiumGate from '../../src/components/PremiumGate';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
 interface Transaction { type: string; amount: number; category?: string; date?: string; }
@@ -81,6 +81,7 @@ export default function FinancialDashboard() {
   const sortedCategories = Object.entries(dashboardData.categoryTotals).sort(([, a], [, b]) => b - a);
 
   return (
+    <PremiumGate requiredTier="balanced" screenIcon="📊" screenTitle="Financial Dashboard" screenTitleAr="لوحة التحكم المالية">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <PageHeader icon="📊" title={tr('Financial Dashboard', 'لوحة التحكم المالية')} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -181,6 +182,7 @@ export default function FinancialDashboard() {
         </Card>
       </ScrollView>
     </View>
+    </PremiumGate>
   );
 }
 

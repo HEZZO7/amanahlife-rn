@@ -172,11 +172,21 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isPremium = tier !== 'free' || isTrialActive;
+  // The 7-day free trial grants FULL family access — both Balanced Life and
+  // Family Plan features — not merely 'balanced'. Treat trial access as a
+  // floor: while the trial runs the user gets family regardless of what
+  // `tier` state currently holds (which is already 'free' unless
+  // ENTITLING_STATUSES matched above), and when it expires they drop to
+  // whatever they are genuinely entitled to. Mirrors web's
+  // SubscriptionContext.tsx `effectiveTier` exactly, so a single tier-level
+  // comparison (e.g. TIER_LEVELS[tier] >= TIER_LEVELS[requiredTier]) behaves
+  // identically on both platforms instead of denying trialing users.
+  const effectiveTier: SubscriptionTier = isTrialActive ? 'family' : tier;
+  const isPremium = effectiveTier !== 'free';
 
   return (
     <SubscriptionContext.Provider value={{
-      tier, status, billingCycle, currentPeriodEnd, loading,
+      tier: effectiveTier, status, billingCycle, currentPeriodEnd, loading,
       isTrialActive, trialDaysRemaining, trialUsed, isPremium,
       startTrial, refetch: fetchSubscription,
     }}>

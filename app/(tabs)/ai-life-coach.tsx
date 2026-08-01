@@ -3,8 +3,9 @@
  * Coaching-area buttons + free-text questions call a real Supabase Edge
  * Function (app_11941c8fec_ai_life_coach) backed by Anthropic's API,
  * personalized with the user's goals (from 'amanah-goals'). Also: habit
- * suggestions, daily-wisdom reveal. localStorage → AsyncStorage. (Web
- * PremiumGate omitted — no RN equivalent.) Bilingual/RTL.
+ * suggestions, daily-wisdom reveal. localStorage → AsyncStorage. Gated
+ * "balanced"-tier via PremiumGate, matching web's PremiumGate requiredTier.
+ * Bilingual/RTL.
  */
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
@@ -14,6 +15,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
+import PremiumGate from '../../src/components/PremiumGate';
 import { supabase } from '../../src/lib/supabase';
 import { functionUrl } from '../../src/lib/config';
 import { toast } from '../../src/lib/toast';
@@ -138,6 +140,7 @@ export default function AILifeCoach() {
   const randomQuote = wisdom[Math.floor(Math.random() * wisdom.length)];
 
   return (
+    <PremiumGate requiredTier="balanced" screenIcon="🤖" screenTitle="AI Life Coach" screenTitleAr="المدرب الذكي">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <PageHeader icon="🤖" title={isAr ? 'المدرب الذكي' : 'AI Life Coach'} />
 
@@ -281,6 +284,7 @@ export default function AILifeCoach() {
         </Card>
       </ScrollView>
     </View>
+    </PremiumGate>
   );
 }
 

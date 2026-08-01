@@ -2,7 +2,8 @@
  * AI Smart Search — natural language search across AmanahLife content.
  * Sends the query to the Supabase edge function (AI endpoint). Falls back to
  * intelligent local keyword matching when offline or endpoint unavailable.
- * Full RTL support via useRTL hook.
+ * Full RTL support via useRTL hook. Gated "balanced"-tier via PremiumGate,
+ * matching web's PremiumGate requiredTier.
  */
 import React, { useState, useRef } from 'react';
 import {
@@ -15,6 +16,7 @@ import { useRTL } from '../../src/hooks/useRTL';
 import { supabase } from '../../src/lib/supabase';
 import { functionUrl } from '../../src/lib/config';
 import { PageHeader } from '../../src/components/ui';
+import PremiumGate from '../../src/components/PremiumGate';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK, FONT_ARABIC } from '../../src/theme/fonts';
 
 const AI_ENDPOINT = functionUrl('ai_search');
@@ -137,6 +139,7 @@ export default function AISearch() {
     : ['What are prayer times?', 'How do I calculate zakat?', 'How do I track fasting?', "What's included in each plan?"];
 
   return (
+    <PremiumGate requiredTier="balanced" screenIcon="🤖" screenTitle="AI Smart Search" screenTitleAr="البحث الذكي بالذكاء الاصطناعي">
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <PageHeader icon="🤖" title={isAr ? 'البحث الذكي بالذكاء الاصطناعي' : 'AI Smart Search'} />
 
@@ -233,6 +236,7 @@ export default function AISearch() {
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+    </PremiumGate>
   );
 }
 

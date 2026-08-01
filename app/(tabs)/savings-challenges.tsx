@@ -6,6 +6,9 @@
  * existed), milestone push notifications via expo-notifications (same
  * library Phase 3's prayer reminders already use).
  * localStorage('amanah-savings-challenges') → AsyncStorage, per-user scoped.
+ * Gated "balanced"-tier via PremiumGate, matching web's PremiumGate
+ * requiredTier — previously the most severe of the paid-feature gaps, since
+ * this screen was fully functional and free.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
@@ -21,6 +24,7 @@ import { supabase } from '../../src/lib/supabase';
 import { functionUrl } from '../../src/lib/config';
 import { toast } from '../../src/lib/toast';
 import { PageHeader, Card } from '../../src/components/ui';
+import PremiumGate from '../../src/components/PremiumGate';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
 interface Challenge {
@@ -174,6 +178,7 @@ export default function SavingsChallenges() {
   const totalSaved = joined.reduce((sum, j) => sum + j.savedAmount, 0);
 
   return (
+    <PremiumGate requiredTier="balanced" screenIcon="🏆" screenTitle="Savings Challenges" screenTitleAr="تحديات الادخار">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <PageHeader
         icon="🏆"
@@ -322,6 +327,7 @@ export default function SavingsChallenges() {
         </View>
       </Modal>
     </View>
+    </PremiumGate>
   );
 }
 

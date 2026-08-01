@@ -2,7 +2,8 @@
  * Weekly Life Score — migrated from app/frontend/src/pages/WeeklyLifeScore.tsx
  * Computes 5 life dimensions (spiritual/health/financial/social/growth) from
  * stored data, overall score, dimension bars, weekly trend, recommendations.
- * localStorage → AsyncStorage (async aggregation). (PremiumGate omitted.)
+ * localStorage → AsyncStorage (async aggregation). Gated "balanced"-tier
+ * via PremiumGate, matching web's PremiumGate requiredTier.
  */
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
@@ -12,6 +13,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
+import PremiumGate from '../../src/components/PremiumGate';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK } from '../../src/theme/fonts';
 
 interface DimensionScore { name: string; nameAr: string; score: number; icon: string; color: string; }
@@ -129,6 +131,7 @@ export default function WeeklyLifeScore() {
   const obg = scoreBg(overallScore);
 
   return (
+    <PremiumGate requiredTier="balanced" screenIcon="💯" screenTitle="Weekly Life Score" screenTitleAr="مؤشر الحياة الأسبوعي">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <PageHeader icon="💯" title={isAr ? 'مؤشر الحياة الأسبوعي' : 'Weekly Life Score'} />
 
@@ -217,6 +220,7 @@ export default function WeeklyLifeScore() {
         )}
       </ScrollView>
     </View>
+    </PremiumGate>
   );
 }
 
