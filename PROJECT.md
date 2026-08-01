@@ -1,6 +1,6 @@
 # AmanahLife — Project Documentation
 
-Handoff document for the full AmanahLife project (web + Android). Last updated 2026-08-01 (paid-feature parity sweep + Android production build).
+Handoff document for the full AmanahLife project (web + Android). Last updated 2026-08-01 (paid-feature parity sweep, bidirectional web↔Android re-audit, Coolify deploy-pipeline fix, and Android production build v1.0.2/versionCode 2).
 
 ---
 
@@ -199,6 +199,11 @@ Ranked by user-visible impact:
   - **Verified**: route file exists and is registered in the `(auth)` stack; `app.json`'s `"scheme": "amanahlife"` is already configured (confirmed present — this is what lets Android route an `amanahlife://` link to the app at all); full-repo `tsc --noEmit` shows the same 26 pre-existing, unrelated errors as before this change (zero new); `expo export --platform android` produces a clean bundle.
   - **NOT verified, and cannot be without a device + real email account (neither available in this environment)**: the actual end-to-end round trip — requesting a reset, receiving the real email, tapping the link, Android resolving the intent and opening the app, the screen correctly capturing the incoming URL via `Linking.useURL()`, the code-exchange or hash-parse branch actually matching what this project's Auth settings really send, and successfully signing in with the new password afterward. This is a real, code-complete, typecheck-clean, bundle-clean fix — but it has not been exercised on a device. Recommend a real on-device test (or at minimum triggering a reset and inspecting the actual received link's format) before treating this as fully proven, and specifically before relying on it in place of another workaround.
 - **RN `receipt-scanner.tsx` falsely claimed "Connected to Supabase ✓ / Real auth / Real data" — fixed, commit `e337f3b`.** Same honesty correction `family-dashboard.tsx` already received. Independent of any future OCR implementation decision.
+
+### Device testing (preview APK) + production build, 2026-08-01
+
+- **Preview APK for on-device testing of the reset-password fix**: build `0a70b814-f312-4ba6-8a0a-8686da957a16` (profile `preview`, distribution `internal`), commit `612d1f5` (includes the reset-password route, its expired/missing-token edge-case handling, and the receipt-scanner honesty fix). `.apk`: https://expo.dev/artifacts/eas/aJpzrS4jk-3Nx2WuzI987CNNv5mS20sTYvwIWBJZpeQ.apk. A first preview build (`fe2380f0`) was started, then cancelled and rebuilt from a newer commit after the edge-case fix landed one commit later — the version above is the correct, final one. Not yet confirmed working on-device by Huzaifa as of this writing (device testing was in progress).
+- **Production `.aab`, versionCode 2 → 1.0.2**: Play Console confirmed the live release was still versionCode 1 (1.0.0), so versionCode 2 was free to use (the versionCode bump made earlier in this same session, to app.json, had never actually been submitted). Build `c8a46f29-16b0-430c-890d-10b2c9ebee36` (profile `production`, distribution `store`), commit `5644741` (version bump on top of `612d1f5` — includes everything in that commit plus every fix from this entire session's Phase 1-3 sweep: paid-feature entitlement/gating parity, the Coolify deploy-pipeline fix, the Lemon Squeezy webhook event-coverage widening + subscriptions status-check-constraint fix, Daily Routine storage scoping (web), the notification-honesty fix (web), the RN password-reset fix, and the receipt-scanner honesty fix). `.aab`: https://expo.dev/artifacts/eas/lWWmWL8Cl4fnJqHEwt8c4cSRyvBWGqda8CqwT7IztZs.aab. `tsc --noEmit` (26 pre-existing errors, zero new) and `expo export --platform android` both confirmed clean immediately before this build. Same signing keystore as the 1.0.1 build (`rZ4fXyj21G`). **`eas submit` was not run** — Huzaifa uploads to Play Console himself.
 
 ---
 
