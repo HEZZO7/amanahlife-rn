@@ -455,6 +455,7 @@ export default function DashboardScreen() {
     { icon: '📊', title: language === 'ar' ? 'اللوحة المالية' : 'Financial Dashboard', path: '/(tabs)/financial-dashboard' },
     { icon: '📈', title: language === 'ar' ? 'الاستثمار الحلال' : 'Halal Investment', path: '/(tabs)/halal-investment' },
     { icon: '🏆', title: language === 'ar' ? 'تحديات الادخار' : 'Savings Challenges', path: '/(tabs)/savings-challenges' },
+    { icon: '📝', title: language === 'ar' ? 'المدونة' : 'Blog', path: '/(tabs)/blog' },
     { icon: '⚙️', title: language === 'ar' ? 'الإعدادات' : 'Settings', path: '/(tabs)/settings' },
   ];
 

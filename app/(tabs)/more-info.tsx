@@ -1,10 +1,12 @@
 /**
  * More / Info — mirrors the web footer's Product/Company/Support link
  * structure (app/frontend/public/landing.html footer), since Android had
- * no equivalent. Legal pages (privacy/terms/refund) and Help Center/Blog
- * open the public web URLs (expo-web-browser) since no native screens
- * exist for them. Features/Pricing/Showcase/Testimonials link out to the
- * web landing page — no native equivalents beyond Pricing → Subscription.
+ * no equivalent. Legal pages (privacy/terms/refund) open the public web
+ * URLs (expo-web-browser) since no native screens exist for them.
+ * Features/Pricing/Showcase/Testimonials link out to the web landing page
+ * — no native equivalents beyond Pricing → Subscription. Blog now opens
+ * the native reader (app/(tabs)/blog/) instead of the web URL, since that
+ * screen exists as of 2026-08-01 - see PROJECT.md section 0c-2.
  */
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
@@ -62,7 +64,7 @@ export default function MoreInfo() {
         { label: 'support@amanahlife.com', onPress: openMail },
         { label: 'CEO@amanahlife.com', onPress: openCeoMail },
         { label: isAr ? 'مركز المساعدة' : 'Help Center', onPress: () => openWeb('/contact') },
-        { label: isAr ? 'المدونة' : 'Blog', onPress: () => openWeb('/blog') },
+        { label: isAr ? 'المدونة' : 'Blog', onPress: () => router.push('/(tabs)/blog' as any) },
       ],
     },
   ];
