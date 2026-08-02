@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 
 type Theme = 'light' | 'dark';
+type ThemeMode = 'auto' | 'light' | 'dark';
 
 // Design tokens — mirror the web app's index.css dark/light tokens exactly.
 // Web dark theme: deep dark-green background (#0A1F17), card green (#102B1F),
@@ -50,11 +51,24 @@ export const lightColors = {
 export type Colors = typeof darkColors;
 
 interface ThemeContextType {
+  /** Resolved value actually rendered - if themeMode is 'auto' this is the sunrise/sunset-computed value. */
   theme: Theme;
   colors: Colors;
-  setTheme: (theme: Theme) => void;
+  /**
+   * Ground truth (Phase F, F1.1 fix). Previously there was only a resolved
+   * `theme` plus an independent `autoSwitch` boolean with no coordination -
+   * the auto-switch effect re-fired on every app mount and unconditionally
+   * overwrote `theme`, silently reverting a manual toggle (most visibly on
+   * app restart, since the effect always re-runs on mount). themeMode is
+   * now the single source of truth; the auto-switch effect below is gated
+   * on `themeMode === 'auto'` so it can never touch a manual choice.
+   */
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
+  /** Manual toggle - always switches to an explicit mode (light/dark), overriding auto. */
   toggleTheme: () => void;
   isDark: boolean;
+  /** Backward-compat alias for themeMode === 'auto' - existing call sites (settings.tsx) unchanged. */
   autoSwitch: boolean;
   setAutoSwitch: (value: boolean) => void;
 }
@@ -90,9 +104,15 @@ function isNightNow(sunrise: string, sunset: string): boolean {
   return nowMin < toMinutes(sunrise) || nowMin >= toMinutes(sunset);
 }
 
+const THEME_KEY = 'amanah-theme';
+const LEGACY_AUTOSWITCH_KEY = 'amanah-theme-autoswitch';
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
-  const [autoSwitch, setAutoSwitchState] = useState(false);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
+  // Only meaningful while themeMode === 'auto' - the sunrise/sunset-computed
+  // resolved value. Kept separate from themeMode itself so a manual choice
+  // is never mixed with the auto-computed one.
+  const [resolvedAutoTheme, setResolvedAutoTheme] = useState<Theme>('dark');
   // Gate rendering until the stored theme is loaded, so screens never get a
   // chance to flash the 'dark' default before AsyncStorage resolves — the
   // provider is a single root-level instance, but this closes the one
@@ -101,13 +121,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     Promise.all([
-      AsyncStorage.getItem('amanah-theme'),
-      AsyncStorage.getItem('amanah-theme-autoswitch'),
-    ]).then(([storedTheme, storedAutoSwitch]) => {
-      if (storedTheme === 'light' || storedTheme === 'dark') {
-        setThemeState(storedTheme);
+      AsyncStorage.getItem(THEME_KEY),
+      AsyncStorage.getItem(LEGACY_AUTOSWITCH_KEY),
+    ]).then(([storedTheme, legacyAutoSwitch]) => {
+      // The legacy autoswitch flag predates themeMode - if it's set, honor
+      // it as 'auto' regardless of whatever plain light/dark value happens
+      // to be under THEME_KEY (that value predates the coordinated model).
+      if (legacyAutoSwitch === 'true') {
+        setThemeModeState('auto');
+      } else if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'auto') {
+        setThemeModeState(storedTheme as ThemeMode);
       }
-      if (storedAutoSwitch === 'true') setAutoSwitchState(true);
       setReady(true);
     });
   }, []);
@@ -115,33 +139,50 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const applyAutoSwitch = useCallback(async () => {
     const times = await fetchSunriseSunset();
     if (!times) return;
-    setThemeState(isNightNow(times.sunrise, times.sunset) ? 'dark' : 'light');
+    setResolvedAutoTheme(isNightNow(times.sunrise, times.sunset) ? 'dark' : 'light');
   }, []);
 
-  // Re-check every 15 minutes while auto-switch is on and the provider is mounted.
+  // Re-check every 15 minutes while themeMode is 'auto' and the provider is
+  // mounted. Root-cause fix for F1.1: this used to run whenever a separate
+  // `autoSwitch` boolean was true and unconditionally overwrite the
+  // resolved theme - including on every app mount - silently reverting a
+  // manual toggle. Gating on themeMode ensures this effect can only ever
+  // touch resolvedAutoTheme, never a manual light/dark choice.
   useEffect(() => {
-    if (!autoSwitch) return;
+    if (themeMode !== 'auto') return;
     applyAutoSwitch();
     const interval = setInterval(applyAutoSwitch, 15 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [autoSwitch, applyAutoSwitch]);
+  }, [themeMode, applyAutoSwitch]);
 
-  const setTheme = async (newTheme: Theme) => {
-    setThemeState(newTheme);
-    await AsyncStorage.setItem('amanah-theme', newTheme);
+  const theme: Theme = themeMode === 'auto' ? resolvedAutoTheme : themeMode;
+
+  const setThemeMode = async (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    await AsyncStorage.setItem(THEME_KEY, mode);
+    // themeMode is now the single source of truth - keep the legacy flag in
+    // sync so a stale 'true' can never resurrect auto mode after this.
+    await AsyncStorage.setItem(LEGACY_AUTOSWITCH_KEY, mode === 'auto' ? 'true' : 'false');
   };
 
-  const setAutoSwitch = async (value: boolean) => {
-    setAutoSwitchState(value);
-    await AsyncStorage.setItem('amanah-theme-autoswitch', value ? 'true' : 'false');
-  };
-
-  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+  // Always switches to an explicit manual mode - flips the currently
+  // *resolved* theme, so tapping toggle while in auto mode gives an
+  // immediate, predictable result instead of an auto-computed surprise.
+  const toggleTheme = () => setThemeMode(theme === 'dark' ? 'light' : 'dark');
 
   const colors = theme === 'dark' ? darkColors : lightColors;
 
   return (
-    <ThemeContext.Provider value={{ theme, colors, setTheme, toggleTheme, isDark: theme === 'dark', autoSwitch, setAutoSwitch }}>
+    <ThemeContext.Provider value={{
+      theme,
+      colors,
+      themeMode,
+      setThemeMode,
+      toggleTheme,
+      isDark: theme === 'dark',
+      autoSwitch: themeMode === 'auto',
+      setAutoSwitch: (value: boolean) => setThemeMode(value ? 'auto' : theme),
+    }}>
       {ready ? children : <View style={{ flex: 1, backgroundColor: colors.bg }} />}
     </ThemeContext.Provider>
   );
@@ -152,7 +193,8 @@ export function useTheme() {
   return ctx ?? {
     theme: 'dark' as Theme,
     colors: darkColors,
-    setTheme: async () => {},
+    themeMode: 'dark' as ThemeMode,
+    setThemeMode: async () => {},
     toggleTheme: () => {},
     isDark: true,
     autoSwitch: false,
