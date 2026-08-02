@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { getExcusedPeriods, isDateExcusedForPrayer, isoDate } from '../../src/lib/excusedPeriods';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -74,12 +75,21 @@ export default function WeeklyLifeScore() {
       // legacy entry (read-only) rather than migrating a key it doesn't own.
       let spiritualScore = 0;
       const today = new Date();
+      const excusedPeriods = await getExcusedPeriods(userId);
+      // Phase C: excused days (hayd/nifas/incapacitated illness) are
+      // dropped from the denominator entirely instead of contributing 0 -
+      // a 7-day week with 2 excused days is scored out of 5, not 7. Two
+      // passes: first find how many of the 7 days are excused so the
+      // denominator is fixed before any score is added, then accumulate.
+      const weekDates = Array.from({ length: 7 }, (_, i) => { const d = new Date(today); d.setDate(d.getDate() - i); return d; });
+      const excusedFlags = weekDates.map((d) => isDateExcusedForPrayer(isoDate(d), excusedPeriods));
+      const trackedDayCount = Math.max(1, 7 - excusedFlags.filter(Boolean).length);
       for (let i = 0; i < 7; i++) {
-        const date = new Date(today); date.setDate(date.getDate() - i);
-        const key = `prayer_completed_${date.toDateString()}`;
+        if (excusedFlags[i]) continue;
+        const key = `prayer_completed_${weekDates[i].toDateString()}`;
         let prayerData = await getUserItem(key, userId);
         if (prayerData === null) prayerData = await AsyncStorage.getItem(key);
-        if (prayerData) spiritualScore += (JSON.parse(prayerData).length / 5) * (100 / 7);
+        if (prayerData) spiritualScore += (JSON.parse(prayerData).length / 5) * (100 / trackedDayCount);
       }
       // Health — wellness logs
       let healthScore = 50;
