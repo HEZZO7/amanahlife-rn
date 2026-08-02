@@ -426,34 +426,36 @@ export default function DashboardScreen() {
   const userName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || '';
   const greeting = language === 'ar' ? 'السلام عليكم' : 'Assalamu Alaikum';
 
-  // All nav items — exact same list as web app
+  // All nav items — exact same list as web app. `description` values are
+  // copied verbatim from web's navItems (Index.tsx) so the 2-column card
+  // sizing matches; Settings has no web equivalent so is left without one.
   const NAV_ITEMS = [
-    { icon: '🕌', title: language === 'ar' ? 'الصلاة' : 'Prayer', path: '/(tabs)/prayer-times' },
-    { icon: '📖', title: language === 'ar' ? 'القرآن' : 'Quran', path: '/(tabs)/quran' },
-    { icon: '🤲', title: language === 'ar' ? 'الدعاء' : 'Duas', path: '/(tabs)/duas' },
-    { icon: '📿', title: language === 'ar' ? 'الذكر' : 'Dhikr', path: '/(tabs)/dhikr' },
-    { icon: '🌅', title: language === 'ar' ? 'الروتين اليومي' : 'Daily Routine', path: '/(tabs)/daily-routine' },
-    { icon: '⏱️', title: language === 'ar' ? 'الصيام' : 'Fasting', path: '/(tabs)/fasting' },
-    { icon: '✅', title: language === 'ar' ? 'المهام' : 'Tasks', path: '/(tabs)/tasks' },
-    { icon: '🍃', title: language === 'ar' ? 'الأذكار' : 'Adhkar', path: '/(tabs)/adhkar' },
-    { icon: '💰', title: language === 'ar' ? 'المالية' : 'Finance', path: '/(tabs)/finance' },
-    { icon: '🧭', title: language === 'ar' ? 'القبلة' : 'Qibla', path: '/(tabs)/qibla' },
-    { icon: '💎', title: language === 'ar' ? 'الزكاة' : 'Zakat', path: '/(tabs)/giving-tracker' },
-    { icon: '🗓️', title: language === 'ar' ? 'التقويم' : 'Calendar', path: '/(tabs)/calendar' },
-    { icon: '🎯', title: language === 'ar' ? 'الأهداف' : 'Goals', path: '/(tabs)/goals' },
-    { icon: '💚', title: language === 'ar' ? 'العافية' : 'Wellness', path: '/(tabs)/wellness' },
-    { icon: '📋', title: language === 'ar' ? 'المخطط' : 'Planner', path: '/(tabs)/planner' },
-    { icon: '🤖', title: language === 'ar' ? 'المدرب الذكي' : 'AI Coach', path: '/(tabs)/ai-life-coach' },
-    { icon: '💯', title: language === 'ar' ? 'مؤشر الحياة' : 'Life Score', path: '/(tabs)/weekly-life-score' },
-    { icon: '🌙', title: language === 'ar' ? 'رمضان' : 'Ramadan', path: '/(tabs)/ramadan-planner' },
-    { icon: '📊', title: language === 'ar' ? 'التحليلات' : 'Analytics', path: '/(tabs)/progress-analytics' },
-    { icon: '🏠', title: language === 'ar' ? 'الميزانية' : 'Family Budget', path: '/(tabs)/family-budget' },
-    { icon: '🔔', title: language === 'ar' ? 'الفواتير' : 'Bill Reminders', path: '/(tabs)/bill-reminders' },
-    { icon: '📊', title: language === 'ar' ? 'اللوحة المالية' : 'Financial Dashboard', path: '/(tabs)/financial-dashboard' },
-    { icon: '📈', title: language === 'ar' ? 'الاستثمار الحلال' : 'Halal Investment', path: '/(tabs)/halal-investment' },
-    { icon: '🏆', title: language === 'ar' ? 'تحديات الادخار' : 'Savings Challenges', path: '/(tabs)/savings-challenges' },
-    { icon: '📝', title: language === 'ar' ? 'المدونة' : 'Blog', path: '/(tabs)/blog' },
-    { icon: '⚙️', title: language === 'ar' ? 'الإعدادات' : 'Settings', path: '/(tabs)/settings' },
+    { icon: '🕌', title: language === 'ar' ? 'الصلاة' : 'Prayer', description: language === 'ar' ? 'تتبع الصلوات' : 'Track daily prayers', path: '/(tabs)/prayer-times' },
+    { icon: '📖', title: language === 'ar' ? 'القرآن' : 'Quran', description: language === 'ar' ? 'قراءة وحفظ' : 'Read & bookmark', path: '/(tabs)/quran' },
+    { icon: '🤲', title: language === 'ar' ? 'الدعاء' : 'Duas', description: language === 'ar' ? 'أدعية مأثورة' : 'Supplications', path: '/(tabs)/duas' },
+    { icon: '📿', title: language === 'ar' ? 'الذكر' : 'Dhikr', description: language === 'ar' ? 'التسبيح' : 'Remembrance', path: '/(tabs)/dhikr' },
+    { icon: '🌅', title: language === 'ar' ? 'الروتين اليومي' : 'Daily Routine', description: language === 'ar' ? 'العادات اليومية' : 'Daily habits', path: '/(tabs)/daily-routine' },
+    { icon: '⏱️', title: language === 'ar' ? 'الصيام' : 'Fasting', description: language === 'ar' ? 'تتبع الصيام' : 'Track fasting', path: '/(tabs)/fasting' },
+    { icon: '✅', title: language === 'ar' ? 'المهام' : 'Tasks', description: language === 'ar' ? 'إدارة المهام' : 'Manage tasks', path: '/(tabs)/tasks' },
+    { icon: '🍃', title: language === 'ar' ? 'الأذكار' : 'Adhkar', description: language === 'ar' ? 'الصباح والمساء' : 'Morning & Evening', path: '/(tabs)/adhkar' },
+    { icon: '💰', title: language === 'ar' ? 'المالية' : 'Finance', description: language === 'ar' ? 'تتبع المالية' : 'Track finances', path: '/(tabs)/finance' },
+    { icon: '🧭', title: language === 'ar' ? 'القبلة' : 'Qibla', description: language === 'ar' ? 'تحديد الاتجاه' : 'Find direction', path: '/(tabs)/qibla' },
+    { icon: '💎', title: language === 'ar' ? 'الزكاة' : 'Zakat', description: language === 'ar' ? 'تتبع العطاء' : 'Track giving', path: '/(tabs)/giving-tracker' },
+    { icon: '🗓️', title: language === 'ar' ? 'التقويم' : 'Calendar', description: language === 'ar' ? 'التواريخ الهجرية' : 'Hijri dates', path: '/(tabs)/calendar' },
+    { icon: '🎯', title: language === 'ar' ? 'الأهداف' : 'Goals', description: language === 'ar' ? 'تتبع الأهداف' : 'Track goals', path: '/(tabs)/goals' },
+    { icon: '💚', title: language === 'ar' ? 'العافية' : 'Wellness', description: language === 'ar' ? 'تتبع الصحة' : 'Health tracking', path: '/(tabs)/wellness' },
+    { icon: '📋', title: language === 'ar' ? 'المخطط' : 'Planner', description: language === 'ar' ? 'خطط يومك' : 'Plan your day', path: '/(tabs)/planner' },
+    { icon: '🤖', title: language === 'ar' ? 'المدرب الذكي' : 'AI Coach', description: language === 'ar' ? 'نصائح مخصصة' : 'Personalized coaching', path: '/(tabs)/ai-life-coach' },
+    { icon: '💯', title: language === 'ar' ? 'مؤشر الحياة' : 'Life Score', description: language === 'ar' ? 'تقييم أسبوعي' : 'Weekly assessment', path: '/(tabs)/weekly-life-score' },
+    { icon: '🌙', title: language === 'ar' ? 'رمضان' : 'Ramadan', description: language === 'ar' ? 'رمضان والعيد' : 'Ramadan & Eid', path: '/(tabs)/ramadan-planner' },
+    { icon: '📊', title: language === 'ar' ? 'التحليلات' : 'Analytics', description: language === 'ar' ? 'تتبع وتحليل' : 'Track & analyze', path: '/(tabs)/progress-analytics' },
+    { icon: '🏠', title: language === 'ar' ? 'الميزانية' : 'Family Budget', description: language === 'ar' ? 'مخطط الميزانية' : 'Budget planner', path: '/(tabs)/family-budget' },
+    { icon: '🔔', title: language === 'ar' ? 'الفواتير' : 'Bill Reminders', description: language === 'ar' ? 'تتبع الفواتير' : 'Track bills', path: '/(tabs)/bill-reminders' },
+    { icon: '📊', title: language === 'ar' ? 'اللوحة المالية' : 'Financial Dashboard', description: language === 'ar' ? 'مؤشرات مالية' : 'Lifestyle KPIs', path: '/(tabs)/financial-dashboard' },
+    { icon: '📈', title: language === 'ar' ? 'الاستثمار الحلال' : 'Halal Investment', description: language === 'ar' ? 'التمويل الأخلاقي' : 'Ethical finance', path: '/(tabs)/halal-investment' },
+    { icon: '🏆', title: language === 'ar' ? 'تحديات الادخار' : 'Savings Challenges', description: language === 'ar' ? 'تحديات ممتعة' : 'Gamified saving', path: '/(tabs)/savings-challenges' },
+    { icon: '📝', title: language === 'ar' ? 'المدونة' : 'Blog', description: language === 'ar' ? 'مقالات ونصائح' : 'Articles & tips', path: '/(tabs)/blog' },
+    { icon: '⚙️', title: language === 'ar' ? 'الإعدادات' : 'Settings', description: '', path: '/(tabs)/settings' },
   ];
 
   const filtered = NAV_ITEMS.filter(i =>
@@ -779,8 +781,11 @@ export default function DashboardScreen() {
             onPress={() => router.push(item.path as any)}
             activeOpacity={0.7}
           >
-            <Text style={{ fontSize: 26, marginBottom: 6 }}>{item.icon}</Text>
-            <Text style={[styles.gridLabel, { color: colors.text }]}>{item.title}</Text>
+            <Text style={{ fontSize: 24, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>{item.icon}</Text>
+            <Text style={[styles.gridLabel, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{item.title}</Text>
+            {!!item.description && (
+              <Text style={[styles.gridDescription, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.description}</Text>
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -827,7 +832,10 @@ const styles = StyleSheet.create({
   searchBar: { alignItems: 'center', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, marginBottom: 16 },
   searchInput: { flex: 1, fontSize: 14 },
   sectionTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: 12 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  gridItem: { width: '30%', borderRadius: 16, padding: 14, borderWidth: 1, alignItems: 'center', minHeight: 90, justifyContent: 'center' },
-  gridLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 2 },
+  // 2 columns (was 3) with larger cards, matching web's `grid-cols-2` +
+  // p-4 QuickAction layout instead of the old compact centered 3-up tiles.
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  gridItem: { width: '47%', borderRadius: 16, padding: 16, borderWidth: 1, alignItems: 'flex-start', justifyContent: 'flex-start' },
+  gridLabel: { fontSize: 14, fontWeight: '600' },
+  gridDescription: { fontSize: 12, marginTop: 2 },
 });
