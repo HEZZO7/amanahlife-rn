@@ -15,6 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
+import { useBackToClose } from '../../src/lib/useBackToClose';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -107,6 +108,15 @@ export default function QuranReader() {
     if (selectedSurah) { setSelectedSurah(null); setAyahs([]); }
     else router.back();
   };
+
+  // Root cause (Stage 3): the on-screen back arrow above already handled
+  // this correctly via goBack(), but Android's hardware/gesture back button
+  // was never intercepted - it fell through to expo-router's default stack
+  // pop, which sent it straight past this screen's own index/reader state
+  // to whatever was on the stack before Quran (Home), skipping the surah
+  // index entirely. useBackToClose only attaches its listener while a
+  // surah is open, so hardware back mirrors the on-screen button exactly.
+  useBackToClose(!!selectedSurah, () => { setSelectedSurah(null); setAyahs([]); });
 
   const filteredSurahs = QURAN_SURAH_LIST.filter((s) =>
     s.englishName.toLowerCase().includes(search.toLowerCase()) ||
