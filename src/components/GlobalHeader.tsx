@@ -203,10 +203,17 @@ function MenuItem({ icon, label, onPress, colors, labelColor, isRTL }: {
 
 const styles = StyleSheet.create({
   header: {
-    height: 56,
+    // minHeight, not a fixed height - a fixed height with no overflow
+    // clipping let this row's own content (two-line brand name stack +
+    // icon buttons) overflow past its box on devices with larger system
+    // font scaling or longer localized strings, bleeding down into
+    // whatever renders directly below (the dashboard's own greeting row).
+    // minHeight lets the row grow to fit its real content instead.
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
+    paddingVertical: 6,
     borderBottomWidth: 1,
   },
   brand: { alignItems: 'center', flex: 1 },
