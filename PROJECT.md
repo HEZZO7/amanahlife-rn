@@ -250,6 +250,47 @@ Mirroring the local-calculation fix to web's separate `PrayerReminderSettings.ts
 
 ---
 
+## 0c-7. Consolidated Work Order — Phase C: Excused Days (عذر شرعي) in Prayer/Fasting Trackers (2026-08-02)
+
+Approved after a research pass that corrected several assumptions in the original plan - see below before the implementation summary, since these corrections shaped the actual scope.
+
+### What the research found before any code was written
+- **No existing missed/made-up (qada) distinction existed anywhere.** `fasting.tsx`'s "Missed vs made-up summary" was misleadingly named - it was just `missedDays = 30 - fastedDays`, no per-day excused/made-up flag anywhere in stored data. This phase built qada tracking from scratch, not extending something that already existed.
+- **Prayer streaks were 5-6 independently duplicated implementations** (`DashboardScreen.tsx` ×3, web's `Streaks.tsx`/`Index.tsx`/`SmartBriefing.tsx` ×3) that didn't even agree with each other on what counts as "a miss" (`completed.length >= 1` in three places, `>= 5` in two). All 6 needed individual patches.
+- **`progress-analytics.tsx`'s streak display is dead code on both platforms** - reads `amanah-streaks`, a key never written anywhere. Not touched.
+- **Confirmed zero Supabase sync exists for prayer/fasting data on either platform today** - the device-local-only privacy requirement was easier to satisfy than expected, since it's already the norm for this whole data category, not a special case to carve out of a sync pipeline.
+- **RN's Backup/Restore already sweeps `prayer_completed_`/`fasting_today_`; web's has a pre-existing, separate gap where fasting isn't covered at all.** New `excused_` keys match neither sweep by construction (verified), plus an explicit "do not add" comment was added at both sweep sites as insurance.
+- **Web's whole prayer-streak ecosystem (`Streaks.tsx`, `Index.tsx`, `SmartBriefing.tsx`) reads `prayer_completed_<date>` as raw, unscoped `localStorage`** (a separate, pre-existing gap, not fixed here). The new excused-period exclusion checks still needed the *real* signed-in userId to find periods (which ARE written scoped, via `getUserItem`/`setUserItem`) - `useAuth` was added to `Streaks.tsx`/`SmartBriefing.tsx` (neither had it before) purely for this lookup, without touching the surrounding unscoped reads.
+- **Family Dashboard (RN) is a fully unbuilt scaffold reading no data at all.** Web's `FamilySharedDashboard.tsx` was already fixed in an earlier audit to explicitly *not* render other members' prayer/fasting data. Nothing live needed excluding; documented as a constraint for whenever real family sharing is eventually built.
+
+### Fiqh mapping (exact scope approved)
+| Reason | Prayer | Fasting |
+|---|---|---|
+| Menstruation (حيض) / Nifas (نفاس) | Waived entirely, **never** made up (no qada mechanism exists for this - by design) | Excused, feeds qada owed |
+| Illness (مرض), not incapacitated | Not excluded - still tracked/expected (shortening/combining is a fiqh allowance the app doesn't model, not a waiver) | Excused, feeds qada owed |
+| Illness (مرض), `illnessIncapacitated` checked | Excluded from tracking/streaks/stats. **The app takes no fiqh position on qada-vs-waived** - shown a disclaimer (bilingual, IslamWeb/mainstream Ahlus Sunnah wal Jama'ah framing, "consult a knowledgeable source") and required to choose explicitly per period (`illnessPrayerChoice: 'qada' \| 'waived'`, no default) | Excused, feeds qada owed |
+| Travel (سفر) | Not excluded - qasr/shortening is a fiqh allowance the app doesn't model, not a waiver | Excused, feeds qada owed |
+
+### Implementation (RN commits)
+- **C1 (`612bece`)**: `src/lib/excusedPeriods.ts` - the model above, plus qada-owed computation that's **recomputed live from real prayer/fasting records on every call, never independently incremented** (can't drift out of sync).
+- **C2 (`bea6898`)**: `src/components/ExcusedPeriodsModal.tsx` - disclaimer (shown once, re-openable), add/list/end/delete periods, qada tick-off. No native date-picker dependency added (would need a fresh EAS build this pass wasn't allowed to trigger) - dates use "N days ago" steppers instead. Discreet entry point wired into `prayer-times.tsx` (small muted text link, no dashboard tile).
+- **C3 (`389f79b`)**: all 3 RN streak sites in `DashboardScreen.tsx` skip excused-for-prayer dates instead of breaking the streak.
+- **C4 (`4b51dc2`)**: `weekly-life-score.tsx`'s spiritual-score denominator excludes excused days (two-pass computation so a day's loop position can't skew the result).
+- **C5 (`7728e96`)**: `fasting.tsx`'s missed count excludes excused days (`30 - fastedDays - excusedDays`), new 3rd summary stat + 3rd grid color (gold, distinct from the "missed" red), discreet entry point.
+- **C6 (`5270294`)**: explicit "do not sweep" comment at `settings.tsx`'s `BACKUP_KEYS`/`DYNAMIC_KEY_PREFIXES`.
+
+### Implementation (web mirror, `AmanahLifeapp` repo commits)
+`66e1dcd` (lib + dialog), `8393f1b` (streaks ×3), `8e7c3ad` (Life Score), `f236fb0` (fasting + both entry points), `1eb306e` (BackupRestore.tsx exclusion note). Same fiqh logic, same storage key names, synchronous localStorage instead of async AsyncStorage.
+
+### Verification
+RN: `tsc --noEmit` 26 baseline throughout (zero new), `expo export --platform android` clean after every commit. Web: `tsc --noEmit` 0 errors throughout, `npm run build` (vite build) clean.
+
+### Not built (explicitly out of scope this pass)
+- Prayer qada for genuine incapacity is now a real, working feature (per the disclaimer-then-choice design above) - this was the one open question from the original plan, resolved by the disclaimer approach rather than left pending.
+- Illness's *default* (non-incapacitated) case intentionally still tracks prayer normally - the app doesn't model qasr/combining, so there's nothing to change there.
+
+---
+
 ## 0d. Pending / Deferred Items
 
 1. **Google Play Billing integration — HARD BLOCKER before Production Play Store release.** GCC/MENA target markets (Saudi Arabia, UAE, Qatar, Egypt, Kuwait, Iraq) have no exception to Google's billing policy (unlike the post-Epic-v-Google US injunction). Play Billing is fully live in these markets, so the current Lemon Squeezy-via-in-app-browser flow is a real Play Store rejection risk. Requires: native billing library (e.g. `react-native-iap`), matching Play Console subscription products, and backend receipt validation. **Internal Testing does not require this fix — only Production does.**
