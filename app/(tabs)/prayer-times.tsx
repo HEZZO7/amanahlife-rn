@@ -27,6 +27,7 @@ import {
   calculatePrayerTimes, CALCULATION_METHODS, DEFAULT_CALCULATION_METHOD, CalculationMethodKey,
 } from '../../src/lib/prayerCalculation';
 import { CURATED_CITIES, CityOption } from '../../src/data/curatedCities';
+import ExcusedPeriodsModal from '../../src/components/ExcusedPeriodsModal';
 
 const MECCA_COORDS = { latitude: 21.4225, longitude: 39.8262 };
 const GPS_TIMEOUT_MS = 10000;
@@ -69,6 +70,7 @@ export default function PrayerTimes() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'location' | 'method'>('location');
   const [citySearch, setCitySearch] = useState('');
+  const [excusedModalOpen, setExcusedModalOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/(auth)/landing');
@@ -314,6 +316,14 @@ export default function PrayerTimes() {
           );
         })}
       </View>
+
+      {/* Discreet entry point - no dashboard tile, no notification about it. */}
+      <TouchableOpacity onPress={() => setExcusedModalOpen(true)} style={{ alignSelf: 'center', marginTop: 18 }}>
+        <Text style={{ color: colors.textMuted, fontSize: 11, fontFamily: FONT_UI }}>
+          {language === 'ar' ? 'عذر شرعي' : 'Excused period'}
+        </Text>
+      </TouchableOpacity>
+      <ExcusedPeriodsModal visible={excusedModalOpen} onClose={() => setExcusedModalOpen(false)} />
 
       {/* Location + calculation-method settings sheet */}
       <Modal visible={settingsOpen} transparent animationType="slide" onRequestClose={() => setSettingsOpen(false)}>
