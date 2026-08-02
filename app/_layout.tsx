@@ -41,7 +41,7 @@ function AppShell() {
 
   useEffect(() => {
     getReminderSettings().then((settings) => {
-      if (settings.enabled) schedulePrayerNotifications(settings, language === 'ar');
+      if (settings.enabled) schedulePrayerNotifications(settings, language === 'ar', userId);
     });
     getLocalPreferences(userId).then((prefs) => {
       refreshAllCategoryReminders(userId, prefs, language === 'ar');

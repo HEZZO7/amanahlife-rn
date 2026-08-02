@@ -1,27 +1,42 @@
 /**
  * Prayer-time-aware local notification reminders.
- * Mirrors web Feature 3 (Smart Prayer-Time-Aware Reminders): fetches prayer
- * times from the same Aladhan API used elsewhere in the app, then schedules
- * a local notification N minutes before each enabled prayer.
+ * Schedules a local notification N minutes before each enabled prayer,
+ * computed fully offline via adhan-js (src/lib/prayerCalculation.ts) using
+ * the same location/method settings the Prayer Times screen persists (see
+ * src/lib/prayerLocation.ts) - not a separate copy of that logic.
  *
  * Phase 3 (critical-audit-2026-07): this used to only ever schedule
  * *today's* remaining prayers, one-shot, whenever the app happened to be
  * opened (app launch, or a settings change). If the user didn't open the
  * app the next day, every reminder silently stopped - there was no
  * mechanism to reschedule for tomorrow. Fixed by scheduling a rolling
- * DAYS_AHEAD-day window every time this runs, using the Aladhan calendar
- * endpoint (one call per month touched, not one per day) so as long as the
- * user opens the app at least once within that window, reminders keep
- * rolling forward. A true fix-and-forget (reschedule via a background task
- * even if the app is never reopened) would need expo-task-manager /
- * expo-background-fetch wired into app.json and a new native build to test
- * - out of scope right now since EAS build quota is exhausted until Aug 1.
+ * DAYS_AHEAD-day window every time this runs, so as long as the user opens
+ * the app at least once within that window, reminders keep rolling
+ * forward. A true fix-and-forget (reschedule via a background task even if
+ * the app is never reopened) would need expo-task-manager/expo-background-
+ * fetch wired into app.json and a new native build to test - separate,
+ * bigger scope.
+ *
+ * Phase B (2026-08-02): previously this fetched api.aladhan.com's
+ * /calendar endpoint - a fetch failure (offline, API down, rate limit)
+ * was swallowed silently, `upcoming` came back empty, and
+ * schedulePrayerNotifications() just returned with zero reminders
+ * scheduled and NO error surfaced to the user, ever (confirmed by reading
+ * the code directly, not assumed). Switching to local calculation removes
+ * that failure mode structurally - resolveActiveLocation() always
+ * produces *some* coordinates (manual city > GPS > last-known > Mecca), so
+ * the timings map can no longer come back empty. The one real failure mode
+ * left (notification permission denied) was ALSO silent before; now
+ * surfaced via toast so the user knows reminders aren't active instead of
+ * silently not receiving them.
  * Re-run schedulePrayerNotifications() whenever settings change or the app
  * opens.
  */
 import * as Notifications from 'expo-notifications';
-import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { calculatePrayerTimes } from './prayerCalculation';
+import { resolveActiveLocation } from './prayerLocation';
+import { toast } from './toast';
 
 export type PrayerName = 'Fajr' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha';
 
@@ -63,60 +78,29 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 const DAYS_AHEAD = 7;
 
-function stripTimezoneSuffix(time: string): string {
-  // The /calendar endpoint returns times like "05:12 (+03)"; /timings
-  // returns clean "05:12" - handle both by just taking the first token.
-  return time.split(' ')[0];
-}
-
-/** Fetch prayer timings for each of the next `days` days (today included), keyed by Date#toDateString(). Exported so other reminder categories (e.g. fasting Suhoor/Iftar) can reuse the same Aladhan-backed timing data instead of duplicating the API call. */
-export async function fetchUpcomingTimings(days: number): Promise<Map<string, Record<PrayerName, string>>> {
+/**
+ * Compute prayer timings for each of the next `days` days (today included),
+ * keyed by Date#toDateString(), from the current persisted location +
+ * calculation method (src/lib/prayerLocation.ts). Fully local - always
+ * returns `days` entries, since resolveActiveLocation() always resolves to
+ * *some* coordinates. Exported so other reminder categories (fasting
+ * Suhoor/Iftar) reuse the same computation instead of duplicating it.
+ */
+export async function computeUpcomingTimings(days: number, userId: string | null): Promise<Map<string, Record<PrayerName, string>>> {
+  const { latitude, longitude, method } = await resolveActiveLocation(userId);
   const result = new Map<string, Record<PrayerName, string>>();
-  try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    const coords = status === 'granted'
-      ? (await Location.getCurrentPositionAsync({})).coords
-      : { latitude: 21.4225, longitude: 39.8262 };
-
-    const today = new Date();
-    const targetDates: Date[] = [];
-    for (let i = 0; i < days; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      targetDates.push(d);
-    }
-
-    // Fetch one calendar (month) per distinct year-month touched by the
-    // window, instead of one request per day.
-    const monthKeys = new Set(targetDates.map((d) => `${d.getFullYear()}-${d.getMonth() + 1}`));
-    const monthEntries = new Map<string, any[]>();
-    await Promise.all([...monthKeys].map(async (key) => {
-      const [year, month] = key.split('-');
-      const res = await fetch(
-        `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${coords.latitude}&longitude=${coords.longitude}&method=2`
-      );
-      const data = await res.json();
-      if (Array.isArray(data?.data)) monthEntries.set(key, data.data);
-    }));
-
-    for (const d of targetDates) {
-      const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
-      const days = monthEntries.get(key);
-      if (!days) continue;
-      const entry = days.find((e: any) => Number(e?.date?.gregorian?.day) === d.getDate());
-      if (!entry) continue;
-      const t = entry.timings;
-      result.set(d.toDateString(), {
-        Fajr: stripTimezoneSuffix(t.Fajr),
-        Dhuhr: stripTimezoneSuffix(t.Dhuhr),
-        Asr: stripTimezoneSuffix(t.Asr),
-        Maghrib: stripTimezoneSuffix(t.Maghrib),
-        Isha: stripTimezoneSuffix(t.Isha),
-      });
-    }
-  } catch {
-    // Best-effort - return whatever was gathered before the failure so the
-    // caller can still schedule a partial window rather than nothing at all.
+  const today = new Date();
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const timings = calculatePrayerTimes(latitude, longitude, d, method);
+    result.set(d.toDateString(), {
+      Fajr: timings.Fajr,
+      Dhuhr: timings.Dhuhr,
+      Asr: timings.Asr,
+      Maghrib: timings.Maghrib,
+      Isha: timings.Isha,
+    });
   }
   return result;
 }
@@ -128,19 +112,29 @@ export async function cancelAllPrayerNotifications(): Promise<void> {
   await Promise.all(ours.map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
 }
 
-/** (Re)schedule the next DAYS_AHEAD days of prayer reminders based on current settings. Call on app start and whenever settings change. */
+/**
+ * (Re)schedule the next DAYS_AHEAD days of prayer reminders based on
+ * current settings. Call on app start and whenever settings change.
+ * Returns true if reminders were (re)scheduled, false if they could not be
+ * (surfaces a toast in the false case - previously this failed silently).
+ */
 export async function schedulePrayerNotifications(
   settings: PrayerReminderSettings,
-  isAr: boolean
-): Promise<void> {
+  isAr: boolean,
+  userId: string | null
+): Promise<boolean> {
   await cancelAllPrayerNotifications();
-  if (!settings.enabled) return;
+  if (!settings.enabled) return true;
 
   const granted = await requestNotificationPermission();
-  if (!granted) return;
+  if (!granted) {
+    toast.error(isAr
+      ? 'تعذّر جدولة تذكيرات الصلاة - يرجى السماح بالإشعارات من إعدادات الجهاز.'
+      : 'Could not schedule prayer reminders - please allow notifications in device settings.');
+    return false;
+  }
 
-  const upcoming = await fetchUpcomingTimings(DAYS_AHEAD);
-  if (upcoming.size === 0) return;
+  const upcoming = await computeUpcomingTimings(DAYS_AHEAD, userId);
 
   const now = new Date();
   const prayerLabels: Record<PrayerName, { en: string; ar: string }> = {
@@ -174,4 +168,5 @@ export async function schedulePrayerNotifications(
       });
     }
   }
+  return true;
 }

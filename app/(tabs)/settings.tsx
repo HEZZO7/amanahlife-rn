@@ -105,7 +105,7 @@ export default function Settings() {
   const updateReminders = async (next: PrayerReminderSettings) => {
     setReminders(next);
     await saveReminderSettings(next);
-    await schedulePrayerNotifications(next, isAr);
+    await schedulePrayerNotifications(next, isAr, userId);
   };
   const togglePrayerReminder = (prayer: PrayerName) =>
     updateReminders({ ...reminders, perPrayer: { ...reminders.perPrayer, [prayer]: !reminders.perPrayer[prayer] } });

@@ -36,7 +36,8 @@
 import * as Notifications from 'expo-notifications';
 import { getUserItem, setUserItem } from './userStorage';
 import { functionUrl } from './config';
-import { requestNotificationPermission, fetchUpcomingTimings } from './prayerNotifications';
+import { requestNotificationPermission, computeUpcomingTimings } from './prayerNotifications';
+import { toast } from './toast';
 
 export interface NotificationPreferences {
   prayer_reminders: boolean;
@@ -202,18 +203,24 @@ const FASTING_DAYS_AHEAD = 7;
 const SUHOOR_MINUTES_BEFORE_FAJR = 30;
 
 /**
- * Real Suhoor/Iftar alerts using the same Aladhan-backed Fajr/Maghrib
- * timings prayerNotifications.ts already fetches for prayer reminders -
- * not a separate or guessed data source.
+ * Real Suhoor/Iftar alerts using the same locally-computed Fajr/Maghrib
+ * timings prayerNotifications.ts computes for prayer reminders (Phase B,
+ * 2026-08-02 - was the same Aladhan fetch prayer reminders used to share;
+ * switching both to local calculation removes the network dependency and
+ * the silent-failure path a fetch error used to leave here too).
  */
-export async function scheduleFastingReminders(enabled: boolean, isAr: boolean): Promise<void> {
+export async function scheduleFastingReminders(enabled: boolean, isAr: boolean, userId: string | null): Promise<void> {
   await cancelTagged(FASTING_TAG);
   if (!enabled) return;
   const granted = await requestNotificationPermission();
-  if (!granted) return;
+  if (!granted) {
+    toast.error(isAr
+      ? 'تعذّر جدولة تذكيرات السحور والإفطار - يرجى السماح بالإشعارات من إعدادات الجهاز.'
+      : 'Could not schedule Suhoor/Iftar reminders - please allow notifications in device settings.');
+    return;
+  }
 
-  const upcoming = await fetchUpcomingTimings(FASTING_DAYS_AHEAD);
-  if (upcoming.size === 0) return;
+  const upcoming = await computeUpcomingTimings(FASTING_DAYS_AHEAD, userId);
 
   const now = new Date();
   for (const [dateKey, timings] of upcoming) {
@@ -283,7 +290,7 @@ export async function updatePreference(
 
   if (key === 'bill_reminders') await scheduleBillReminders(userId, value, isAr);
   else if (key === 'habit_reminders') await scheduleGoalReminders(userId, value, isAr);
-  else if (key === 'fasting_reminders') await scheduleFastingReminders(value, isAr);
+  else if (key === 'fasting_reminders') await scheduleFastingReminders(value, isAr, userId);
   // prayer_reminders: owned by the separate PrayerReminderSettings section.
   // savings_reminders: event-triggered live in savings-challenges.tsx, not scheduled ahead.
   // general_activity: no dedicated content on either platform.
@@ -296,6 +303,6 @@ export async function refreshAllCategoryReminders(userId: string | null, prefs: 
   await Promise.all([
     scheduleBillReminders(userId, prefs.bill_reminders, isAr),
     scheduleGoalReminders(userId, prefs.habit_reminders, isAr),
-    scheduleFastingReminders(prefs.fasting_reminders, isAr),
+    scheduleFastingReminders(prefs.fasting_reminders, isAr, userId),
   ]);
 }
