@@ -1,13 +1,18 @@
 /**
- * Prayer Times — migrated from app/frontend/src/pages/PrayerTimes.tsx
- * - navigator.geolocation  → expo-location
- * - localStorage           → AsyncStorage
- * - sonner toast           → src/lib/toast
- * Same aladhan.com API (method=2), Mecca fallback, next-prayer countdown,
- * gradient hero card, progress bar, bilingual/RTL.
+ * Prayer Times — migrated from app/frontend/src/pages/PrayerTimes.tsx.
+ * Phase B (2026-08-02): prayer times are now computed fully offline via
+ * adhan-js (src/lib/prayerCalculation.ts) instead of fetching
+ * api.aladhan.com - no network call anywhere in this screen. Calculation
+ * method is user-selectable (default Umm al-Qura, not the previous
+ * hardcoded ISNA). Location is either automatic (GPS, with a timeout that
+ * falls back to last-known-location then Mecca) or manually picked from a
+ * curated city list (src/data/curatedCities.ts) - see PROJECT.md 0c-6.
+ * localStorage → AsyncStorage, sonner toast → src/lib/toast.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import {
+  View, Text, ActivityIndicator, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { getUserItem, setUserItem, migrateLegacyKeyIfNeeded } from '../../src/lib/userStorage';
@@ -18,6 +23,23 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { Screen, Card, Button, GradientCard, ProgressBar } from '../../src/components/ui';
 import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_BOLD, FONT_UI_MEDIUM, FONT_UI_BLACK } from '../../src/theme/fonts';
+import {
+  calculatePrayerTimes, CALCULATION_METHODS, DEFAULT_CALCULATION_METHOD, CalculationMethodKey,
+} from '../../src/lib/prayerCalculation';
+import { CURATED_CITIES, CityOption } from '../../src/data/curatedCities';
+
+const MECCA_COORDS = { latitude: 21.4225, longitude: 39.8262 };
+const GPS_TIMEOUT_MS = 10000;
+const CALC_METHOD_KEY = 'prayer_calc_method';
+const LOCATION_MODE_KEY = 'prayer_location_mode';
+const MANUAL_CITY_KEY = 'prayer_manual_city';
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('location-timeout')), ms)),
+  ]);
+}
 
 interface PrayerTime { name: string; time: string; icon: string; }
 
@@ -41,6 +63,13 @@ export default function PrayerTimes() {
   const [nextPrayer, setNextPrayer] = useState<{ name: string; time: string; countdown: string } | null>(null);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
 
+  const [calcMethod, setCalcMethod] = useState<CalculationMethodKey>(DEFAULT_CALCULATION_METHOD);
+  const [locationMode, setLocationMode] = useState<'auto' | 'manual'>('auto');
+  const [manualCity, setManualCity] = useState<CityOption | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'location' | 'method'>('location');
+  const [citySearch, setCitySearch] = useState('');
+
   useEffect(() => {
     if (!authLoading && !user) router.replace('/(auth)/landing');
   }, [user, authLoading]);
@@ -63,17 +92,10 @@ export default function PrayerTimes() {
     setNextPrayer({ name: tomorrowLabel, time: prayerList[0]?.time || '', countdown: '' });
   }, [language]);
 
-  const fetchPrayerTimes = useCallback(async (lat: number, lng: number) => {
+  const computePrayerTimes = useCallback((lat: number, lng: number, locationLabel: string, method: CalculationMethodKey) => {
     try {
-      const today = new Date();
-      const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
-      const res = await fetch(
-        `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${lat}&longitude=${lng}&method=2`
-      );
-      const data = await res.json();
-      const timings = data.data.timings;
-      setLocation(data.data.meta.timezone || (language === 'ar' ? 'موقعك' : 'Your Location'));
-
+      const timings = calculatePrayerTimes(lat, lng, new Date(), method);
+      setLocation(locationLabel);
       const prayerList: PrayerTime[] = [
         { name: 'Fajr', time: timings.Fajr, icon: '🌅' },
         { name: 'Sunrise', time: timings.Sunrise, icon: '☀️' },
@@ -84,32 +106,78 @@ export default function PrayerTimes() {
       ];
       setPrayers(prayerList);
       updateNextPrayer(prayerList);
-    } catch {
-      toast.error(language === 'ar' ? 'فشل في تحميل مواقيت الصلاة' : 'Failed to fetch prayer times');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [language, updateNextPrayer]);
+  }, [updateNextPrayer]);
 
-  const loadByLocation = useCallback(async () => {
+  const loadByLocation = useCallback(async (method: CalculationMethodKey, mode: 'auto' | 'manual', city: CityOption | null) => {
+    if (mode === 'manual' && city) {
+      computePrayerTimes(city.lat, city.lon, language === 'ar' ? city.nameAr : city.name, method);
+      return;
+    }
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        await fetchPrayerTimes(21.4225, 39.8262);
+        computePrayerTimes(MECCA_COORDS.latitude, MECCA_COORDS.longitude, language === 'ar' ? 'مكة المكرمة (افتراضي)' : 'Mecca (default)', method);
         toast.info(language === 'ar'
-          ? 'يتم استخدام موقع مكة المكرمة. فعّل الموقع لنتائج دقيقة.'
-          : 'Using default location (Mecca). Enable location for accurate times.');
+          ? 'يتم استخدام موقع مكة المكرمة. فعّل الموقع لنتائج دقيقة، أو اختر مدينتك يدوياً.'
+          : 'Using default location (Mecca). Enable location for accurate times, or set your city manually.');
         return;
       }
-      const pos = await Location.getCurrentPositionAsync({});
-      await fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude);
+      const pos = await withTimeout(Location.getCurrentPositionAsync({}), GPS_TIMEOUT_MS);
+      computePrayerTimes(pos.coords.latitude, pos.coords.longitude, language === 'ar' ? 'موقعك الحالي' : 'Your location', method);
     } catch {
-      await fetchPrayerTimes(21.4225, 39.8262);
+      // GPS hung or failed (no timeout existed here before - a stuck GPS
+      // fix used to hang this screen indefinitely). Try the last-known fix
+      // before falling all the way back to Mecca.
+      try {
+        const last = await Location.getLastKnownPositionAsync();
+        if (last) {
+          computePrayerTimes(last.coords.latitude, last.coords.longitude, language === 'ar' ? 'آخر موقع معروف' : 'Last known location', method);
+          return;
+        }
+      } catch { /* fall through to Mecca */ }
+      computePrayerTimes(MECCA_COORDS.latitude, MECCA_COORDS.longitude, language === 'ar' ? 'مكة المكرمة (افتراضي)' : 'Mecca (default)', method);
     }
-  }, [fetchPrayerTimes, language]);
+  }, [computePrayerTimes, language]);
 
-  useEffect(() => { loadByLocation(); }, []);
+  useEffect(() => {
+    (async () => {
+      await migrateLegacyKeyIfNeeded(CALC_METHOD_KEY, userId);
+      await migrateLegacyKeyIfNeeded(LOCATION_MODE_KEY, userId);
+      await migrateLegacyKeyIfNeeded(MANUAL_CITY_KEY, userId);
+      const [savedMethod, savedMode, savedCity] = await Promise.all([
+        getUserItem(CALC_METHOD_KEY, userId),
+        getUserItem(LOCATION_MODE_KEY, userId),
+        getUserItem(MANUAL_CITY_KEY, userId),
+      ]);
+      const method = (savedMethod as CalculationMethodKey) || DEFAULT_CALCULATION_METHOD;
+      const mode = savedMode === 'manual' ? 'manual' : 'auto';
+      const city = savedCity ? (JSON.parse(savedCity) as CityOption) : null;
+      setCalcMethod(method);
+      setLocationMode(mode);
+      setManualCity(city);
+      loadByLocation(method, mode, city);
+    })();
+  }, [userId]);
+
+  const applyLocationMode = (mode: 'auto' | 'manual', city: CityOption | null) => {
+    setLocationMode(mode);
+    setManualCity(city);
+    setUserItem(LOCATION_MODE_KEY, userId, mode);
+    if (city) setUserItem(MANUAL_CITY_KEY, userId, JSON.stringify(city));
+    setLoading(true);
+    loadByLocation(calcMethod, mode, city);
+  };
+
+  const applyCalcMethod = (method: CalculationMethodKey) => {
+    setCalcMethod(method);
+    setUserItem(CALC_METHOD_KEY, userId, method);
+    setLoading(true);
+    loadByLocation(method, locationMode, manualCity);
+  };
 
   // Update countdown every minute
   useEffect(() => {
@@ -146,7 +214,7 @@ export default function PrayerTimes() {
     });
   };
 
-  const onRefresh = () => { setRefreshing(true); loadByLocation(); };
+  const onRefresh = () => { setRefreshing(true); loadByLocation(calcMethod, locationMode, manualCity); };
 
   const getPrayerDisplayName = (name: string) =>
     language === 'ar' ? (PRAYER_NAMES_AR[name] || name) : name;
@@ -170,6 +238,14 @@ export default function PrayerTimes() {
       title={language === 'ar' ? 'مواقيت الصلاة' : 'Prayer Times'}
       refreshing={refreshing}
       onRefresh={onRefresh}
+      headerRight={
+        <TouchableOpacity
+          onPress={() => setSettingsOpen(true)}
+          style={[styles.settingsBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <Text style={{ fontSize: 16 }}>⚙️</Text>
+        </TouchableOpacity>
+      }
     >
       {/* Next prayer hero card */}
       {nextPrayer && (
@@ -187,10 +263,12 @@ export default function PrayerTimes() {
         </GradientCard>
       )}
 
-      {/* Location */}
-      <Text style={[styles.location, { color: colors.textSecondary }]}>
-        📍 {language === 'ar' ? 'الموقع:' : 'Location:'} {location}
-      </Text>
+      {/* Location - tap to open the same settings sheet */}
+      <TouchableOpacity onPress={() => setSettingsOpen(true)}>
+        <Text style={[styles.location, { color: colors.textSecondary }]}>
+          📍 {language === 'ar' ? 'الموقع:' : 'Location:'} {location}
+        </Text>
+      </TouchableOpacity>
 
       {/* Progress */}
       <View style={styles.progressWrap}>
@@ -236,6 +314,99 @@ export default function PrayerTimes() {
           );
         })}
       </View>
+
+      {/* Location + calculation-method settings sheet */}
+      <Modal visible={settingsOpen} transparent animationType="slide" onRequestClose={() => setSettingsOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.bg }]}>
+            <View style={[styles.modalTabRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <TouchableOpacity
+                style={[styles.modalTab, settingsTab === 'location' && { borderBottomColor: colors.teal, borderBottomWidth: 2 }]}
+                onPress={() => setSettingsTab('location')}
+              >
+                <Text style={{ color: settingsTab === 'location' ? colors.teal : colors.textSecondary, fontFamily: FONT_UI_BOLD, fontSize: 13 }}>
+                  {language === 'ar' ? 'الموقع' : 'Location'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalTab, settingsTab === 'method' && { borderBottomColor: colors.teal, borderBottomWidth: 2 }]}
+                onPress={() => setSettingsTab('method')}
+              >
+                <Text style={{ color: settingsTab === 'method' ? colors.teal : colors.textSecondary, fontFamily: FONT_UI_BOLD, fontSize: 13 }}>
+                  {language === 'ar' ? 'طريقة الحساب' : 'Calculation Method'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSettingsOpen(false)} style={{ marginLeft: isRTL ? 0 : 'auto', marginRight: isRTL ? 'auto' : 0, padding: 6 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 18 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {settingsTab === 'location' ? (
+              <View style={{ flex: 1 }}>
+                <View style={[styles.modeRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                  <TouchableOpacity
+                    style={[styles.modeBtn, { borderColor: colors.border }, locationMode === 'auto' && { backgroundColor: colors.teal, borderColor: colors.teal }]}
+                    onPress={() => applyLocationMode('auto', manualCity)}
+                  >
+                    <Text style={{ color: locationMode === 'auto' ? '#04211C' : colors.text, fontFamily: FONT_UI_BOLD, fontSize: 13 }}>
+                      {language === 'ar' ? '📡 تلقائي (GPS)' : '📡 Automatic (GPS)'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modeBtn, { borderColor: colors.border }, locationMode === 'manual' && { backgroundColor: colors.teal, borderColor: colors.teal }]}
+                    onPress={() => manualCity && applyLocationMode('manual', manualCity)}
+                  >
+                    <Text style={{ color: locationMode === 'manual' ? '#04211C' : colors.text, fontFamily: FONT_UI_BOLD, fontSize: 13 }}>
+                      {language === 'ar' ? '🏙️ يدوي' : '🏙️ Manual'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  placeholder={language === 'ar' ? 'ابحث عن مدينة...' : 'Search for a city...'}
+                  placeholderTextColor={colors.textMuted}
+                  value={citySearch}
+                  onChangeText={setCitySearch}
+                  style={[styles.search, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border, textAlign: isRTL ? 'right' : 'left' }]}
+                />
+                <ScrollView style={{ flex: 1 }}>
+                  {CURATED_CITIES.filter((c) =>
+                    !citySearch ||
+                    c.name.toLowerCase().includes(citySearch.toLowerCase()) ||
+                    c.nameAr.includes(citySearch) ||
+                    c.country.toLowerCase().includes(citySearch.toLowerCase())
+                  ).map((c) => (
+                    <TouchableOpacity
+                      key={`${c.name}-${c.countryCode}`}
+                      style={[styles.cityRow, { borderBottomColor: colors.border }]}
+                      onPress={() => { applyLocationMode('manual', c); setSettingsOpen(false); }}
+                    >
+                      <Text style={{ color: colors.text, fontFamily: FONT_UI_MEDIUM, fontSize: 14 }}>
+                        {language === 'ar' ? c.nameAr : c.name}
+                      </Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{c.country}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : (
+              <ScrollView style={{ flex: 1 }}>
+                {CALCULATION_METHODS.map((m) => (
+                  <TouchableOpacity
+                    key={m.key}
+                    style={[styles.methodRow, { borderBottomColor: colors.border }]}
+                    onPress={() => { applyCalcMethod(m.key); setSettingsOpen(false); }}
+                  >
+                    <Text style={{ color: calcMethod === m.key ? colors.teal : colors.text, fontFamily: calcMethod === m.key ? FONT_UI_BOLD : FONT_UI_MEDIUM, fontSize: 14, flex: 1, textAlign: isRTL ? 'right' : 'left' }}>
+                      {language === 'ar' ? m.labelAr : m.labelEn}
+                    </Text>
+                    {calcMethod === m.key && <Text style={{ color: colors.teal }}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -255,4 +426,14 @@ const styles = StyleSheet.create({
   prayerLeft: { alignItems: 'center', gap: 12 },
   prayerName: { fontSize: 16, fontFamily: FONT_UI_BOLD },
   prayerTime: { fontSize: 13, marginTop: 2, fontFamily: FONT_UI },
+  settingsBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalSheet: { height: '75%', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16 },
+  modalTabRow: { alignItems: 'center', marginBottom: 14 },
+  modalTab: { paddingVertical: 8, paddingHorizontal: 12, marginRight: 4 },
+  modeRow: { gap: 8, marginBottom: 12 },
+  modeBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
+  search: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontFamily: FONT_UI, marginBottom: 10 },
+  cityRow: { paddingVertical: 12, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  methodRow: { paddingVertical: 14, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });
