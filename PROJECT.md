@@ -313,6 +313,14 @@ Also fixed 2 hardcoded hex text colors bypassing the theme system entirely (`giv
 
 **Not done**: web uses a structurally different theming system (HSL CSS custom properties in `index.css`, not literal hex constants like RN's `ThemeContext.tsx`) - this was an RN-only audit/fix; web needs its own separate pass if requested, not a hex-for-hex mirror (the underlying value shapes don't correspond 1:1).
 
+### Stage 3 — Quran back-navigation bug, commit `fad0c88`
+
+Root cause: `quran.tsx`'s index/reader distinction is local component state (`selectedSurah`), not a real navigation-stack route - there's only one `quran` route total. The on-screen back arrow already worked correctly via `goBack()`. Android's hardware/gesture back button was never intercepted, so it fell through to expo-router's default stack pop - which only knows about the single route, not the internal state - sending it straight past the surah index to whatever was on the stack before Quran (Home), regardless of entry point. Fixed by wiring in the existing `useBackToClose` hook (already used elsewhere in the app for this exact "custom back button works, hardware back doesn't" pattern on sheet/modal screens) - active only while a surah is open, so hardware back now always returns to the index first.
+
+**Confirmed web's `QuranReader.tsx` has the identical gap** (same single-route + local view-state architecture, only the on-screen button is wired, no `popstate` interception for the browser back button) - not fixed this pass since not explicitly requested; flagged for awareness.
+
+**Verification**: `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean.
+
 ---
 
 ## 0d. Pending / Deferred Items
