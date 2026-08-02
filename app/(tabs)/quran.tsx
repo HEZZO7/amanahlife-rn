@@ -1,7 +1,10 @@
 /**
  * Quran Reader — migrated from app/frontend/src/pages/QuranReader.tsx
- * alquran.cloud API (surah list, Arabic + en.asad translation). Search, last-read
- * resume, ayah bookmarks. localStorage → AsyncStorage, sonner → src/lib/toast.
+ * alquran.cloud API (surah list, Arabic + en.sahih/Saheeh International
+ * translation - was en.asad/Muhammad Asad, which doesn't meet the app's own
+ * "trusted, scholarly" translation bar; corrected 2026-08-02). Search,
+ * last-read resume, ayah bookmarks. localStorage → AsyncStorage, sonner →
+ * src/lib/toast.
  */
 import React, { useState, useEffect } from 'react';
 import {
@@ -98,7 +101,7 @@ export default function QuranReader() {
     try {
       const [arabicRes, englishRes] = await Promise.all([
         fetch(`https://api.alquran.cloud/v1/surah/${surah.number}`),
-        fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.asad`),
+        fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
       ]);
       const arabicData = await arabicRes.json();
       const englishData = await englishRes.json();
