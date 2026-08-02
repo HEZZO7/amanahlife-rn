@@ -23,6 +23,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRTL } from '../hooks/useRTL';
 import { getUserItem } from '../lib/userStorage';
 import { gregorianToHijri, formatHijri, formatGregorian } from '../lib/hijriDate';
+import { getExcusedPeriods, isDateExcusedForPrayer, isoDate } from '../lib/excusedPeriods';
 
 const DAILY_VERSES = [
   { arabic: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا', translation: 'Indeed, with hardship comes ease.', reference: 'Quran 94:6' },
@@ -186,6 +187,7 @@ export default function DashboardScreen() {
   const calcStreak = useCallback(async () => {
     let s = 0;
     const today = new Date();
+    const excusedPeriods = await getExcusedPeriods(userId);
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
@@ -197,6 +199,8 @@ export default function DashboardScreen() {
       if (val) {
         const completed = JSON.parse(val);
         if (completed.length >= 1) { s++; } else { break; }
+      } else if (isDateExcusedForPrayer(isoDate(d), excusedPeriods)) {
+        continue; // Phase C: excused day (hayd/nifas/incapacitated illness) - skip, don't break the streak.
       } else {
         if (i === 0) continue;
         break;
@@ -261,6 +265,7 @@ export default function DashboardScreen() {
     await AsyncStorage.setItem(todayKey, '1');
 
     let prayerStreak = 0;
+    const excusedPeriodsForStreaks = await getExcusedPeriods(userId);
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
@@ -270,6 +275,8 @@ export default function DashboardScreen() {
       if (val) {
         const completed = JSON.parse(val);
         if (completed.length >= 5) { prayerStreak++; } else { break; }
+      } else if (isDateExcusedForPrayer(isoDate(d), excusedPeriodsForStreaks)) {
+        continue; // Phase C: excused day - skip, don't break the streak.
       } else {
         if (i === 0) continue;
         break;
@@ -355,6 +362,7 @@ export default function DashboardScreen() {
 
     let briefingStreak = 0;
     const today = new Date();
+    const excusedPeriodsForBriefing = await getExcusedPeriods(userId);
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
@@ -364,6 +372,8 @@ export default function DashboardScreen() {
       if (val) {
         const completed = JSON.parse(val);
         if (completed.length >= 1) { briefingStreak++; } else { break; }
+      } else if (isDateExcusedForPrayer(isoDate(d), excusedPeriodsForBriefing)) {
+        continue; // Phase C: excused day - skip, don't break the streak.
       } else {
         if (i === 0) continue;
         break;
