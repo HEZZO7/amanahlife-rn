@@ -1,14 +1,16 @@
 /**
- * Quran Reader — migrated from app/frontend/src/pages/QuranReader.tsx
- * alquran.cloud API (surah list, Arabic + en.sahih/Saheeh International
- * translation - was en.asad/Muhammad Asad, which doesn't meet the app's own
- * "trusted, scholarly" translation bar; corrected 2026-08-02). Search,
- * last-read resume, ayah bookmarks. localStorage → AsyncStorage, sonner →
- * src/lib/toast.
+ * Quran Reader — migrated from app/frontend/src/pages/QuranReader.tsx.
+ * Fully offline (2026-08-02, Phase B): Arabic Uthmani text, the Saheeh
+ * International translation, and surah metadata are bundled with the app
+ * (src/data/quranSurahList.ts + src/data/quranArabicAssets.ts +
+ * src/data/quranTranslationAssets.ts, generated from real api.alquran.cloud
+ * responses - see PROJECT.md 0c-6 for the data source and size numbers).
+ * No network call remains anywhere in this screen. Search, last-read
+ * resume, ayah bookmarks unchanged.
  */
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
@@ -17,8 +19,10 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { Card } from '../../src/components/ui';
-import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_ARABIC } from '../../src/theme/fonts';
+import { QURAN_SURAH_LIST } from '../../src/data/quranSurahList';
+import { loadArabicSurah } from '../../src/data/quranArabicAssets';
+import { loadTranslationSurah } from '../../src/data/quranTranslationAssets';
 
 interface Surah { number: number; name: string; englishName: string; englishNameTranslation: string; numberOfAyahs: number; revelationType: string; }
 interface Ayah { number: number; text: string; numberInSurah: number; translation?: string; }
@@ -49,10 +53,8 @@ export default function QuranReader() {
   const router = useRouter();
   const tr = (en: string, ar: string) => (language === 'ar' ? ar : en);
 
-  const [surahs, setSurahs] = useState<Surah[]>([]);
   const [selectedSurah, setSelectedSurah] = useState<Surah | null>(null);
   const [ayahs, setAyahs] = useState<Ayah[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [lastRead, setLastRead] = useState<{ surah: number; name: string } | null>(null);
@@ -81,38 +83,18 @@ export default function QuranReader() {
   };
   useEffect(() => { setUserItem('quran_bookmarks', userId, JSON.stringify([...bookmarks])); }, [bookmarks, userId]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('https://api.alquran.cloud/v1/surah');
-        const data = await res.json();
-        setSurahs(data.data);
-      } catch {
-        toast.error(tr('Failed to load Quran data', 'فشل تحميل بيانات القرآن'));
-      } finally { setLoading(false); }
-    })();
-  }, [language]);
-
-  const loadSurah = async (surah: Surah) => {
-    setLoading(true);
+  const loadSurah = (surah: Surah) => {
     setSelectedSurah(surah);
     setLastRead({ surah: surah.number, name: surah.englishName });
     setUserItem('quran_last_read', userId, JSON.stringify({ surah: surah.number, name: surah.englishName }));
-    try {
-      const [arabicRes, englishRes] = await Promise.all([
-        fetch(`https://api.alquran.cloud/v1/surah/${surah.number}`),
-        fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
-      ]);
-      const arabicData = await arabicRes.json();
-      const englishData = await englishRes.json();
-      setAyahs(arabicData.data.ayahs.map((ayah: Ayah, i: number) => ({
-        ...ayah,
-        text: stripBasmalahPrefix(ayah.text, surah.number, ayah.numberInSurah),
-        translation: englishData.data.ayahs[i]?.text || '',
-      })));
-    } catch {
-      toast.error(tr('Failed to load surah', 'فشل تحميل السورة'));
-    } finally { setLoading(false); }
+    const arabicAyahs = loadArabicSurah(surah.number);
+    const translationAyahs = loadTranslationSurah(surah.number);
+    setAyahs(arabicAyahs.map((ayah) => ({
+      number: ayah.number,
+      numberInSurah: ayah.numberInSurah,
+      text: stripBasmalahPrefix(ayah.text, surah.number, ayah.numberInSurah),
+      translation: translationAyahs.find((t) => t.numberInSurah === ayah.numberInSurah)?.text || '',
+    })));
   };
 
   const toggleBookmark = (key: string) => setBookmarks((prev) => {
@@ -126,7 +108,7 @@ export default function QuranReader() {
     else router.back();
   };
 
-  const filteredSurahs = surahs.filter((s) =>
+  const filteredSurahs = QURAN_SURAH_LIST.filter((s) =>
     s.englishName.toLowerCase().includes(search.toLowerCase()) ||
     s.englishNameTranslation.toLowerCase().includes(search.toLowerCase()) ||
     s.name.includes(search) || s.number.toString() === search
@@ -190,18 +172,15 @@ export default function QuranReader() {
                 </View>
                 <TouchableOpacity
                   style={[styles.resumeBtn, { backgroundColor: colors.teal }]}
-                  onPress={() => { const s = surahs.find((x) => x.number === lastRead.surah); if (s) loadSurah(s); }}
+                  onPress={() => { const s = QURAN_SURAH_LIST.find((x) => x.number === lastRead.surah); if (s) loadSurah(s); }}
                 >
                   <Text style={{ color: '#04211C', fontSize: 13, fontFamily: FONT_UI_BOLD }}>{tr('Resume', 'استئناف')}</Text>
                 </TouchableOpacity>
               </Card>
             )}
 
-            {/* Surah list */}
-            {loading ? (
-              <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
-            ) : (
-              <View style={{ gap: 8 }}>
+            {/* Surah list - bundled locally, renders instantly, no network */}
+            <View style={{ gap: 8 }}>
                 {filteredSurahs.map((surah) => (
                   <TouchableOpacity key={surah.number} activeOpacity={0.7} onPress={() => loadSurah(surah)}>
                     <Card style={[styles.surahRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
@@ -224,11 +203,8 @@ export default function QuranReader() {
                     </Card>
                   </TouchableOpacity>
                 ))}
-              </View>
-            )}
+            </View>
           </>
-        ) : loading ? (
-          <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
         ) : (
           <View style={{ gap: 14 }}>
             {selectedSurah.number !== 1 && selectedSurah.number !== 9 && (
