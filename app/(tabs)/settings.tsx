@@ -162,6 +162,16 @@ export default function Settings() {
     'fasting_today_', 'dhikr_count_', 'dhikr_total_', 'adhkar_progress_', 'quran_pages_', 'prayer_completed_',
   ];
 
+  // DELIBERATELY NOT SWEPT: excused-period data (src/lib/excusedPeriods.ts -
+  // keys 'excused_periods', 'excused_qada_fasts_made_up',
+  // 'excused_qada_prayers_made_up', 'excused_disclaimer_seen'). This is
+  // sensitive (menstruation/nifas/illness/travel exemption history) and is
+  // device-local-only by explicit design (Phase C, 2026-08-02) - it must
+  // never appear in a backup export or be restorable to a different
+  // device/account. Do not add an 'excused_' entry to BACKUP_KEYS or
+  // DYNAMIC_KEY_PREFIXES without an explicit, separate privacy-design
+  // approval - this exclusion is intentional, not an oversight.
+
   const [backupBusy, setBackupBusy] = useState(false);
 
   const exportAllData = async () => {
