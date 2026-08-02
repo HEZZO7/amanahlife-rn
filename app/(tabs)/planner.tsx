@@ -97,6 +97,17 @@ export default function Planner() {
   };
   const removeAgendaItem = (id: string) => setAgendaItems((prev) => prev.filter((i) => i.id !== id));
 
+  // Root cause (F1.2): tapping a day in weekly/monthly view highlighted it
+  // (selectedDay), but the add-event form was never wired to that
+  // selection - it always opened with a blank/today date regardless of
+  // which day was tapped, so selecting a future day appeared to do
+  // nothing. Pre-fill the date from selectedDay in those views; agenda
+  // view has no day-selection concept, so it keeps defaulting to today.
+  const openAddForm = () => {
+    setNewItem((prev) => ({ ...prev, date: view === 'agenda' ? '' : selectedDayStr }));
+    setShowAddForm(true);
+  };
+
   const getWeekDays = () => {
     const days: Date[] = [];
     const today = new Date();
@@ -315,16 +326,21 @@ export default function Planner() {
                 if (day === null) return <View key={i} style={styles.monthCell} />;
                 const isToday = day === new Date().getDate();
                 const dateObj = new Date(new Date().getFullYear(), new Date().getMonth(), day);
+                const isSelected = dateObj.toDateString() === selectedDay.toDateString();
                 const hasTask = getTaskCountForDate(dateObj) > 0;
                 return (
-                  <View key={i} style={styles.monthCell}>
-                    <View style={[styles.monthDay, isToday && { backgroundColor: colors.teal }]}>
+                  <TouchableOpacity key={i} style={styles.monthCell} activeOpacity={0.7} onPress={() => setSelectedDay(dateObj)}>
+                    <View style={[
+                      styles.monthDay,
+                      isToday && { backgroundColor: colors.teal },
+                      !isToday && isSelected && { backgroundColor: colors.gold + '2A', borderWidth: 1, borderColor: colors.gold },
+                    ]}>
                       <Text style={{ color: isToday ? '#04211C' : colors.textSecondary, fontSize: 13, fontFamily: isToday ? FONT_UI_BOLD : FONT_UI }}>
                         {day}
                       </Text>
                       {hasTask && <View style={[styles.taskDot, { backgroundColor: colors.gold }]} />}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -333,7 +349,7 @@ export default function Planner() {
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.teal }]} onPress={() => setShowAddForm(true)} activeOpacity={0.85}>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.teal }]} onPress={openAddForm} activeOpacity={0.85}>
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
