@@ -212,8 +212,8 @@ export default function WeeklyLifeScore() {
         {lowestDimension && (
           <Card>
             <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>💡 {isAr ? 'توصيات للتحسين' : 'Improvement Recommendations'}</Text>
-            <View style={[styles.recBox, { backgroundColor: '#C9A96E1A', borderColor: '#C9A96E33' }]}>
-              <Text style={{ color: '#C9A96E', fontSize: 11, fontFamily: FONT_UI_MEDIUM, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
+            <View style={[styles.recBox, { backgroundColor: colors.gold + '1A', borderColor: colors.gold + '33' }]}>
+              <Text style={{ color: colors.gold, fontSize: 11, fontFamily: FONT_UI_MEDIUM, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
                 {isAr ? 'أقل بُعد:' : 'Lowest dimension:'} {lowestDimension.icon} {isAr ? lowestDimension.nameAr : lowestDimension.name} ({lowestDimension.score}/100)
               </Text>
               <Text style={{ color: colors.text, fontSize: 13.5, fontFamily: FONT_UI, textAlign: isRTL ? 'right' : 'left' }}>

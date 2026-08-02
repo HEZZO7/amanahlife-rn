@@ -26,9 +26,9 @@ export const darkColors = {
   tealLight: '#3DD9D3',
   tealDark: '#178F8A',  // gradient end used on web hero cards
   gold: '#D4A017',      // --gold accent
-  red: '#E05D4E',
+  red: '#E26759',       // brightened from #E05D4E (Phase F Stage 2: was 4.1-4.3:1 on surface/card, failed WCAG AA for normal text; now ~4.6:1)
   green: '#27AE60',     // success / income
-  blue: '#3b82f6',
+  blue: '#4C8DF7',      // brightened from #3b82f6 (Phase F Stage 2: was 4.1-4.2:1 on surface/card, failed WCAG AA for normal text; now ~4.7:1)
 };
 
 export const lightColors = {
@@ -39,12 +39,12 @@ export const lightColors = {
   text: '#0B1F17',      // foreground 152 53% 8%
   textSecondary: '#4A5C54', // muted-foreground 152 20% 35%
   textMuted: '#5C6B63', // darkened from #8A968F (was ~2.8:1 on light bg, failed WCAG AA; now ~5.2:1)
-  teal: '#178F8A',
+  teal: '#147B77',      // darkened from #178F8A (Phase F Stage 2: was 3.6-3.9:1 on bg/card, failed WCAG AA for normal text; now ~4.7:1)
   tealLight: '#1FC7C1',
   tealDark: '#0F6B67',
-  gold: '#B8860B',
-  red: '#DC2626',
-  green: '#16A34A',
+  gold: '#8F6809',      // darkened from #B8860B (Phase F Stage 2: was 3.0-3.3:1 on bg/card - the worst offender, failed even the large-text 3:1 minimum against bg; now ~4.6:1)
+  red: '#D82323',       // darkened from #DC2626 (Phase F Stage 2: was 4.4:1 on bg, just under WCAG AA for normal text; now ~4.6:1)
+  green: '#117F3A',     // darkened from #16A34A (Phase F Stage 2: was 3.0-3.3:1 on bg/card, failed WCAG AA for normal text; now ~4.7:1)
   blue: '#2563eb',
 };
 

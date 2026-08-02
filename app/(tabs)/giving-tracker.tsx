@@ -173,7 +173,7 @@ export default function ZakatCalculator() {
             {pricesLive ? (
               <Text style={{ color: colors.green, fontSize: 9, fontFamily: FONT_UI_MEDIUM }}>✓ {isAr ? 'أسعار مباشرة' : 'Live prices'}</Text>
             ) : (
-              <Text style={{ color: '#D4A017', fontSize: 9, fontFamily: FONT_UI_MEDIUM }}>
+              <Text style={{ color: colors.gold, fontSize: 9, fontFamily: FONT_UI_MEDIUM }}>
                 ⚠ {pricesAsOf
                   ? (isAr ? `تقديرية (${pricesAsOf.toLocaleDateString()})` : `Estimated (${pricesAsOf.toLocaleDateString()})`)
                   : (isAr ? 'تقديرية' : 'Estimated')}
