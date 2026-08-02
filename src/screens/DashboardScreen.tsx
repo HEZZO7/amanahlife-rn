@@ -22,6 +22,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRTL } from '../hooks/useRTL';
 import { getUserItem } from '../lib/userStorage';
+import { gregorianToHijri, formatHijri, formatGregorian } from '../lib/hijriDate';
 
 const DAILY_VERSES = [
   { arabic: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا', translation: 'Indeed, with hardship comes ease.', reference: 'Quran 94:6' },
@@ -108,7 +109,7 @@ const LEVEL_TITLES_AR = ['مبتدئ', 'باحث', 'متعبد', 'عالم', 'م
 
 const DUA_NOTIF_KEY = 'amanah-dua-notifications';
 
-interface HijriInfo { day: string; month: string; year: string; }
+interface HijriInfo { day: number; month: number; year: number; }
 interface NextPrayer { name: string; time: string; }
 interface DailySummary { tasksDone: number; tasksTotal: number; prayersDone: number; activeGoals: number; balance: number; overdueCount: number; }
 interface StreakData { appStreak: number; prayerStreak: number; quranStreak: number; savingsStreak: number; xp: number; level: number; title: string; badges: { icon: string; name: string; earned: boolean }[]; }
@@ -122,7 +123,10 @@ export default function DashboardScreen() {
   const router = useRouter();
   const userId = user?.id ?? null;
 
-  const [hijriDate, setHijriDate] = useState<HijriInfo | null>(null);
+  // Lazy initializer, not null - the conversion is synchronous and cheap,
+  // so the badge has a correct value from the very first render instead of
+  // a null-guard flash while an effect runs.
+  const [hijriDate, setHijriDate] = useState<HijriInfo>(() => gregorianToHijri(new Date()));
   const [nextPrayer, setNextPrayer] = useState<NextPrayer | null>(null);
   const [streak, setStreak] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -145,19 +149,12 @@ export default function DashboardScreen() {
     }
   }, [user, authLoading]);
 
-  const fetchHijri = useCallback(async () => {
-    try {
-      const today = new Date();
-      const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
-      const res = await fetch(`https://api.aladhan.com/v1/gToH/${dateStr}`);
-      const data = await res.json();
-      setHijriDate({
-        day: data.data.hijri.day,
-        month: language === 'ar' ? data.data.hijri.month.ar : data.data.hijri.month.en,
-        year: data.data.hijri.year,
-      });
-    } catch {}
-  }, [language]);
+  // Computed locally (see src/lib/hijriDate.ts) - no network call, renders
+  // instantly, works offline. Previously fetched from api.aladhan.com/gToH,
+  // which made this badge slow or missing entirely with no/poor connection.
+  const fetchHijri = useCallback(() => {
+    setHijriDate(gregorianToHijri(new Date()));
+  }, []);
 
   const fetchPrayerTimes = useCallback(async () => {
     try {
@@ -479,7 +476,18 @@ export default function DashboardScreen() {
             {greeting} 👋
           </Text>
           <Text style={[styles.name, { color: colors.text }, rtlText as any]}>
-            {userName} {hijriDate && `· ${hijriDate.day} ${hijriDate.month} ${hijriDate.year}${language === 'ar' ? 'هـ' : 'H'}`}
+            {userName}
+          </Text>
+        </View>
+        {/* Hijri date first, Gregorian beneath - matches web's dashboard
+            badge exactly. Computed locally (src/lib/hijriDate.ts), so this
+            renders instantly with no network dependency. */}
+        <View style={[styles.dateBadge, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.dateBadgeHijri, { color: colors.gold }, rtlText as any]}>
+            {formatHijri(hijriDate, language === 'ar')}
+          </Text>
+          <Text style={[styles.dateBadgeGregorian, { color: colors.textMuted }, rtlText as any]}>
+            {formatGregorian(new Date(), language === 'ar')}
           </Text>
         </View>
       </View>
@@ -489,7 +497,7 @@ export default function DashboardScreen() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.rowBetween, rtlView as any]}>
             <Text style={[styles.cardTitle, { color: colors.text }, rtlText as any]}>{briefing.greeting}</Text>
-            <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 11, flexShrink: 0, marginHorizontal: 8 }}>
               {language === 'ar' ? 'ملخص يومي' : 'Daily Briefing'}
             </Text>
           </View>
@@ -522,7 +530,7 @@ export default function DashboardScreen() {
           <Text style={[styles.cardTitle, { color: colors.gold }, rtlText as any]}>
             🤲 {language === 'ar' ? 'دعاء اليوم' : 'Dua of the Day'}
           </Text>
-          <Text style={{ fontSize: 10, color: colors.textMuted }}>#{(dayOfYear % DUAS.length) + 1}/{DUAS.length}</Text>
+          <Text style={{ fontSize: 10, color: colors.textMuted, flexShrink: 0, marginHorizontal: 8 }}>#{(dayOfYear % DUAS.length) + 1}/{DUAS.length}</Text>
         </View>
         <Text style={{ fontSize: 18, color: colors.text, textAlign: 'center', lineHeight: 30, marginVertical: 10, fontFamily: 'serif' }}>
           {todaysDua.arabic}
@@ -786,8 +794,15 @@ const styles = StyleSheet.create({
   header: { justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   greeting: { fontSize: 13, fontWeight: '500', marginBottom: 2 },
   name: { fontSize: 20, fontWeight: '800' },
-  card: { borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700' },
+  dateBadge: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, alignItems: 'flex-end' },
+  dateBadgeHijri: { fontSize: 12, fontWeight: '600' },
+  dateBadgeGregorian: { fontSize: 10, marginTop: 2 },
+  card: { borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, overflow: 'hidden' },
+  // flexShrink: 1 - RN's default is 0 (unlike web's CSS default of 1), so
+  // without this the title fought the fixed-width counter/label text next
+  // to it in `rowBetween` rows and got visually clipped rather than
+  // wrapping (the "Dua of the" truncation bug).
+  cardTitle: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   briefingGrid: { flexDirection: 'row', gap: 8, marginTop: 12, marginBottom: 10 },
   briefingCell: { flex: 1, borderRadius: 12, padding: 10 },
