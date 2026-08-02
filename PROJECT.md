@@ -301,6 +301,18 @@ Stage 1 of 4 (ranks above Phase D - Family Dashboard/Receipt Scanner/AI Search/P
 
 **Verification**: `tsc --noEmit` 26 baseline throughout (zero new), `expo export --platform android` clean after both fixes.
 
+### Stage 2 — Color contrast + design-token audit, commit `56541c9`
+
+Real WCAG 2.1 contrast calculation (no axe-core equivalent exists for RN views - this is the RN-appropriate automated check) across every text-token/background-token pairing actually used, both themes.
+
+**Found**: light mode's `teal`/`gold`/`green` all failed 4.5:1 against `bg`/`card` (2.99-3.94:1) - `gold` was worst, failing even the 3:1 large-text minimum against `bg` (2.99:1); `red` borderline-failed (4.43:1). Dark mode's `red`/`blue` failed 4.5:1 against `surface`/`card` (4.12-4.28:1, passed the 3:1 large-text minimum but not normal text). **Confirmed root cause of both named examples in the ticket**: the "Enable Daily Reminders" button and the prayer-streak value text (`src/screens/DashboardScreen.tsx`) both use the failing light-mode `gold` token directly.
+
+**Fix**: darkened light-mode teal/gold/red/green and brightened dark-mode red/blue (hue-preserving HSL adjustment) until every token clears 4.5:1 against the harder of its two real backgrounds, with a small safety margin. Re-audited after: zero failures in either theme. Named examples verified: gold-on-card now 5.06:1 light / 6.37:1 dark (was 3.25:1 / 6.37:1).
+
+Also fixed 2 hardcoded hex text colors bypassing the theme system entirely (`giving-tracker.tsx`'s stale-price warning, `weekly-life-score.tsx`'s lowest-dimension callout) - neither adapted to dark/light mode; both now use `colors.gold`.
+
+**Not done**: web uses a structurally different theming system (HSL CSS custom properties in `index.css`, not literal hex constants like RN's `ThemeContext.tsx`) - this was an RN-only audit/fix; web needs its own separate pass if requested, not a hex-for-hex mirror (the underlying value shapes don't correspond 1:1).
+
 ---
 
 ## 0d. Pending / Deferred Items
