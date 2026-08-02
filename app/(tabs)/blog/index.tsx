@@ -40,6 +40,15 @@ export default function BlogIndex() {
                 >
                   {post.title}
                 </Text>
+                {!!post.keywords && (
+                  <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    {post.keywords.split(',').slice(0, 3).map((kw, i) => (
+                      <View key={i} style={{ backgroundColor: colors.teal + '1A', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                        <Text style={{ color: colors.teal, fontSize: 11, fontFamily: FONT_UI_MEDIUM }}>{kw.trim()}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
                 <Text
                   style={{ color: colors.textSecondary, fontSize: 12.5, fontFamily: FONT_UI, textAlign: isRTL ? 'right' : 'left', lineHeight: 18 }}
                   numberOfLines={3}

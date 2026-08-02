@@ -14,12 +14,17 @@ export interface BlogPost {
   description: string;
   heroImage: string;
   body: string;
+  /** From the source .md frontmatter's `keywords` field - dropped during
+   * the original web-to-RN content conversion, restored 2026-08-02 so the
+   * blog list can show tag chips matching web's BlogIndexPage.tsx. */
+  keywords: string;
 }
 
 export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "amanahlife-islamic-spiritual-companion",
     "lang": "en",
+    "keywords": "prayer tracker, Quran reading tracker, dhikr counter app, Islamic lifestyle app, Qibla finder",
     "title": "AmanahLife: Your All-in-One Islamic Spiritual Companion App",
     "description": "Discover AmanahLife, the ultimate Islamic spiritual companion app. Track prayers, read Quran, count dhikr, find Qibla, and manage your Muslim lifestyle effortlessly.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-21/parfeuqaagra/amanahlife-islamic-spiritual-companion-hero.png",
@@ -28,6 +33,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "amanahlife-muslim-family-growth",
     "lang": "en",
+    "keywords": "Islamic family budget, halal budgeting, Muslim productivity family, family Quran tracker, Islamic lifestyle app",
     "title": "Empower Your Muslim Family: AmanahLife for Collective Growth & Harmony",
     "description": "Discover AmanahLife, the ultimate Islamic lifestyle app designed to empower your Muslim family with integrated spiritual tools, halal financial management, and collective productivity features for growth and harmony.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-21/parfdlaaagtq/amanahlife-muslim-family-growth-hero.png",
@@ -36,6 +42,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "amanahlife-personal-islamic-journey",
     "lang": "en",
+    "keywords": "Muslim goal setting, fasting tracker, Islamic wellness, Quran reading tracker, Muslim daily planner",
     "title": "How AmanahLife Transforms Your Personal Islamic Journey",
     "description": "Elevate your personal Islamic journey with AmanahLife. Track prayers, set Muslim goals, manage fasting, and boost Islamic wellness with an all-in-one daily planner.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-21/parfa7aaagsq/amanahlife-personal-islamic-journey-hero.png",
@@ -44,6 +51,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "amanahlife-productivity-halal-finance",
     "lang": "en",
+    "keywords": "Muslim productivity, Islamic finance app, halal investment, Muslim daily planner, Islamic family budget",
     "title": "Master Your Muslim Life: Productivity & Halal Finance with AmanahLife",
     "description": "Revolutionize your Muslim life with AmanahLife, the ultimate app for Muslim productivity and halal finance. Organize your spiritual journey, manage finances, and plan with ease.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-21/parfcaqaagrq/amanahlife-productivity-halal-finance-hero.png",
@@ -52,6 +60,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "solve-muslim-lifestyle-challenges",
     "lang": "en",
+    "keywords": "Islamic lifestyle app, Muslim productivity app, halal finance app, prayer tracker problems, digital Islamic tools",
     "title": "Overcome Muslim Lifestyle Challenges: The AmanahLife Solution",
     "description": "Tired of juggling apps? Discover AmanahLife, the all-in-one Islamic lifestyle app for Muslim productivity, halal finance, and spiritual growth. Simplify your daily life with digital Islamic tools.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-21/parfemyaagta/solve-muslim-lifestyle-challenges-hero.png",
@@ -60,6 +69,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "amanahlife-islamic-spiritual-companion",
     "lang": "ar",
+    "keywords": "تتبع الصلاة, متابعة قراءة القرآن, عداد الأذكار, تطبيق إسلامي, محدد القبلة, أذكار يومية",
     "title": "أمانة لايف: رفيقك الروحي الإسلامي الشامل",
     "description": "اكتشف تطبيق أمانة لايف، الرفيق الروحي الإسلامي المتكامل. تتبع صلواتك، اقرأ القرآن، عدّ أذكارك، حدد اتجاه القبلة، وأدر حياتك الإسلامية بسهولة تامة.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-23/pdaa3myaagtq/ar-blog-islamic-spiritual-companion-hero.png",
@@ -68,6 +78,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "amanahlife-muslim-family-growth",
     "lang": "ar",
+    "keywords": "ميزانية العائلة الإسلامية, التخطيط المالي الحلال, إنتاجية العائلة المسلمة, متابعة القرآن العائلي, تطبيق إسلامي عائلي",
     "title": "تمكين العائلة المسلمة: أمانة لايف للنمو الجماعي والانسجام",
     "description": "اكتشف كيف يمكن لتطبيق أمانة لايف تمكين عائلتك المسلمة من خلال أدوات روحية متكاملة وإدارة مالية حلال وميزات إنتاجية جماعية لتحقيق النمو والانسجام الأسري.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-23/pdaa3hiaagta/ar-blog-muslim-family-growth-hero.png",
@@ -76,6 +87,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "amanahlife-personal-islamic-journey",
     "lang": "ar",
+    "keywords": "تحديد الأهداف الإسلامية, متتبع الصيام, العافية الإسلامية, متابعة قراءة القرآن, المخطط اليومي المسلم",
     "title": "كيف يحوّل أمانة لايف رحلتك الإسلامية الشخصية",
     "description": "ارتقِ برحلتك الإسلامية الشخصية مع أمانة لايف. تتبع صلواتك، حدد أهدافك، أدر صيامك، وعزز عافيتك الإسلامية بمخطط يومي شامل ومتكامل.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-23/pdaa3wqaagsq/ar-blog-personal-islamic-journey-hero.png",
@@ -84,6 +96,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "amanahlife-productivity-halal-finance",
     "lang": "ar",
+    "keywords": "إنتاجية المسلم, تطبيق مالي إسلامي, استثمار حلال, مخطط يومي مسلم, ميزانية العائلة الإسلامية",
     "title": "أتقن حياتك: الإنتاجية والمالية الحلال مع أمانة لايف",
     "description": "حوّل حياتك مع أمانة لايف، التطبيق الأمثل للإنتاجية الإسلامية والمالية الحلال. نظّم رحلتك الروحية، أدر أموالك، وخطط بسهولة وفق المبادئ الإسلامية.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-23/pdaa3dyaagra/ar-blog-productivity-halal-finance-hero.png",
@@ -92,6 +105,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     "slug": "solve-muslim-lifestyle-challenges",
     "lang": "ar",
+    "keywords": "تطبيق نمط الحياة الإسلامي, تطبيق إنتاجية مسلم, تطبيق مالي حلال, مشاكل تتبع الصلاة, أدوات إسلامية رقمية",
     "title": "تغلّب على تحديات نمط الحياة المسلم: حل أمانة لايف",
     "description": "هل سئمت من التنقل بين تطبيقات متعددة؟ اكتشف أمانة لايف، التطبيق الإسلامي الشامل للإنتاجية والمالية الحلال والنمو الروحي. بسّط حياتك اليومية بأدوات إسلامية رقمية متكاملة.",
     "heroImage": "https://mgx-backend-cdn.metadl.com/generate/images/1249149/2026-05-23/pdabq3aaagrq/ar-blog-solve-lifestyle-challenges-hero.png",
