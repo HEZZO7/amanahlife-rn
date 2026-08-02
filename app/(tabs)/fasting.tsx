@@ -12,8 +12,10 @@ import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BLACK } from '../../src/theme/fonts';
+import { getExcusedPeriods, isDateExcusedForFasting, isoDate } from '../../src/lib/excusedPeriods';
+import ExcusedPeriodsModal from '../../src/components/ExcusedPeriodsModal';
 
-interface DayStatus { date: string; fasted: boolean; }
+interface DayStatus { date: string; fasted: boolean; excused: boolean; }
 
 export default function FastingTracker() {
   const { user } = useAuth();
@@ -27,6 +29,7 @@ export default function FastingTracker() {
   const [fasting, setFasting] = useState(false);
   const [iftar, setIftar] = useState(false);
   const [monthDays, setMonthDays] = useState<DayStatus[]>([]);
+  const [excusedModalOpen, setExcusedModalOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -37,6 +40,7 @@ export default function FastingTracker() {
         setSuhoor(!!data.suhoor); setFasting(!!data.fasting); setIftar(!!data.iftar);
       }
 
+      const excusedPeriods = await getExcusedPeriods(userId);
       const days: DayStatus[] = [];
       for (let i = 29; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
@@ -46,7 +50,12 @@ export default function FastingTracker() {
         // history isn't lost without bulk-migrating every past day.
         let dayData = await getUserItem(`fasting_today_${dateStr}`, userId);
         if (dayData === null) dayData = await AsyncStorage.getItem(`fasting_today_${dateStr}`);
-        days.push({ date: dateStr, fasted: dayData ? JSON.parse(dayData).fasting === true : false });
+        const fasted = dayData ? JSON.parse(dayData).fasting === true : false;
+        // Phase C: excused days (any of the 4 reasons) never show as
+        // "missed" - they feed the qada counter instead (see the excused
+        // period sheet), so a fasted excused day still counts as fasted.
+        const excused = !fasted && isDateExcusedForFasting(isoDate(d), excusedPeriods);
+        days.push({ date: dateStr, fasted, excused });
       }
       setMonthDays(days);
     })();
@@ -58,12 +67,16 @@ export default function FastingTracker() {
   const toggleSuhoor = () => { const v = !suhoor; setSuhoor(v); saveToday(v, fasting, iftar); };
   const toggleFasting = () => {
     const v = !fasting; setFasting(v); saveToday(suhoor, v, iftar);
-    setMonthDays((prev) => prev.map((d) => d.date === today ? { ...d, fasted: v } : d));
+    setMonthDays((prev) => prev.map((d) => d.date === today ? { ...d, fasted: v, excused: v ? false : d.excused } : d));
   };
   const toggleIftar = () => { const v = !iftar; setIftar(v); saveToday(suhoor, fasting, v); };
 
   const fastedDays = monthDays.filter((d) => d.fasted).length;
-  const missedDays = monthDays.length - fastedDays;
+  const excusedDays = monthDays.filter((d) => d.excused).length;
+  // Phase C: excused days feed the qada counter (see the excused-period
+  // sheet), not this "missed" count - they were never actually missed,
+  // they were exempted.
+  const missedDays = monthDays.length - fastedDays - excusedDays;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -97,18 +110,38 @@ export default function FastingTracker() {
               <Text style={[styles.bigNum, { color: colors.red, fontSize: 22 }]}>{missedDays}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, textAlign: 'center' }}>{tr('Missed (need makeup)', 'أيام فائتة (بحاجة للقضاء)')}</Text>
             </View>
+            {excusedDays > 0 && (
+              <View style={{ flex: 1, alignItems: 'center', borderLeftWidth: 1, borderLeftColor: colors.border }}>
+                <Text style={[styles.bigNum, { color: colors.gold, fontSize: 22 }]}>{excusedDays}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, textAlign: 'center' }}>{tr('Excused (qada owed)', 'معذورة (بحاجة للقضاء)')}</Text>
+              </View>
+            )}
           </View>
         </Card>
 
-        {/* 30-day grid */}
-        <Card>
+        {/* 30-day grid - excused days get a distinct 3rd color, never the "missed" red */}
+        <Card style={{ marginBottom: 14 }}>
           <Text style={[styles.cardTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{tr('30-Day Progress', 'تقدم ٣٠ يوم')}</Text>
           <View style={styles.grid}>
             {monthDays.map((day, i) => (
-              <View key={i} style={[styles.gridCell, { backgroundColor: day.fasted ? colors.teal : colors.surface }]} />
+              <View
+                key={i}
+                style={[
+                  styles.gridCell,
+                  { backgroundColor: day.fasted ? colors.teal : day.excused ? colors.gold : colors.surface },
+                ]}
+              />
             ))}
           </View>
         </Card>
+
+        {/* Discreet entry point - no dashboard tile, no notification about it. */}
+        <TouchableOpacity onPress={() => setExcusedModalOpen(true)} style={{ alignSelf: 'center', marginTop: 4 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 11, fontFamily: FONT_UI }}>
+            {tr('Excused period', 'عذر شرعي')}
+          </Text>
+        </TouchableOpacity>
+        <ExcusedPeriodsModal visible={excusedModalOpen} onClose={() => setExcusedModalOpen(false)} />
       </ScrollView>
     </View>
   );
