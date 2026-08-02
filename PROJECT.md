@@ -219,6 +219,37 @@ Found during real device testing of 1.0.2. Web is the reference; each fix requir
 
 ---
 
+## 0c-6. Consolidated Work Order — Phase B: Offline Quran + Local Prayer-Time Calculation (2026-08-02)
+
+Approved plan (tafsir explicitly excluded - no verified trustworthy English source exists for Ibn Kathir/As-Sa'di, skip entirely for now). All numbers below are real, measured this session, not estimated.
+
+### B1 — Offline Quran, RN
+- **B1a, commit `28c40ea`**: swapped `quran.tsx`'s translation from `en.asad` (Muhammad Asad) to `en.sahih` (Saheeh International) - matches the pre-launch doc's own "trusted, scholarly" bar. Web already had this fix (Task 8 Phase A); it had never been mirrored to Android.
+- **B1b, commit `636412d`**: bundled the full Arabic Uthmani text, the Saheeh International translation, and all 114 surahs' metadata directly in the app - real data fetched once from the live `api.alquran.cloud` API and committed as 228 per-surah JSON asset files (`assets/quran/ar/{1-114}.json`, `assets/quran/en-sahih/{1-114}.json`) plus `src/data/quranSurahList.ts`. Loaded via a per-surah `switch` (not an eager object literal) in `quranArabicAssets.ts`/`quranTranslationAssets.ts` so only the surah actually opened gets parsed into memory, not all 114 at once. `quran.tsx` makes zero network calls now.
+- **Measured app-size impact**: `entry.hbc` grew from 5.8 MB → 8.56 MB (**+2.76 MB**) in `expo export --platform android` - Metro inlines required `.json` as bundled JS rather than treating it as a lazily-downloaded binary asset, so the full dataset is present in the compiled bundle regardless of the lazy-`switch` design (that design's benefit is deferred parse time/memory at runtime, not APK size - documented in the B1b commit).
+- **Measured load-time, before vs after** (real, not estimated):
+  | | Before (network fetch) | After (local) |
+  |---|---|---|
+  | Al-Fatihah (7 ayahs) | ~0.66s (parallel Arabic+translation fetch, measured against the live API) | ~1.1 ms (file read + `JSON.parse`) |
+  | Al-Baqarah (286 ayahs, largest surah) | ~1.0s | ~4.7 ms |
+
+  ~200-600x faster, and works with zero network - the actual goal.
+
+### B2 — Local prayer-time calculation (adhan-js), RN + web
+- **B2a, commit `f0ec070`**: new `src/lib/prayerCalculation.ts` wraps `adhan` (batoulapps/adhan-js - verified via npm registry: zero runtime deps, 25k weekly downloads, actively maintained). Exposes all 13 calculation methods adhan-js supports, **Umm al-Qura as default** (was hardcoded ISNA/`method=2` - wrong for this app's actual Gulf/MENA target markets per the Play Billing pending item below). Also resolves each coordinate's real IANA time zone via the new `tz-lookup` dependency + `Intl.DateTimeFormat`, so a manually-picked city displays correctly even when it's in a different zone than the device.
+- **B2b/B2c, commit `84ee982`**: `prayer-times.tsx` no longer fetches `api.aladhan.com` at all. Location is automatic (GPS, now wrapped in a 10s timeout - **there was none before**, so a stuck GPS fix could previously hang the screen indefinitely - falling back to `getLastKnownPositionAsync()` then Mecca) or manual: search + pick from `src/data/curatedCities.ts`, a new **68-city curated list** (Gulf/MENA first, then major world cities) with real coordinates fetched live from the free Open-Meteo geocoding API (open-meteo.com, no key required) on 2026-08-02 - not fabricated. A full geo-database (the `cities.json` npm package) is **19.5 MB unpacked**, confirmed too large to bundle, hence the curated subset.
+- **B2d, commit `893c491`** (priority sub-item, its own commit per explicit instruction): `prayerNotifications.ts`'s old `fetchUpcomingTimings()` fetched Aladhan's `/calendar` endpoint and **swallowed any failure silently** - confirmed directly by reading the code, not assumed - leaving `schedulePrayerNotifications()` to see an empty timings map and just `return`, with **zero reminders scheduled and no error ever surfaced to the user**. `notificationPreferences.ts`'s Suhoor/Iftar scheduler shared this exact function, so it shared the exact same silent failure. New `src/lib/prayerLocation.ts` centralizes location/method resolution so both the screen and the schedulers always compute against the same persisted settings; the new `computeUpcomingTimings()` is local-only and **cannot come back empty**, structurally eliminating that failure mode. The one real failure mode left (notification permission denied) was **also** silent before - now surfaced via a bilingual `toast.error()` in both schedulers.
+- **B2e, commit `1da44fa`** (web repo, `AmanahLifeapp`): mirrored B2a-c to `PrayerTimes.tsx` - same `adhan`/`tz-lookup` libs, same Umm al-Qura default, same 68-city curated list. Web's browser geolocation already had a timeout (`{ timeout: 5000, maximumAge: 300000 }`, bumped to 10s to match RN), so it didn't share RN's GPS-hang bug.
+- **Measured load-time, before vs after** (real, not estimated): a single live `api.aladhan.com/v1/timings` fetch measured ~1.1s from this environment (mobile networks would typically be slower, not faster). A single local `calculatePrayerTimes()` call (coordinates → 6 formatted times, including the `tz-lookup` zone resolution and `Intl.DateTimeFormat` calls) measured **0.42ms average over 100 calls** - roughly **2,600x faster**, and works with zero network, directly fixing the confirmed silent-scheduling-failure bug above.
+
+### Packaging note (informational, not a blocker)
+`adhan@4.4.4`'s CJS build (`lib/cjs/Adhan.js`) is broken for plain Node.js `require()` - the package root declares `"type":"module"` but `lib/cjs` has no `package.json` override, so Node's strict ESM loader rejects it (reproduced directly, twice, via two different invocation methods). **Metro's bundler resolver does not have this problem** - confirmed via real `expo export --platform android` runs after wiring this into `prayer-times.tsx` (bundled clean, 2096 modules). Vite (web) also has no issue, since it resolves the package's proper ESM `exports` condition. Upstream `adhan-js` packaging defect worth knowing about if this dependency is ever touched again; not a defect in this integration.
+
+### Not yet done
+Mirroring the local-calculation fix to web's separate `PrayerReminderSettings.tsx` (its own same-day Aladhan-based scheduler, distinct from `PrayerTimes.tsx`) was **not** part of this approved plan - the approval named `PrayerTimes.tsx` specifically. Flagging in case Huzaifa wants that mirrored too in a future pass.
+
+---
+
 ## 0d. Pending / Deferred Items
 
 1. **Google Play Billing integration — HARD BLOCKER before Production Play Store release.** GCC/MENA target markets (Saudi Arabia, UAE, Qatar, Egypt, Kuwait, Iraq) have no exception to Google's billing policy (unlike the post-Epic-v-Google US injunction). Play Billing is fully live in these markets, so the current Lemon Squeezy-via-in-app-browser flow is a real Play Store rejection risk. Requires: native billing library (e.g. `react-native-iap`), matching Play Console subscription products, and backend receipt validation. **Internal Testing does not require this fix — only Production does.**
