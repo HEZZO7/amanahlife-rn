@@ -340,6 +340,25 @@ Exported the app's current morning (8 items) + evening (6 items) `ADHKAR_DATA` f
 
 **Verification**: `tsc --noEmit` 26 baseline (zero new, zero in `adhkar.tsx`), `expo export --platform android` clean.
 
+### Stage 4 addendum — Arabic sourcing re-verification, commits `f3d0cf2` + `0fd9647`
+
+The Stage 4 caveat above (summarized/paraphrased fetches, not raw HTML) was flagged as a real gap. Huzaifa asked for a re-do using genuinely raw text, cross-checked between two sources. Re-sourced via the real browser's DOM extraction (`get_page_text`, not the summarizing `WebFetch` tool) against **hisnmuslim.com** and **sunnah.com/hisn** (item-by-item, hadith 75a-94 — independently confirms the same chapter boundary `ahadith.co.uk` used). **IslamWeb.net could not be used** — confirmed via their own library search (zero results for "حصن المسلم") and their one relevant fatwa page (279817, discusses the book's authenticity only, doesn't reproduce its text) that they don't host this content; substituted `sunnah.com` per the already-approved fallback list.
+
+**Two-source-confirmed corrections, commit `f3d0cf2`**:
+- Ushhidu-witnessing dua (m10/e8): "وَمَلَائِكَتَكَ" → "وَمَلاَئِكَتِكَ" (both sources use the kasra/idafa form).
+- Three Quls (m19/e16): added the Basmalah before each surah (both sources have it, the app didn't), switched to the "*" ayah-separator both sources use, corrected the Al-Ikhlas closing word to match both sources and the Quran text itself.
+
+**Pre-existing truncations found and fixed, commit `0fd9647`** (predate Stage 4, surfaced incidentally by the same raw-source comparison): `m1`/`e1`, `m5`, and `m6`/`e4` were each cut down to a first clause; restored to the full canonical text confirmed by both sources. Also added `m20`/`e17` — a distinct dua from the same chapter ("Asbahna/Amsayna wa asbahal-mulku lillahi Rabbil-'alameen... khayra hadha al-yawm/hadhihil-laylah") confirmed present in both sources, not previously in the app.
+
+**Held per Huzaifa's explicit instruction — not changed, decision pending**:
+1. `e14` ("Subhanallahi 'adada khalqihi" in the evening category) — both sources annotate this dhikr "إذا أصبح" (morning only); neither documents an evening version. Not removed; awaiting a decision on whether to keep it as a convenience duplicate or drop it.
+2. Two genuine cross-source spelling disagreements, left as-is: "شِرْكِهِ" vs "شَرَكِهِ" in the Alimal-ghaybi dua (m13/e10), and "شَأْنِي" vs "شَأْنِيَ" in Ya Hayyu Ya Qayyum (m15/e12). Both sources are legitimate primary sources that disagree with each other — not resolved in either direction.
+3. `m18`/`e15` (Astaghfirullah, 100x) — confirmed via hisnmuslim.com only; fell outside sunnah.com's numbered range for this chapter (75-94), so not independently re-confirmed via a second raw source this pass. Not removed.
+
+**Verification**: `tsc --noEmit` 26 baseline (zero new, zero in `adhkar.tsx`) after both commits, `expo export --platform android` clean after both.
+
+**Not done**: the shirkihi/sharakihi and sha'ni/sha'niya variants, the e14 scope question, and the single-sourced Astaghfirullah item all still need Huzaifa's decision before any further code change.
+
 ---
 
 **Phase F: all 4 stages complete.** Phase D (Family Dashboard, Receipt Scanner, AI Search, Google Play Billing) remains untouched, pending a future decision.
