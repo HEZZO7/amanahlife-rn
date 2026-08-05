@@ -321,6 +321,29 @@ Root cause: `quran.tsx`'s index/reader distinction is local component state (`se
 
 **Verification**: `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean.
 
+### Stage 4 — Adhkar content completeness audit, commit `7dcf0bd`
+
+Exported the app's current morning (8 items) + evening (6 items) `ADHKAR_DATA` from `app/(tabs)/adhkar.tsx` and compared item-by-item against Hisn al-Muslim (Fortress of the Muslim), cross-referencing two independent sources (`hisnmuslim.com`'s "Words of Remembrance for Morning and Evening" chapter and `ahadith.co.uk`'s numbered dua list, items 75-94) since the two sites use different item-numbering conventions for the same chapter — cross-checking both against each other and against well-established hadith wording (e.g. Sayyid al-Istighfar, Bukhari 6306) resolved the numbering discrepancy and gave confidence in the final list.
+
+**(a) Missing items found: 21 total** (11 added to morning, 10 added to evening — one item, "Allahumma ma asbaha/amsa bi min ni'matin," already existed on the evening side only, so only its morning counterpart needed adding). Missing items included some of the most well-known duas in the chapter: **Sayyid al-Istighfar** ("Allahumma anta Rabbi la ilaha illa anta...", the specific dua the Prophet ﷺ called the best form of seeking forgiveness) was entirely absent from both categories, along with the ushhidu-witnessing dua, the health/refuge trio, "Alimal-ghaybi wash-shahadah," "Radeetu billahi rabban," "Ya Hayyu Ya Qayyum," the fitratil-Islam declaration, "Subhanallahi adada khalqihi," the 100x istighfar, and Surahs Al-Ikhlas/Al-Falaq/An-Nas (all three, recited together, part of the same chapter per both sources).
+
+**(b) Wrong repetition counts found: 3** (present in both morning and evening, so 3 distinct errors × 2 categories = both `m`/`e` pairs fixed):
+- "Subhanallahi wa bihamdihi" — app had **33x**, both sources agree on **100x**.
+- "La ilaha illAllahu wahdahu la sharika lah" — app had **3x** with truncated text; both sources give the fuller "...lahul-mulku wa lahul-hamdu wa huwa 'ala kulli shay'in qadir" wording at **10x** (Sahih Muslim 2692 — this exact fuller phrase recited 10 times in the morning carries the specific reward cited in the hadith; the app's shorter wording doesn't match what that count applies to, so text and count were corrected together).
+- "Allahumma inni as'aluka al-'afwa wal-'afiyah" — app had **3x**, both sources agree on **1x**.
+
+**Before/after item count**: morning 8 → 19, evening 6 → 16 (32 combined, up from 14).
+
+**Sources cited**: `hisnmuslim.com` (dedicated Hisn al-Muslim site, English) and `ahadith.co.uk/hisnulmuslim-dua-27` (item-numbered English translation), cross-checked against standard hadith wording for high-confidence items. **Caveat**: both source fetches returned summarized/paraphrased text rather than raw HTML, so exact Arabic diacritics for the newly-added items were authored from well-established, widely-published canonical wording rather than copy-pasted verbatim from either fetch — transliteration and translation for every new item were verified consistent across both independent sources before being added. Given the sensitivity of scripture-adjacent text, a native-Arabic-reading review pass before next release would be a reasonable extra precaution, though not one Claude Code can perform itself.
+
+**Not touched**: `afterPrayer` and `sleep` categories — the ticket named only "morning/evening adhkar," and those two categories weren't in scope. Web's `Adhkar.tsx` was not audited/mirrored this pass — not explicitly requested.
+
+**Verification**: `tsc --noEmit` 26 baseline (zero new, zero in `adhkar.tsx`), `expo export --platform android` clean.
+
+---
+
+**Phase F: all 4 stages complete.** Phase D (Family Dashboard, Receipt Scanner, AI Search, Google Play Billing) remains untouched, pending a future decision.
+
 ---
 
 ## 0d. Pending / Deferred Items
