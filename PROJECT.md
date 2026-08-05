@@ -301,6 +301,14 @@ Stage 1 of 4 (ranks above Phase D - Family Dashboard/Receipt Scanner/AI Search/P
 
 **Verification**: `tsc --noEmit` 26 baseline throughout (zero new), `expo export --platform android` clean after both fixes.
 
+### F1.1 regression found post-completion (2026-08-05) — web header toggle no-op in auto mode, commit `c14945f` (`AmanahLifeapp` repo)
+
+Found after F1.1 was marked complete above — not a fresh bug, a gap in that fix's own coverage. F1.1's investigation checked web's `ThemeContext.tsx` and confirmed its auto-switch *effect* was already correctly gated (`if (themeMode !== 'auto') return;`), so web was judged unaffected and left untouched. That check didn't cover `toggleTheme()` itself, which had a **separate, silent defect**: `if (themeMode === 'manual') { setTheme(...) }` with no `else` — meaning the header's light/dark toggle button called `toggleTheme()`, which no-opped completely (no flip, no revert, no error) whenever `themeMode === 'auto'`. Confirmed RN's `toggleTheme` (the actual F1.1 fix) was never affected by this — RN's version always resolves an explicit theme and calls `setThemeMode`, unconditionally exiting auto mode.
+
+**Fixed**: web's `toggleTheme()` now always calls `setTheme(...)` and follows with `setThemeMode('manual')`, so tapping the header button while in auto mode explicitly overrides it — the header toggle and the Settings auto-switch control are confirmed to be two entry points into the exact same `themeMode` state (single `ThemeProvider` instance, one `ThemeContext.tsx` file, no drift). Before: tap did nothing while auto was on. After: tap immediately sets an explicit theme and takes the app out of auto mode, matching RN's behavior.
+
+**Verification**: `npx tsc --noEmit` clean (0 errors), `npm run build` (vite build + prerender) clean. Live click-through in the browser preview hit a tab-permission gate that didn't resolve this session, so the fix was verified statically (typecheck + build) rather than by an actual click-test; flagging this rather than claiming a UI test that didn't happen.
+
 ### Stage 2 — Color contrast + design-token audit, commit `56541c9`
 
 Real WCAG 2.1 contrast calculation (no axe-core equivalent exists for RN views - this is the RN-appropriate automated check) across every text-token/background-token pairing actually used, both themes.
