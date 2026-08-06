@@ -9,7 +9,7 @@
  * still unsupported rather than built speculatively. Not a general-purpose
  * markdown engine.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
@@ -40,6 +40,24 @@ async function handleLinkPress(url: string, router: ReturnType<typeof useRouter>
   } catch {
     Linking.openURL(url).catch(() => {});
   }
+}
+
+// Renders at the image's own intrinsic aspect ratio (via Image.getSize),
+// uncropped and square-cornered - matching web's unstyled <img> inside the
+// markdown-to-jsx `prose` body, which has no crop/border-radius override.
+// Falls back to 16:9 only until the real size resolves.
+function ArticleHeroImage({ uri }: { uri: string }) {
+  const [ratio, setRatio] = useState(16 / 9);
+  useEffect(() => {
+    let cancelled = false;
+    Image.getSize(
+      uri,
+      (w, h) => { if (!cancelled && h > 0) setRatio(w / h); },
+      () => {}
+    );
+    return () => { cancelled = true; };
+  }, [uri]);
+  return <Image source={{ uri }} style={{ width: '100%', aspectRatio: ratio, marginBottom: 14 }} resizeMode="contain" />;
 }
 
 function renderInline(
@@ -99,7 +117,7 @@ export function SimpleMarkdown({ body, colors, isAr }: { body: string; colors: C
     const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
     if (imageMatch) {
       flushParagraph();
-      blocks.push(<Image key={`img-${idx}`} source={{ uri: imageMatch[2] }} style={{ width: '100%', height: 200, borderRadius: 12, marginBottom: 14 }} resizeMode="cover" />);
+      blocks.push(<ArticleHeroImage key={`img-${idx}`} uri={imageMatch[2]} />);
       return;
     }
     const h1 = line.match(/^#\s+(.*)$/);
