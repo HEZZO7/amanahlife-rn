@@ -556,6 +556,16 @@ Also identified, not a code bug but worth noting: Settings has an unrelated "Cou
 
 **Verification**: `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean.
 
+### Priority 2 — Suhoor/Iftar notifications firing outside Ramadan, commit `884321d`
+
+Confirmed: `scheduleFastingReminders()` (`src/lib/notificationPreferences.ts`) scheduled Suhoor + Iftar alerts for the next 7 days unconditionally whenever the `fasting_reminders` preference was on — which it is by default (`DEFAULT_NOTIFICATION_PREFERENCES`). No date/month gate existed anywhere in the function. A "Ramadan Mode" toggle exists in Settings (`settings.tsx`, `settings.ramadanMode`) but is completely inert — defined in the interface and has a UI row, but is never read anywhere else in the codebase — so it wasn't gating this or anything.
+
+**Fixed**: added `isRamadan(date)` to `src/lib/hijriDate.ts` (Ramadan = Hijri month 9, using the existing offline `gregorianToHijri()` calculator - same one powering the Hijri date badge). Gated per-day inside the 7-day scheduling loop, not once for the whole call, so the schedule self-corrects exactly at the Ramadan start/end boundary rather than an all-or-nothing decision made once at call time. Deliberately did not wire this to the existing `ramadanMode` toggle, per the explicit instruction that the real constraint is the calendar date, not a UI setting.
+
+**"Already scheduled for a future Ramadan" case**: doesn't apply here structurally - `FASTING_DAYS_AHEAD` is 7, so this function can never look further than a week ahead at call time. The per-day gate is the only gate needed; there's no separate class of "distant future Ramadan" notifications that could have been scheduled prematurely.
+
+**Verification**: `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean.
+
 ---
 
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
