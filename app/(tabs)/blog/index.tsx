@@ -25,7 +25,11 @@ export default function BlogIndex() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PageHeader icon="📝" title={isAr ? 'المدونة' : 'Blog'} />
+      <PageHeader
+        icon="📝"
+        title={isAr ? 'المدونة' : 'Blog'}
+        subtitle={isAr ? 'مقالات ونصائح لتعزيز نمط حياتك المتوازن' : 'Articles and tips to enhance your balanced lifestyle'}
+      />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {posts.map((post) => (
           <TouchableOpacity key={post.slug} activeOpacity={0.85} onPress={() => router.push(`/(tabs)/blog/${post.slug}` as any)}>
