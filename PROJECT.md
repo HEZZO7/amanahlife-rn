@@ -538,6 +538,26 @@ Edge functions are deployed via the Supabase CLI or dashboard; no local migratio
 
 ---
 
+## 0h. Priority Fixes from Real Device Testing (2026-08-06)
+
+Five-item priority list from real-device testing, worked in strict order (each committed + verified before the next starts).
+
+### Priority 1 — Adhan notification timing didn't match Settings location, commit `6a0125f`
+
+Real bug confirmed in `app/(tabs)/prayer-times.tsx`: `applyLocationMode()` and `applyCalcMethod()` persisted the new city/calculation-method and refreshed the on-screen display, but never called `schedulePrayerNotifications()`. The single shared location-read function (`src/lib/prayerLocation.ts`'s `resolveActiveLocation()`) was never wrong or stale itself — it always reads current storage when invoked — the bug was that nothing re-invoked the scheduler after a location change. `schedulePrayerNotifications()` had exactly 2 call sites: app launch (`_layout.tsx`) and touching the reminder toggles in Settings (`settings.tsx`) — neither fires when you change city/method in Prayer Times itself, so already-scheduled notifications kept firing at the OLD location's absolute-time triggers indefinitely (or until one of those 2 other triggers happened to fire).
+
+Also identified, not a code bug but worth noting: Settings has an unrelated "Country" picker (currency/locale display only, includes Qatar) that a user could easily mistake for a prayer-location control — the real location control lives entirely inside the Prayer Times screen's own manual-city search (Phase B2c). Not changed, since it's working as designed for its actual (currency) purpose — just flagging the naming/mental-model collision.
+
+**Fixed**: both handlers now call `schedulePrayerNotifications()` (gated on reminders being enabled) immediately after persisting the new location/method, mirroring the exact pattern `settings.tsx`'s reminder-toggle handler already used.
+
+**Platform scope**: RN-only. Web's reminder system (`PrayerReminderSettings.tsx`) re-reads live `navigator.geolocation` on every (re)schedule and has no persisted manual-city setting that could go stale in this way — structurally different (same-day-only, `setTimeout`-based), so this exact bug pattern doesn't apply there.
+
+**How to verify without waiting for a natural prayer time**: open Prayer Times, switch to manual mode and pick a different city (or change calculation method), then check `Notifications.getAllScheduledNotificationsAsync()` (e.g. via a debug log) — the scheduled trigger times should immediately reflect the new city's prayer times, not the previous city's.
+
+**Verification**: `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
