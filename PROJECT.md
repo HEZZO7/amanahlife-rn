@@ -598,6 +598,8 @@ Fetched islamweb.net article 178309 ("أذكار الصباح والمساء") r
 
 **Verification**: `tsc --noEmit` 26 baseline (zero new, zero in `adhkar.tsx`), `expo export --platform android` clean.
 
+**Follow-up, commit `eecf37a`**: removed `m4` from morning per explicit instruction - both sources mark "A'udhu bikalimatillah" evening-only, and it was already correctly present as `e3` with identical text, so `m4` was a duplicate-in-the-wrong-place rather than distinct content. Morning: 23 → 22 items. Evening unchanged at 21. Verified clean (`tsc --noEmit` 26 baseline, `expo export` clean).
+
 ---
 
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
