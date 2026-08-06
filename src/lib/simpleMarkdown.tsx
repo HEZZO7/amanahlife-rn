@@ -68,15 +68,23 @@ function renderInline(
   isAr: boolean,
   onLinkPress: (url: string) => void
 ): React.ReactNode {
-  // Bold spans and links can both appear in the same sentence, so split on
-  // whichever pattern matches first at each position.
-  const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g).filter(Boolean);
+  // Bold spans, italic spans, and links can all appear in the same
+  // sentence, so split on whichever pattern matches first at each
+  // position. Bold is listed before italic so "**x**" can't be picked up
+  // by the single-asterisk alternative first (moot in practice since
+  // `[^*]+` can't match into a second leading asterisk, but explicit
+  // ordering keeps the intent clear).
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g).filter(Boolean);
   return (
     <Text key={key} style={{ color, fontSize: 14.5, fontFamily: FONT_UI, lineHeight: 22, textAlign: isAr ? 'right' : 'left' }}>
       {parts.map((part, i) => {
         const boldMatch = part.match(/^\*\*([^*]+)\*\*$/);
         if (boldMatch) {
           return <Text key={i} style={{ fontFamily: FONT_UI_BOLD }}>{boldMatch[1]}</Text>;
+        }
+        const italicMatch = part.match(/^\*([^*]+)\*$/);
+        if (italicMatch) {
+          return <Text key={i} style={{ fontStyle: 'italic' }}>{italicMatch[1]}</Text>;
         }
         const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
         if (linkMatch) {
