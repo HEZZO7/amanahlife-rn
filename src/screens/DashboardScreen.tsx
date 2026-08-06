@@ -24,6 +24,7 @@ import { useRTL } from '../hooks/useRTL';
 import { getUserItem } from '../lib/userStorage';
 import { gregorianToHijri, formatHijri, formatGregorian } from '../lib/hijriDate';
 import { getExcusedPeriods, isDateExcusedForPrayer, isoDate } from '../lib/excusedPeriods';
+import { getNavItems, getCategories } from '../lib/dashboardNav';
 
 const DAILY_VERSES = [
   { arabic: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا', translation: 'Indeed, with hardship comes ease.', reference: 'Quran 94:6' },
@@ -436,37 +437,13 @@ export default function DashboardScreen() {
   const userName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || '';
   const greeting = language === 'ar' ? 'السلام عليكم' : 'Assalamu Alaikum';
 
-  // All nav items — exact same list as web app. `description` values are
-  // copied verbatim from web's navItems (Index.tsx) so the 2-column card
-  // sizing matches; Settings has no web equivalent so is left without one.
-  const NAV_ITEMS = [
-    { icon: '🕌', title: language === 'ar' ? 'الصلاة' : 'Prayer', description: language === 'ar' ? 'تتبع الصلوات' : 'Track daily prayers', path: '/(tabs)/prayer-times' },
-    { icon: '📖', title: language === 'ar' ? 'القرآن' : 'Quran', description: language === 'ar' ? 'قراءة وحفظ' : 'Read & bookmark', path: '/(tabs)/quran' },
-    { icon: '🤲', title: language === 'ar' ? 'الدعاء' : 'Duas', description: language === 'ar' ? 'أدعية مأثورة' : 'Supplications', path: '/(tabs)/duas' },
-    { icon: '📿', title: language === 'ar' ? 'الذكر' : 'Dhikr', description: language === 'ar' ? 'التسبيح' : 'Remembrance', path: '/(tabs)/dhikr' },
-    { icon: '🌅', title: language === 'ar' ? 'الروتين اليومي' : 'Daily Routine', description: language === 'ar' ? 'العادات اليومية' : 'Daily habits', path: '/(tabs)/daily-routine' },
-    { icon: '⏱️', title: language === 'ar' ? 'الصيام' : 'Fasting', description: language === 'ar' ? 'تتبع الصيام' : 'Track fasting', path: '/(tabs)/fasting' },
-    { icon: '✅', title: language === 'ar' ? 'المهام' : 'Tasks', description: language === 'ar' ? 'إدارة المهام' : 'Manage tasks', path: '/(tabs)/tasks' },
-    { icon: '🍃', title: language === 'ar' ? 'الأذكار' : 'Adhkar', description: language === 'ar' ? 'الصباح والمساء' : 'Morning & Evening', path: '/(tabs)/adhkar' },
-    { icon: '💰', title: language === 'ar' ? 'المالية' : 'Finance', description: language === 'ar' ? 'تتبع المالية' : 'Track finances', path: '/(tabs)/finance' },
-    { icon: '🧭', title: language === 'ar' ? 'القبلة' : 'Qibla', description: language === 'ar' ? 'تحديد الاتجاه' : 'Find direction', path: '/(tabs)/qibla' },
-    { icon: '💎', title: language === 'ar' ? 'الزكاة' : 'Zakat', description: language === 'ar' ? 'تتبع العطاء' : 'Track giving', path: '/(tabs)/giving-tracker' },
-    { icon: '🗓️', title: language === 'ar' ? 'التقويم' : 'Calendar', description: language === 'ar' ? 'التواريخ الهجرية' : 'Hijri dates', path: '/(tabs)/calendar' },
-    { icon: '🎯', title: language === 'ar' ? 'الأهداف' : 'Goals', description: language === 'ar' ? 'تتبع الأهداف' : 'Track goals', path: '/(tabs)/goals' },
-    { icon: '💚', title: language === 'ar' ? 'العافية' : 'Wellness', description: language === 'ar' ? 'تتبع الصحة' : 'Health tracking', path: '/(tabs)/wellness' },
-    { icon: '📋', title: language === 'ar' ? 'المخطط' : 'Planner', description: language === 'ar' ? 'خطط يومك' : 'Plan your day', path: '/(tabs)/planner' },
-    { icon: '🤖', title: language === 'ar' ? 'المدرب الذكي' : 'AI Coach', description: language === 'ar' ? 'نصائح مخصصة' : 'Personalized coaching', path: '/(tabs)/ai-life-coach' },
-    { icon: '💯', title: language === 'ar' ? 'مؤشر الحياة' : 'Life Score', description: language === 'ar' ? 'تقييم أسبوعي' : 'Weekly assessment', path: '/(tabs)/weekly-life-score' },
-    { icon: '🌙', title: language === 'ar' ? 'رمضان' : 'Ramadan', description: language === 'ar' ? 'رمضان والعيد' : 'Ramadan & Eid', path: '/(tabs)/ramadan-planner' },
-    { icon: '📊', title: language === 'ar' ? 'التحليلات' : 'Analytics', description: language === 'ar' ? 'تتبع وتحليل' : 'Track & analyze', path: '/(tabs)/progress-analytics' },
-    { icon: '🏠', title: language === 'ar' ? 'الميزانية' : 'Family Budget', description: language === 'ar' ? 'مخطط الميزانية' : 'Budget planner', path: '/(tabs)/family-budget' },
-    { icon: '🔔', title: language === 'ar' ? 'الفواتير' : 'Bill Reminders', description: language === 'ar' ? 'تتبع الفواتير' : 'Track bills', path: '/(tabs)/bill-reminders' },
-    { icon: '📊', title: language === 'ar' ? 'اللوحة المالية' : 'Financial Dashboard', description: language === 'ar' ? 'مؤشرات مالية' : 'Lifestyle KPIs', path: '/(tabs)/financial-dashboard' },
-    { icon: '📈', title: language === 'ar' ? 'الاستثمار الحلال' : 'Halal Investment', description: language === 'ar' ? 'التمويل الأخلاقي' : 'Ethical finance', path: '/(tabs)/halal-investment' },
-    { icon: '🏆', title: language === 'ar' ? 'تحديات الادخار' : 'Savings Challenges', description: language === 'ar' ? 'تحديات ممتعة' : 'Gamified saving', path: '/(tabs)/savings-challenges' },
-    { icon: '📝', title: language === 'ar' ? 'المدونة' : 'Blog', description: language === 'ar' ? 'مقالات ونصائح' : 'Articles & tips', path: '/(tabs)/blog' },
-    { icon: '⚙️', title: language === 'ar' ? 'الإعدادات' : 'Settings', description: '', path: '/(tabs)/settings' },
-  ];
+  // Category data (Phase G) lives in src/lib/dashboardNav.ts - single
+  // source shared with the category landing screen so the two can never
+  // drift out of sync. Blog and Settings are deliberately excluded there:
+  // Settings is already reachable from every screen via BottomNav +
+  // GlobalHeader, and Blog gets a small link on the Growth landing screen.
+  const NAV_ITEMS = getNavItems(language);
+  const CATEGORIES = getCategories(language);
 
   const filtered = NAV_ITEMS.filter(i =>
     !searchQuery || i.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -777,28 +754,59 @@ export default function DashboardScreen() {
         <Text style={[styles.verseRef, { color: colors.teal }, rtlText as any]}>{dailyVerse.reference}</Text>
       </View>
 
-      {/* All features grid */}
-      <View style={{ width: '100%' }}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left', width: '100%' }]}>
-          {language === 'ar' ? 'كل الميزات' : 'ALL FEATURES'}
-        </Text>
-      </View>
-      <View style={[styles.grid, isRTL ? { flexDirection: 'row-reverse', flexWrap: 'wrap' } : {}]}>
-        {filtered.map((item) => (
-          <TouchableOpacity
-            key={item.path}
-            style={[styles.gridItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => router.push(item.path as any)}
-            activeOpacity={0.7}
-          >
-            <Text style={{ fontSize: 24, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>{item.icon}</Text>
-            <Text style={[styles.gridLabel, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{item.title}</Text>
-            {!!item.description && (
-              <Text style={[styles.gridDescription, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.description}</Text>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Phase G: category selector replaces the old flat "ALL FEATURES"
+          grid - drill into a category to see its own feature sub-grid
+          (app/(tabs)/dashboard/[category].tsx). Search still searches
+          every item flat across all categories (unchanged behavior) so
+          typing in the search box doesn't require picking a category
+          first. */}
+      {searchQuery ? (
+        <>
+          <View style={{ width: '100%' }}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left', width: '100%' }]}>
+              {language === 'ar' ? 'نتائج البحث' : 'SEARCH RESULTS'}
+            </Text>
+          </View>
+          <View style={[styles.grid, isRTL ? { flexDirection: 'row-reverse', flexWrap: 'wrap' } : {}]}>
+            {filtered.map((item) => (
+              <TouchableOpacity
+                key={item.path}
+                style={[styles.gridItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => router.push(item.path as any)}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 24, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>{item.icon}</Text>
+                <Text style={[styles.gridLabel, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{item.title}</Text>
+                {!!item.description && (
+                  <Text style={[styles.gridDescription, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.description}</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={{ width: '100%' }}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left', width: '100%' }]}>
+              {language === 'ar' ? 'الفئات' : 'CATEGORIES'}
+            </Text>
+          </View>
+          <View style={[styles.grid, isRTL ? { flexDirection: 'row-reverse', flexWrap: 'wrap' } : {}]}>
+            {CATEGORIES.map((cat) => (
+              <TouchableOpacity
+                key={cat.id}
+                style={[styles.gridItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => router.push(`/(tabs)/dashboard/${cat.id}` as any)}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 24, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>{cat.icon}</Text>
+                <Text style={[styles.gridLabel, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{cat.title}</Text>
+                <Text style={[styles.gridDescription, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{cat.description}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }
