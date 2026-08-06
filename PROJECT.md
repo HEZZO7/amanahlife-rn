@@ -602,6 +602,24 @@ Fetched islamweb.net article 178309 ("أذكار الصباح والمساء") r
 
 ---
 
+## 0h-2. Phase G: Dashboard Category Restructure — Category Selector + Landing Screens (2026-08-06)
+
+Resumed from the previously-approved Phase G plan (4 categories: Worship/Finance/Planning/Growth, 24 items, drill-down navigation reusing A4's grid). This unit covers plan steps 2-3 (build the category landing screens, replace the flat grid with the category selector) on both platforms. Step 4 (trim/relocate the pre-grid widget stack) is explicitly out of scope for this unit and remains a separate future pass.
+
+**Data layer** (already existed going into this unit, confirmed present): `src/lib/dashboardNav.ts` on both platforms - `getNavItems(language)` / `getCategories(language)`, single source shared by the home screen's category selector and each category's landing screen so they can't drift out of sync.
+
+**RN, commit `542accb`**: `src/screens/DashboardScreen.tsx`'s inline `NAV_ITEMS`/`CATEGORIES` literals replaced with calls into the shared `dashboardNav.ts` functions; the old flat "ALL FEATURES" grid replaced with conditional rendering - a 4-card category grid when not searching, the flat filtered-results grid when searching (unchanged search behavior). New file `app/(tabs)/dashboard/[category].tsx` - one parameterized screen for all 4 categories, reusing A4's exact grid styles (`width:'47%'`, `gap:12`, etc.), with a small "Read the blog" link appended under Growth (Blog has no grid card in any category, matching the plan's "drop Blog from the grid" decision).
+
+**Web, commit `588cca0`**: new `src/lib/dashboardNav.ts` mirrors RN's module (same categories/functions), using web's own paths and preserving web's existing item wording/icons verbatim rather than overwriting with RN's copies. `src/pages/Index.tsx`'s flat `grid grid-cols-2 md:grid-cols-4` "Quick Actions" section replaced with the same conditional pattern as RN (category selector when not searching, flat search-results grid when searching) - the existing `navItems`/`filteredNavItems` array (28 items, includes Family Dashboard/Receipt Scanner/Blog) was deliberately left untouched so search remains exactly as capable as before; only the *default* (non-searching) view changed. New file `src/pages/CategoryLanding.tsx` - React Router `useParams`-based equivalent of RN's screen, new route `/dashboard/:category` registered in `src/App.tsx`. Web's shared `PageHeader.tsx` has no subtitle prop (RN's does, added during the earlier blog-parity pass) - rather than extend the shared component for one new page, `CategoryLanding.tsx` renders the category description as a plain paragraph under the header instead.
+
+**Family Dashboard / Receipt Scanner**: excluded from the category grouping on both platforms, per the plan's explicit call-out - both are still-undecided Phase D items (see `0d`/queued decision-brief work). Not a new exclusion; already reachable via web's search field and via their existing (unlinked-from-grid) routes.
+
+**Deep-link safety verified**: `amanahlife://reset-password` and `amanahlife://subscription` target their own route files (`app/(auth)/reset-password.tsx`, `app/(tabs)/subscription.tsx`) directly and are untouched; no route file was renamed or moved by this unit - the only new route is `dashboard/[category]`, which nothing pre-existing points at, so there's no collision risk. No RN notification-tap handler currently targets any dashboard path (grepped for it, no matches), so there was nothing to re-target.
+
+**Verification**: RN - `tsc --noEmit` 26 baseline (zero new, none in the touched files), `expo export --platform android` clean. Web - `tsc --noEmit` 0 errors, `npm run build` clean (including prerender). **Live browser verification not completed this session**: the Browser pane could not reach `localhost:3000` for a click-through/screenshot pass (navigation was denied on repeated attempts - an environment/tooling limitation, not a code signal) - so the "3 screen sizes, EN/AR" check for this unit rests on static reasoning rather than a live screenshot: both new grids reuse CSS/style rules (`grid grid-cols-2 md:grid-cols-4` on web, the A4 flex-wrap grid on RN) that are already shipped and visually verified elsewhere in the app (the pre-existing Daily Summary 4-cell grid on web, A4's own grid on RN), and RTL is handled via the same `isRTL` conditional pattern used throughout both codebases. Recommend a quick manual check (phone width, tablet/desktop width, both languages) before considering this fully closed - flagging honestly per the same standard applied to Priority 4's scroll-reset fix above.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
