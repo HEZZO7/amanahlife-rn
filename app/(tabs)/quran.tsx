@@ -8,7 +8,7 @@
  * No network call remains anywhere in this screen. Search, last-read
  * resume, ayah bookmarks unchanged.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
 } from 'react-native';
@@ -82,6 +82,7 @@ export default function QuranReader() {
   const todayKey = new Date().toDateString();
   const [quranPages, setQuranPages] = useState(0);
   const userId = user?.id ?? null;
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => { if (!authLoading && !user) router.replace('/(auth)/landing'); }, [user, authLoading]);
 
@@ -104,6 +105,14 @@ export default function QuranReader() {
   };
   useEffect(() => { setUserItem('quran_bookmarks', userId, JSON.stringify([...bookmarks])); }, [bookmarks, userId]);
 
+  // Root cause: the same <ScrollView> instance is reused for the index list
+  // and every surah's reading view (only its content swaps via selectedSurah/
+  // ayahs state) - React Native never resets a ScrollView's scroll OFFSET
+  // just because its content changed, so switching surahs while scrolled
+  // partway into the previous one left the reader visually positioned at
+  // that same pixel offset inside the new surah, looking like it opened on
+  // the wrong page (or the previous surah's page) until manually scrolled
+  // back up. Explicitly scroll to the top on every surah open/switch/resume.
   const loadSurah = (surah: Surah) => {
     setSelectedSurah(surah);
     setLastRead({ surah: surah.number, name: surah.englishName });
@@ -116,6 +125,7 @@ export default function QuranReader() {
       text: stripBasmalahPrefix(ayah.text, surah.number, ayah.numberInSurah),
       translation: translationAyahs.find((t) => t.numberInSurah === ayah.numberInSurah)?.text || '',
     })));
+    requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: 0, animated: false }));
   };
 
   const toggleBookmark = (key: string) => setBookmarks((prev) => {
@@ -125,8 +135,11 @@ export default function QuranReader() {
   });
 
   const goBack = () => {
-    if (selectedSurah) { setSelectedSurah(null); setAyahs([]); }
-    else router.back();
+    if (selectedSurah) {
+      setSelectedSurah(null);
+      setAyahs([]);
+      requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: 0, animated: false }));
+    } else router.back();
   };
 
   // Root cause (Stage 3): the on-screen back arrow above already handled
@@ -136,7 +149,11 @@ export default function QuranReader() {
   // to whatever was on the stack before Quran (Home), skipping the surah
   // index entirely. useBackToClose only attaches its listener while a
   // surah is open, so hardware back mirrors the on-screen button exactly.
-  useBackToClose(!!selectedSurah, () => { setSelectedSurah(null); setAyahs([]); });
+  useBackToClose(!!selectedSurah, () => {
+    setSelectedSurah(null);
+    setAyahs([]);
+    requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: 0, animated: false }));
+  });
 
   const filteredSurahs = QURAN_SURAH_LIST.filter((s) =>
     s.englishName.toLowerCase().includes(search.toLowerCase()) ||
@@ -160,7 +177,7 @@ export default function QuranReader() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {!selectedSurah ? (
           <>
             {/* Pages read today */}
