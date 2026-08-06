@@ -638,6 +638,24 @@ Follow-up to the Phase D decision brief (see `0d`/Phase D report): approved opti
 
 ---
 
+## 0h-4. Phase J: AI Search — Real Claude-Backed Search, Web Only (2026-08-06)
+
+Follow-up to the same Phase D decision brief. Approved option: an edge function that reads the user's own data, has Claude interpret the natural-language query, and returns matches in the UI's existing `{type, title, description, icon}` shape.
+
+**Correction made during implementation, flagged rather than silently changed**: the approved brief assumed the function would query the user's "RLS-scoped tasks/goals/transactions" from Postgres. Checking the live schema (`list_tables` on the Supabase project) during this pass confirmed none of that exists server-side - tasks, goals, and finance transactions are `localStorage`-only on web (only `subscriptions`, `families`/`family_*`, `search_history`, `notification_preferences`, `exchange_rates`, `email_digest`, `push_subscriptions` are real server tables). There was nothing to query. The function instead receives the client's own local data directly in the request body - it's inherently already scoped to the requesting user, since it's their own browser's storage - and Claude still does the natural-language interpretation against real data, exactly as approved; only *where the data comes from* changed, not the user-facing behavior or privacy posture.
+
+**Prior state**: web's `AISearch.tsx` returned a **hardcoded static array of 5 results**, identical for every query and every user - it never read the query text meaningfully and never touched any real data.
+
+**New Edge Function `app_11941c8fec_ai_search`** (web-only, see RN scope note below): deployed with the same `verify_jwt: false` + manual auth pattern as every other function here. Takes `{ query, language, data }` where `data` is a compact bundle the client gathers from its own local storage (last 30 tasks, up to 20 goals, last 30 transactions, today's adhkar progress, up to 20 Quran bookmarks, last-read position). System prompt instructs Claude to build results ONLY from the supplied data - "never invent a task, goal, transaction, or progress number that isn't present in the data" - and to return `{results: []}` rather than force irrelevant matches when nothing fits. Same defensive JSON-fence-stripping + shape validation as `receipt_scan`.
+
+**Web** (`AISearch.tsx`): removed `SAMPLE_RESULTS_AR`/`SAMPLE_RESULTS_EN` entirely. A new `gatherLocalData()` helper reads the same localStorage keys the app's own screens already use (`amanah_tasks`, `amanah-goals`, `amanah-transactions`, `adhkar_progress_<today>`, `quran_bookmarks`, `quran_last_read`) - no new storage format invented. `handleSearch`/`handleHistorySelect` now call the real endpoint with a loading state and an honest "No matching results found" empty state, instead of always showing 5 fixed cards.
+
+**RN scope decision**: RN's existing `search.tsx` is a genuinely separate feature - it keyword-searches static app content (Duas, Adhkar text, Islamic calendar events, live Quran surah lookup), not personal user data, and was never fake (no rewrite needed or done). Per instruction, did **not** modify it and did **not** build a new personal-data AI-search screen for RN in this pass, since that wasn't explicitly requested - flagging this as an open option rather than assuming it should be built: if RN should get the same personal-data search web now has, that's a new, separate RN screen + its own edge-function copy (this function is currently web-only in both repos), sized similarly to this web unit.
+
+**Verification**: `tsc --noEmit` 0 errors, `npm run build` clean (prerender included). Not verified: an actual live search query on a running instance (no browser preview reachable this session, same limitation noted in the Phase G entry above) - reasoned through instead: the function's data-gathering reads keys that are already read/written correctly by the app's own existing screens (confirmed by grepping each screen's own localStorage calls before choosing the key names), so the data it receives should match what a user actually sees elsewhere in the app.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
