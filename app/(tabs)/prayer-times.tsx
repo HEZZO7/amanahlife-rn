@@ -28,6 +28,7 @@ import {
 } from '../../src/lib/prayerCalculation';
 import { CURATED_CITIES, CityOption } from '../../src/data/curatedCities';
 import ExcusedPeriodsModal from '../../src/components/ExcusedPeriodsModal';
+import { getReminderSettings, schedulePrayerNotifications } from '../../src/lib/prayerNotifications';
 
 const MECCA_COORDS = { latitude: 21.4225, longitude: 39.8262 };
 const GPS_TIMEOUT_MS = 10000;
@@ -165,6 +166,20 @@ export default function PrayerTimes() {
     })();
   }, [userId]);
 
+  // Re-schedules background prayer-reminder notifications against the new
+  // location/method whenever either changes here - previously only the
+  // on-screen display refreshed (loadByLocation below), while already-
+  // scheduled notifications kept firing at the OLD location's times until
+  // the next app launch or a reminder-toggle touch in Settings happened to
+  // trigger a reschedule. No-ops (via schedulePrayerNotifications' own
+  // check) if reminders aren't enabled.
+  const rescheduleNotifications = async () => {
+    const reminderSettings = await getReminderSettings();
+    if (reminderSettings.enabled) {
+      await schedulePrayerNotifications(reminderSettings, language === 'ar', userId);
+    }
+  };
+
   const applyLocationMode = (mode: 'auto' | 'manual', city: CityOption | null) => {
     setLocationMode(mode);
     setManualCity(city);
@@ -172,6 +187,7 @@ export default function PrayerTimes() {
     if (city) setUserItem(MANUAL_CITY_KEY, userId, JSON.stringify(city));
     setLoading(true);
     loadByLocation(calcMethod, mode, city);
+    rescheduleNotifications();
   };
 
   const applyCalcMethod = (method: CalculationMethodKey) => {
@@ -179,6 +195,7 @@ export default function PrayerTimes() {
     setUserItem(CALC_METHOD_KEY, userId, method);
     setLoading(true);
     loadByLocation(method, locationMode, manualCity);
+    rescheduleNotifications();
   };
 
   // Update countdown every minute
