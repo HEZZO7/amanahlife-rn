@@ -31,7 +31,9 @@ export default function BlogIndex() {
           <TouchableOpacity key={post.slug} activeOpacity={0.85} onPress={() => router.push(`/(tabs)/blog/${post.slug}` as any)}>
             <Card padded={false} style={{ marginBottom: 14, overflow: 'hidden' }}>
               {!!post.heroImage && (
-                <Image source={{ uri: post.heroImage }} style={styles.hero} resizeMode="cover" />
+                <View style={styles.heroBox}>
+                  <Image source={{ uri: post.heroImage }} style={styles.hero} resizeMode="cover" />
+                </View>
               )}
               <View style={{ padding: 14 }}>
                 <Text
@@ -69,5 +71,8 @@ export default function BlogIndex() {
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
-  hero: { width: '100%', height: 160 },
+  // 16:9 box matching web's aspect-video crop (was a fixed 160dp height,
+  // which cropped more off the same source image than web does).
+  heroBox: { width: '100%', aspectRatio: 16 / 9 },
+  hero: { width: '100%', height: '100%' },
 });
