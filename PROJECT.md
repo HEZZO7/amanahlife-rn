@@ -309,6 +309,19 @@ Found after F1.1 was marked complete above — not a fresh bug, a gap in that fi
 
 **Verification**: `npx tsc --noEmit` clean (0 errors), `npm run build` (vite build + prerender) clean. Live click-through in the browser preview hit a tab-permission gate that didn't resolve this session, so the fix was verified statically (typecheck + build) rather than by an actual click-test; flagging this rather than claiming a UI test that didn't happen.
 
+### Blog Android-vs-web parity audit + fixes (2026-08-06), commits `b3334b7`, `0f8707d`, `a53e55b`, `332b607`
+
+Audited RN's native blog reader (`app/(tabs)/blog/*`, built in an earlier session) against web's, item by item: list-card layout, article-detail markdown rendering, and full 10-article content inventory. All 10 real articles confirmed present on both platforms with matching titles/slugs/langs, no fewer, no placeholders. Heading levels, bold rendering, link routing, tag-chip logic, sort order all verified correct already. Found and fixed 4 real gaps, one commit each:
+
+- **`b3334b7`** — list-card hero image was a fixed 160dp height (crops more than web); now a true 16:9 `aspectRatio` box matching web's `aspect-video`.
+- **`0f8707d`** — detail-screen hero image was forced to 200dp height + 12px border-radius + cover-crop; web renders it unstyled (natural aspect ratio, square corners) since `markdown-to-jsx`'s `prose` output has no image override. New `ArticleHeroImage` component (`src/lib/simpleMarkdown.tsx`) resolves the real ratio via `Image.getSize` and renders uncropped, matching web.
+- **`a53e55b`** — RN's custom markdown renderer (`simpleMarkdown.tsx`) had no single-asterisk italics support; `*amanah*`, `*deen*`, `*dunya*` (3 words across 2 of the 10 articles) rendered as literal asterisks instead of italic text. Added an italic branch to the inline-span regex, ordered after bold so `**bold**` still matches first.
+- **`332b607`** — web's blog list page has a header-banner tagline ("Articles and tips to enhance your balanced lifestyle") that RN's shared `PageHeader` had no slot for, so it was silently dropped. Added an optional `subtitle` prop (backward-compatible - every other screen's header height is unchanged when unset) and wired it into the blog list screen. Audited all 32 other `PageHeader` call sites against their web counterparts - confirmed blog was the only screen with a real dropped tagline; every other screen either already mirrors what little header text web shows, or web's own shared header component has no subtitle to port in the first place.
+
+**Left alone on purpose**: one broken internal link (typo'd slug `amanahlife-islamah-spiritual-companion`) exists in the shared markdown source content, breaking identically (404) on both platforms - not fixed here since it's a shared content issue, not an RN-vs-web parity gap; flagged for a separate content fix if wanted.
+
+**Verification**: `tsc --noEmit` 26 baseline throughout (zero new), `expo export --platform android` clean after all 4 commits.
+
 ### Stage 2 — Color contrast + design-token audit, commit `56541c9`
 
 Real WCAG 2.1 contrast calculation (no axe-core equivalent exists for RN views - this is the RN-appropriate automated check) across every text-token/background-token pairing actually used, both themes.
