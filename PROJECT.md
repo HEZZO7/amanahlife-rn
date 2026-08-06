@@ -576,6 +576,16 @@ Root cause was in the render-layer comparison logic, not the bundled data - the 
 
 **Verification**: RN - `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean. Web - `tsc --noEmit` 0 errors, `npm run build` clean (after an unrelated `npm install` to repair a corrupted nested `vite/node_modules/rollup` install found in this session's working copy - pre-existing environment issue, not caused by this change).
 
+### Priority 4 — surah selection opened the reader at the wrong scroll position, commit `2d095a6` (RN) + `855503d` (`AmanahLifeapp` repo, web)
+
+Not a page-index/surah-mapping bug (RN's reader has no page numbering at all - each surah renders as one continuous list from its own ayah 1; web's `findPageForBoundary()` page-lookup math checked out fine on inspection). Root cause on both platforms was a missing scroll-position reset: the scrollable view (RN's `<ScrollView>` instance, web's ordinary document/window scroll) is reused across surah/page switches - only the underlying content (ayahs/state) changes - and nothing ever explicitly reset the scroll offset back to the top. Tapping a new surah while scrolled partway into the previous one (or the index list) left the reader visually positioned at that same pixel offset inside the new content, looking like it opened on the wrong page.
+
+**Fixed**: RN adds a `ScrollView` ref, resetting to `(0,0)` (deferred via `requestAnimationFrame` so it runs after the new content has laid out) on every surah open (`loadSurah` - covers direct selection and "Resume") and on every return to the index (on-screen back button + the hardware/gesture back handler). Web adds `window.scrollTo({top:0})` to `openPage()` and the reader-to-index back button. The fix is content-position-independent (always resets to a fixed offset, never a computed one), so it applies identically regardless of which surah or how long it is.
+
+**Verification note**: this was fixed and reasoned through by reading the code (the fix's correctness doesn't depend on which surah is selected, since it's a fixed reset not a computed one, so it generalizes to every surah by construction) - not verified via an actual manual tap-through of 3 different surahs on a running device/emulator in this session, since none was available. Flagging this rather than claiming a device test that didn't happen; recommend a quick manual spot-check (e.g. Al-Baqarah, Al-Kahf, An-Nas) before considering this fully closed.
+
+**Verification**: RN - `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean. Web - `tsc --noEmit` 0 errors, `npm run build` clean.
+
 ---
 
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
