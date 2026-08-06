@@ -73,6 +73,12 @@ export function gregorianToHijri(date: Date): HijriDate {
   return { day, month, year };
 }
 
+/** Ramadan is Hijri month 9. Used to gate Suhoor/Iftar scheduling to the
+ * actual calendar month rather than a manual toggle - see PROJECT.md. */
+export function isRamadan(date: Date): boolean {
+  return gregorianToHijri(date).month === 9;
+}
+
 const HIJRI_MONTHS_EN = [
   'Muharram', 'Safar', "Rabi' al-awwal", "Rabi' al-thani",
   'Jumada al-awwal', 'Jumada al-thani', 'Rajab', "Sha'ban",

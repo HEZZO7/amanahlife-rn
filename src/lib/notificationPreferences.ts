@@ -37,6 +37,7 @@ import * as Notifications from 'expo-notifications';
 import { getUserItem, setUserItem } from './userStorage';
 import { functionUrl } from './config';
 import { requestNotificationPermission, computeUpcomingTimings } from './prayerNotifications';
+import { isRamadan } from './hijriDate';
 import { toast } from './toast';
 
 export interface NotificationPreferences {
@@ -225,6 +226,12 @@ export async function scheduleFastingReminders(enabled: boolean, isAr: boolean, 
   const now = new Date();
   for (const [dateKey, timings] of upcoming) {
     const dayDate = new Date(dateKey);
+    // Gate on the actual Hijri calendar date, not a manual toggle - Suhoor/
+    // Iftar only make sense during Ramadan itself. Checked per-day (not
+    // once for the whole call) so the rolling 7-day window self-corrects
+    // right at the Ramadan start/end boundary instead of scheduling a
+    // week's worth of alerts based on whatever today happens to be.
+    if (!isRamadan(dayDate)) continue;
 
     const [fh, fm] = timings.Fajr.split(':').map(Number);
     if (!Number.isNaN(fh) && !Number.isNaN(fm)) {
