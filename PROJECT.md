@@ -620,6 +620,24 @@ Resumed from the previously-approved Phase G plan (4 categories: Worship/Finance
 
 ---
 
+## 0h-3. Phase I: Receipt Scanner — Real Claude Vision Backend (2026-08-06)
+
+Follow-up to the Phase D decision brief (see `0d`/Phase D report): approved option was Claude vision via a new edge function mirroring `ai_life_coach`'s pattern.
+
+**Prior state**: web's `ReceiptScanner.tsx` ignored the uploaded photo entirely - it showed "AI analyzing receipt" for a fake 2-second delay, then returned a random pick from 4 hardcoded mock receipts (Fresh Market, City Pharmacy, Gas Station, Electronics Store). RN's `receipt-scanner.tsx` was an honest "Not implemented yet" placeholder, unreachable from nav.
+
+**New Edge Function `app_11941c8fec_receipt_scan`**: deployed to the shared Supabase project (same `verify_jwt: false` + manual `supabase.auth.getUser(token)` pattern as every other function here), source committed to both repos per the established duplication convention. Takes `{ imageBase64, mimeType, language }`, sends the image to Claude (`claude-haiku-4-5-20251001`) via its vision API with a system prompt asking for strict JSON (`{isReceipt, storeName, date, items: [{name, amount}], total}` or `{isReceipt: false}`), defensively strips markdown fences before parsing, and validates the shape before returning it. Distinguishes real failure classes for the client: `not_a_receipt` (the photo isn't a receipt), `unreadable` (parse/shape failure), and hard errors (missing image, oversized payload, unsupported MIME type, upstream Anthropic failure) - no case silently succeeds with fabricated data.
+
+**Response shape matches what the UI already expected** (`storeName`, `items: [{name, amount}]`, `total`, `date`) - no UI schema change needed, only the data source changed from `Math.random()` mock selection to a real parsed response.
+
+**Web** (`ReceiptScanner.tsx`): removed `MOCK_RECEIPTS` and the fake `setTimeout` entirely. `handleFileChange` now reads the picked file as base64, gets the user's session token, POSTs to the function, and maps `error` responses to real, distinct toast messages (not-a-receipt / unreadable / unavailable) rather than ever faking a success.
+
+**RN** (`receipt-scanner.tsx`): built for real (previously an unlinked placeholder). Added `expo-image-picker` (new dependency, SDK-54-compatible version resolved via `expo install`) plus its config plugin in `app.json` with camera/photo-library permission strings - the `NSCameraUsageDescription` and Android `CAMERA` permission already existed in `app.json` from an earlier pass that anticipated this feature but never built it. Real camera-capture and photo-library flows (`ImagePicker.launchCameraAsync` / `launchImageLibraryAsync`, `base64: true`), same edge-function call as web, same three-way error handling. "Add to Finance" writes into the same `amanah_finance` AsyncStorage key (scoped via `getUserItem`/`setUserItem`) that the real Finance screen already reads, using RN's existing expense-category enum - not a new parallel finance store. Receipt history saved under a new user-scoped key `amanah_receipts`.
+
+**Verification**: RN - `tsc --noEmit` 26 baseline (zero new, none in `receipt-scanner.tsx`), `expo export --platform android` clean. Web - `tsc --noEmit` 0 errors, `npm run build` clean (prerender included). Not verified: an actual live photo scan on a device/emulator (none available this session) - the function was reasoned through and its JSON-shape validation is defensive against a malformed Claude response, but a real end-to-end scan (camera → function → Claude → parsed UI) hasn't been watched happen. Recommend one real test scan on each platform before considering this fully closed.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```

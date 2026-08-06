@@ -60,7 +60,14 @@
       ],
       "expo-asset",
       "expo-web-browser",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AmanahLife uses your photo library to scan receipts.",
+          "cameraPermission": "AmanahLife uses the camera to scan receipts."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
