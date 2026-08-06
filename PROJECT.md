@@ -566,6 +566,16 @@ Confirmed: `scheduleFastingReminders()` (`src/lib/notificationPreferences.ts`) s
 
 **Verification**: `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean.
 
+### Priority 3 — Quran Basmalah merged into ayah 1, commit `e6c7a40` (RN) + `a8c186f` (`AmanahLifeapp` repo, web)
+
+Root cause was in the render-layer comparison logic, not the bundled data - the data itself is correct real Uthmani-Mushaf orthography. `stripBasmalahPrefix()` (`app/(tabs)/quran.tsx`) compared each surah's ayah-1 text against a hardcoded Basmalah literal using plain alef (ا, U+0627), but the actual bundled data (`assets/quran/ar/*.json`, and the same true on web's live `api.alquran.cloud` fetch) uses **alef wasla** (ٱ, U+0671) for "Allah"/"ar-Rahman"/"ar-Raheem" - correct Mushaf convention - and its shadda+fatha combining marks are stored in the opposite order from the literal. Both differences are visually invisible (render identically in any font), but `text.startsWith()` never matched on either count, so the strip had been a silent no-op for the entire Quran since Phase B - confirmed directly against the bundled JSON for surahs 2, 3, 18, 36, 55 (early/middle/late Mushaf). The separately-rendered standalone Basmalah header above the ayah list was always correct; ayah 1 itself just still carried the un-stripped Basmalah underneath its own text.
+
+**Fixed**: normalize alef wasla to plain alef and apply Unicode NFC normalization (which canonically reorders combining marks) before comparing - match and slice both happen in normalized space, returning the normalized remainder (renders identically, no visible effect beyond fixing the match). At-Tawbah (9, no Basmalah) and Al-Fatihah (1, Basmalah IS ayah 1) both verified still handled correctly - neither reaches the strip logic.
+
+**Platform scope**: fixed on both. Web's `QuranReader.tsx` had the identical hardcoded-literal bug, sourced from the same Uthmani-script convention.
+
+**Verification**: RN - `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean. Web - `tsc --noEmit` 0 errors, `npm run build` clean (after an unrelated `npm install` to repair a corrupted nested `vite/node_modules/rollup` install found in this session's working copy - pre-existing environment issue, not caused by this change).
+
 ---
 
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
