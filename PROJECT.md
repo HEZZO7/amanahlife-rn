@@ -586,6 +586,18 @@ Not a page-index/surah-mapping bug (RN's reader has no page numbering at all - e
 
 **Verification**: RN - `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean. Web - `tsc --noEmit` 0 errors, `npm run build` clean.
 
+### Priority 5 — Adhkar cross-reference vs IslamWeb, commit `50709b6`
+
+Fetched islamweb.net article 178309 ("أذكار الصباح والمساء") raw via the real browser (not the summarizing `WebFetch` tool), item-by-item against the app's 37-item list. 32 of the article's ~41 items were already present (a few under phrasing that differs from IslamWeb's but was already two-source-verified against Hisn al-Muslim in the prior audit pass - not re-litigated here). Found and added 5 genuinely missing duas: Ayat al-Kursi (Quran 2:255, morning `m21` + evening `e18`), "As'aluka 'ilman nafi'an..." (morning-only `m22`, matches the earlier-confirmed "morning only" restriction), Bismillahil-ladhi la yadurru evening counterpart (`e19`, app only had the morning version as `m5`), Hasbiyallah evening counterpart (`e20`, app only had morning `m8`), and a combined Tasbih+Tahmid+Takbir+Tahlil formula (100x, `m23`/`e21`) not present under any existing item. Each new entry has a source citation as a code comment (not user-facing) for the audit trail.
+
+**Specific question answered**: confirmed `e3` ("A'udhu bikalimatillah...") already correctly serves as evening's counterpart to `m17`'s "Subhanallahi 'adada khalqihi" - not a gap.
+
+**Flagged, not fixed**: both IslamWeb and hisnmuslim.com mark "A'udhu bikalimatillah" as evening-only, yet the app also carries it in morning as `m4` - a pre-existing placement question outside this pass's "add what's missing" scope, noted for a future decision alongside the other held items.
+
+**Held, untouched per instruction**: `e14`, the شِرْكِه/شَرَكِه and شَأْنِي/شَأْنِيَ cross-source variants, and `m18`/`e15`.
+
+**Verification**: `tsc --noEmit` 26 baseline (zero new, zero in `adhkar.tsx`), `expo export --platform android` clean.
+
 ---
 
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
