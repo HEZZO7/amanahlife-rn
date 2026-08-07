@@ -14,9 +14,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSetNavBarHeight } from '../../contexts/NavBarHeightContext';
-import { useBackToClose } from '../../lib/useBackToClose';
 import { useSheetAnimation } from '../../lib/useSheetAnimation';
 import Svg, { Path, Rect, Line, Circle } from 'react-native-svg';
+
+function CloseIcon({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5}>
+      <Path strokeLinecap="round" d="M18 6L6 18M6 6l12 12" />
+    </Svg>
+  );
+}
 
 // SVG icons matching web app exactly
 function DashboardIcon({ color }: { color: string }) {
@@ -75,13 +82,17 @@ const NAV_ITEMS = [
   { path: '/(tabs)/settings', id: 'more' },
 ];
 
-export default function BottomNav() {
+interface BottomNavProps {
+  showSearchModal: boolean;
+  setShowSearchModal: (visible: boolean) => void;
+}
+
+export default function BottomNav({ showSearchModal, setShowSearchModal }: BottomNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { t, language, isRTL } = useLanguage();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const [showSearchModal, setShowSearchModal] = useState(false);
   const setNavBarHeight = useSetNavBarHeight();
   const [navHeight, setNavHeight] = useState(0);
 
@@ -91,7 +102,10 @@ export default function BottomNav() {
     setNavBarHeight(h);
   };
 
-  useBackToClose(showSearchModal, () => setShowSearchModal(false));
+  // Hardware back + tab-navigation dismissal are handled one level up in
+  // app/(tabs)/_layout.tsx, which owns this state - see that file's
+  // comment for why (a single handler beats two independently-registered
+  // BackHandler listeners racing on subscription order).
   const sheetAnim = useSheetAnimation(showSearchModal, 60);
 
   const getLabel = (id: string) => {
@@ -172,9 +186,19 @@ export default function BottomNav() {
           >
           <Pressable onPress={() => {}} style={[styles.sheet, { backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.text, textAlign: language === 'ar' ? 'right' : 'center' }]}>
-              {language === 'ar' ? 'اختر نوع البحث' : 'Choose Search Type'}
-            </Text>
+            <View style={[styles.sheetHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <Text style={[styles.sheetTitle, { color: colors.text, flex: 1, textAlign: language === 'ar' ? 'right' : 'left' }]}>
+                {language === 'ar' ? 'اختر نوع البحث' : 'Choose Search Type'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowSearchModal(false)}
+                style={[styles.closeBtn, { backgroundColor: colors.surface }]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={language === 'ar' ? 'إغلاق' : 'Close'}
+              >
+                <CloseIcon color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
 
             {/* Classic Search — Free */}
             <TouchableOpacity
@@ -245,7 +269,9 @@ const styles = StyleSheet.create({
   label: { fontSize: 10, fontWeight: '500', marginTop: 2 },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
   handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  sheetTitle: { fontSize: 17, fontWeight: '600', textAlign: 'center', marginBottom: 16 },
+  sheetHeader: { alignItems: 'center', marginBottom: 16, gap: 10 },
+  sheetTitle: { fontSize: 17, fontWeight: '600' },
+  closeBtn: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   searchOption: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     padding: 14, borderRadius: 16, borderWidth: 1, marginBottom: 10,

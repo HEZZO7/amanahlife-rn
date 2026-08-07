@@ -694,6 +694,26 @@ Found on the preview APK: card text/icons stayed left-aligned in Arabic mode ins
 
 ---
 
+## 0h-7. RN Bug 2: Search bottom-sheet only dismissed on outside-tap (2026-08-07)
+
+Found on the same preview APK: the search sheet (opened from `BottomNav`'s Search tab) only closed when tapping outside it - hardware back, switching tabs, and a close button (which didn't exist) all failed to dismiss it.
+
+**Investigation, per the requested checklist**:
+- **Library or custom?** Custom - a plain positioned `View`, deliberately not RN's `<Modal>` (an earlier fix, `8da9c5d`, moved off `<Modal>` specifically because it captures all touches within its bounds and was blocking taps to the real nav bar underneath).
+- **Close button**: confirmed genuinely absent - the sheet header had only a non-interactive drag handle bar, no tap target at all.
+- **Tab-navigation dismiss**: confirmed genuinely broken - `BottomNav`'s tab `onPress` handlers called `router.push(item.path)` directly without ever calling `setShowSearchModal(false)`, for every tab except Search itself.
+- **Back-button dismiss**: this one already had a `useBackToClose(showSearchModal, ...)` hook wired up (added in an earlier session, `d3ef8df`) that looked correct in isolation - proper `BackHandler.addEventListener` + `return true` to stop propagation. The real bug: `app/(tabs)/_layout.tsx` **also** registers its own independent `hardwareBackPress` listener (for "back-from-any-tab returns to Dashboard first"), re-subscribing on every `pathname` change. Native `BackHandler` doesn't document a guaranteed order between two independently-registered listeners - the existing code's own comment ("this one only runs once no sheet is open") was an assumption about registration order, not something the code actually enforced. Two listeners racing on which was subscribed more recently is not something to build "close only the sheet, never also navigate" correctness on.
+
+**Fix**: consolidated to one handler instead of two racing ones. Lifted `showSearchModal` state out of `BottomNav` and into `app/(tabs)/_layout.tsx` (which already renders `<BottomNav>` directly, so this is plain prop-passing, no new context needed). `_layout.tsx`'s single `hardwareBackPress` handler now checks `showSearchModal` first, explicitly, before its existing tab-back logic - deterministic priority, no ordering assumption. Also added `useEffect(() => setShowSearchModal(false), [pathname])` in `_layout.tsx`, which closes the sheet on *any* route change - covers tab-bar taps directly (satisfying the requested "navigation listener that closes it on route change") without needing to patch each of the 4 non-search tab handlers individually. Added a close (✕) button to the sheet header, RTL-aware, calling the same `setShowSearchModal(false)`. Outside-tap dismiss (the existing `Pressable` overlay) is untouched - still calls the same setter, now just sourced from a prop instead of local state.
+
+**Single-vs-double back press, traced through explicitly since this was flagged as the case to get right**: sheet open, tab is e.g. Finance (`pathname='/finance'`, not `/`) - press 1: `showSearchModal` branch fires first, closes the sheet, returns `true` (stops here) - screen stays on Finance, nothing else happens. Press 2: `showSearchModal` is now `false`, so it falls through to the existing `pathname !== '/'` branch - navigates to Dashboard, same as normal back behavior before this fix ever existed. Same trace from the Dashboard tab: press 1 closes the sheet and stops; press 2 finds `pathname === '/'`, returns `false` (unhandled), OS gets normal back/exit behavior. Neither case can close-and-navigate on a single press, because the `showSearchModal` branch always `return true`s before the tab-back branch is even reached.
+
+**Scope**: this fix is specific to the search sheet's `BackHandler` coordination in `_layout.tsx` + `BottomNav.tsx`. The other screens using `useBackToClose` for their own local sheets (Finance/Tasks/Planner/BillReminders add-forms, Quran) are untouched and out of scope - they weren't reported broken, and each is a screen-local sheet without the same persistent-root-layout collision (`_layout.tsx`'s handler only competes with `BottomNav`'s search sheet, since that's the one sharing the always-mounted root layout).
+
+**Verification**: `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean. All four dismiss paths (back button, tab switch, close button, outside-tap) traced through the code logic above; not verified on a live device (none available this session) - recommend testing the specific single-then-double-back-press sequence on the next build, since that was flagged as the most important case.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
