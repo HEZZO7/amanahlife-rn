@@ -801,6 +801,23 @@ Web:  Finance, Zakat & Giving, Family Budget, Bill Reminders, Dashboard,
 
 ---
 
+## 0h-11. RN Bug 5: Prayer notifications stacking - three prayers firing simultaneously (2026-08-07)
+
+Reported symptom: with location correctly set to Qatar, Isha/Maghrib/Asr reminders (each labeled "in 10 minutes") arrived at the same real-world moment - impossible if each prayer's own trigger time were being scheduled and replaced correctly.
+
+**Diagnosis, per the requested checklist:**
+1. **Missing cancel-before-schedule?** No - `schedulePrayerNotifications()` (`src/lib/prayerNotifications.ts`) already calls `await cancelAllPrayerNotifications()` as its first statement, and that function correctly queries every scheduled notification and cancels each one tagged `amanah-prayer-reminder`.
+2. **Calculation bug collapsing prayers to the same timestamp?** No - `src/lib/prayerCalculation.ts` computes each prayer via adhan-js's `PrayerTimes` class off one `Coordinates`/`CalculationParameters`/date; `times.asr`, `.maghrib`, `.isha` etc. are independent fields with no shared mutable state that could collapse them.
+3. **How many notifications are actually scheduled on-device?** Not directly inspectable without a live device - not claimed as verified.
+
+**Actual root cause: a race condition between concurrent, un-awaited calls to `schedulePrayerNotifications()`.** Three call sites exist - `app/_layout.tsx`'s launch effect, `prayer-times.tsx`'s `rescheduleNotifications()` (fired on location/method change), and `settings.tsx`'s reminder toggle. The launch effect's dependency array is `[language, userId]`, and `userId` starts `null` then flips to the real id once async auth/session restore resolves - a near-guaranteed sequence on a normal cold launch, not an edge case - so the effect fires this call twice on most launches. Each call's own cancel-then-schedule (`await cancel` → loop of up to 35 `await scheduleNotificationAsync` calls for 7 days x 5 prayers) is not atomic against another call's concurrent writes: if two calls overlap, one call's cancel step can query the notification store *while the other is still mid-loop*, catching only a partial set and leaving the other's later writes uncancelled - so the store ends up with a stacked union of both runs' notifications instead of a clean replace, even though each individual run's cancel-then-schedule logic is correct in isolation.
+
+**Fix** (`src/lib/prayerNotifications.ts`): serialized all calls through a module-level promise-chained mutex (`inFlight`, chaining each new call onto the previous one via `.then()`/reject-handler so a rejected prior call can't wedge the queue). `schedulePrayerNotifications()` is now a thin wrapper that enqueues onto `inFlight`; the actual cancel-then-schedule logic moved to an internal `scheduleNow()`. Calls from all three sites now always run strictly one at a time, so whichever call executes last is guaranteed to see and cancel every notification scheduled by every prior call - "never append" is now structurally enforced rather than relying on no two calls ever overlapping in practice.
+
+**Verification**: `tsc --noEmit` - still 26 baseline errors, zero new (all pre-existing, all in unrelated files - `ai-life-coach.tsx`, `calendar.tsx`, `family-budget.tsx`, `ramadan-planner.tsx`, `search.tsx`, `subscription.tsx`, `weekly-life-score.tsx`). `expo export --platform android` - clean. No live-device verification of the actual on-device notification count was possible (no device available) - disclosed rather than claimed.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```

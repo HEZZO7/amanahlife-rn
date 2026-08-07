@@ -117,8 +117,34 @@ export async function cancelAllPrayerNotifications(): Promise<void> {
  * current settings. Call on app start and whenever settings change.
  * Returns true if reminders were (re)scheduled, false if they could not be
  * (surfaces a toast in the false case - previously this failed silently).
+ *
+ * Callers (app launch, location/method change, reminder-settings toggle)
+ * fire this un-awaited from separate effects/handlers, so overlapping
+ * calls are a real scenario (e.g. app launch's effect re-runs when userId
+ * resolves from null to the real id shortly after auth restores). Each
+ * call's own cancel-then-schedule is not atomic against another call's
+ * concurrent writes, so without serialization two overlapping calls can
+ * each miss cancelling the other's in-flight notifications and leave a
+ * stacked union behind instead of a clean replace. inFlight chains every
+ * call onto the previous one so they always run strictly one at a time -
+ * the last call to actually execute is guaranteed to see and cancel
+ * everything scheduled before it.
  */
-export async function schedulePrayerNotifications(
+let inFlight: Promise<boolean> = Promise.resolve(true);
+
+export function schedulePrayerNotifications(
+  settings: PrayerReminderSettings,
+  isAr: boolean,
+  userId: string | null
+): Promise<boolean> {
+  inFlight = inFlight.then(
+    () => scheduleNow(settings, isAr, userId),
+    () => scheduleNow(settings, isAr, userId)
+  );
+  return inFlight;
+}
+
+async function scheduleNow(
   settings: PrayerReminderSettings,
   isAr: boolean,
   userId: string | null
