@@ -776,6 +776,31 @@ Same one-line fix as Receipt Scanner, flagged in the previous entry and now appl
 
 ---
 
+## 0h-10. Finance category showing only 7 cards - diagnosed on both repos (2026-08-07)
+
+Reported symptom: Dashboard → Finance showed only 7 cards on both web and the Android APK, missing Receipt Scanner and Family Dashboard despite the fixes above.
+
+**Diagnosis, per the requested checklist, both repos:**
+1. **dashboardNav.ts contents**: RN had all 9 finance entries, `category: 'finance'` character-for-character identical on every entry (no typo, no case mismatch, no enum drift). **Web had only 7** - Receipt Scanner and Family Dashboard were never added there at all. I'd fixed RN in commits `08e89c3`/`1792584` but never made the equivalent edit on web - flagged as a known gap in the earlier audit but not fixed until asked.
+2. **Rendering logic**: both platforms' category-landing screen (`dashboard/[category].tsx` on RN, `CategoryLanding.tsx` on web) do a plain `getNavItems(language).filter(i => i.category === categoryId)` with no hardcoded array, no premium/entitlement gate, no slice/limit, no dead-route filter.
+3. **Route existence**: both `/receipt-scanner` and `/family-dashboard` routes confirmed registered and pointing at real screens on both platforms.
+
+**Root cause differed by platform:**
+- **Web**: genuine missing data, fixed - see `AmanahLifeapp` commit `c166982`. Also updated the file's header comment, which was stale (still said "excluded for now, Phase D pending" - no longer true since both are real, shipped features).
+- **RN**: no bug found in current source. The 9-item data and the filter-only render path were already correct. Most likely explanation: an APK older than commit `1792584` was tested - the first preview build (`1095d25d`) predates both nav fixes and would show exactly 7; the second (`a858ae9b`) has only the Receipt Scanner fix and would show 8. No RN code change made here since none was needed - avoided adding a duplicate/workaround entry per instruction.
+
+**Final Finance category list, both platforms (9 each), printed after the fix:**
+```
+RN:   Finance, Zakat, Family Budget, Bill Reminders, Financial Dashboard,
+      Halal Investment, Savings Challenges, Receipt Scanner, Family Dashboard
+Web:  Finance, Zakat & Giving, Family Budget, Bill Reminders, Dashboard,
+      Halal Invest, Savings Challenges, Receipt Scanner, Family Dashboard
+```
+
+**Verification**: web - `tsc --noEmit` 0 errors, `npm run build` clean. RN - unchanged, still 26 baseline/zero new, `expo export` clean (no code touched). A fresh preview APK was already building from `1792584` when this diagnosis started (see build tracking below) - that build is the one to use to confirm the stale-APK theory, rather than triggering a redundant rebuild of identical RN source.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
