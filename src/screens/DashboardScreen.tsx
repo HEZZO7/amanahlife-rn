@@ -25,6 +25,7 @@ import { getUserItem } from '../lib/userStorage';
 import { gregorianToHijri, formatHijri, formatGregorian } from '../lib/hijriDate';
 import { getExcusedPeriods, isDateExcusedForPrayer, isoDate } from '../lib/excusedPeriods';
 import { getNavItems, getCategories } from '../lib/dashboardNav';
+import { FeatureGrid } from '../components/ui';
 
 const DAILY_VERSES = [
   { arabic: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا', translation: 'Indeed, with hardship comes ease.', reference: 'Quran 94:6' },
@@ -767,22 +768,15 @@ export default function DashboardScreen() {
               {language === 'ar' ? 'نتائج البحث' : 'SEARCH RESULTS'}
             </Text>
           </View>
-          <View style={[styles.grid, isRTL ? { flexDirection: 'row-reverse', flexWrap: 'wrap' } : {}]}>
-            {filtered.map((item) => (
-              <TouchableOpacity
-                key={item.path}
-                style={[styles.gridItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => router.push(item.path as any)}
-                activeOpacity={0.7}
-              >
-                <Text style={{ fontSize: 24, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>{item.icon}</Text>
-                <Text style={[styles.gridLabel, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{item.title}</Text>
-                {!!item.description && (
-                  <Text style={[styles.gridDescription, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.description}</Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FeatureGrid
+            items={filtered.map((item) => ({
+              key: item.path,
+              icon: item.icon,
+              title: item.title,
+              description: item.description,
+              onPress: () => router.push(item.path as any),
+            }))}
+          />
         </>
       ) : (
         <>
@@ -791,20 +785,15 @@ export default function DashboardScreen() {
               {language === 'ar' ? 'الفئات' : 'CATEGORIES'}
             </Text>
           </View>
-          <View style={[styles.grid, isRTL ? { flexDirection: 'row-reverse', flexWrap: 'wrap' } : {}]}>
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                style={[styles.gridItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => router.push(`/(tabs)/dashboard/${cat.id}` as any)}
-                activeOpacity={0.7}
-              >
-                <Text style={{ fontSize: 24, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>{cat.icon}</Text>
-                <Text style={[styles.gridLabel, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{cat.title}</Text>
-                <Text style={[styles.gridDescription, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{cat.description}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FeatureGrid
+            items={CATEGORIES.map((cat) => ({
+              key: cat.id,
+              icon: cat.icon,
+              title: cat.title,
+              description: cat.description,
+              onPress: () => router.push(`/(tabs)/dashboard/${cat.id}` as any),
+            }))}
+          />
         </>
       )}
     </ScrollView>
@@ -850,10 +839,4 @@ const styles = StyleSheet.create({
   searchBar: { alignItems: 'center', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, marginBottom: 16 },
   searchInput: { flex: 1, fontSize: 14 },
   sectionTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: 12 },
-  // 2 columns (was 3) with larger cards, matching web's `grid-cols-2` +
-  // p-4 QuickAction layout instead of the old compact centered 3-up tiles.
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  gridItem: { width: '47%', borderRadius: 16, padding: 16, borderWidth: 1, alignItems: 'flex-start', justifyContent: 'flex-start' },
-  gridLabel: { fontSize: 14, fontWeight: '600' },
-  gridDescription: { fontSize: 12, marginTop: 2 },
 });
