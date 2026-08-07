@@ -1,7 +1,18 @@
 /**
- * AI Smart Search — natural language search across AmanahLife content.
- * Sends the query to the Supabase edge function (AI endpoint). Falls back to
- * intelligent local keyword matching when offline or endpoint unavailable.
+ * AI Smart Search — natural language search across the user's own real data.
+ * Calls the real app_11941c8fec_ai_search Edge Function (Claude-backed,
+ * built in Phase J). Previously this screen called functionUrl('ai_search'),
+ * a slug that was never deployed - every query silently fell through to the
+ * local KB fallback below and never reached the real backend, since before
+ * this session started. Mirrors web's AISearch.tsx: gathers the user's own
+ * local tasks/goals/transactions/adhkar/Quran data and sends it in the
+ * request body (Phase J's design - there's no server-side table for any of
+ * that to query), and renders the real {type,title,description,icon}[]
+ * results into this screen's existing chat-bubble UI rather than a single
+ * free-text answer. Falls back to the local keyword KB only for genuine
+ * backend-unavailable cases (no session, network error, non-2xx) - a
+ * successful call that legitimately found nothing shows an honest "no
+ * results" message instead, never the unrelated canned KB answer.
  * Full RTL support via useRTL hook. Gated "balanced"-tier via PremiumGate,
  * matching web's PremiumGate requiredTier.
  */
@@ -15,11 +26,52 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { useRTL } from '../../src/hooks/useRTL';
 import { supabase } from '../../src/lib/supabase';
 import { functionUrl } from '../../src/lib/config';
+import { getUserItem } from '../../src/lib/userStorage';
 import { PageHeader } from '../../src/components/ui';
 import PremiumGate from '../../src/components/PremiumGate';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK, FONT_ARABIC } from '../../src/theme/fonts';
 
-const AI_ENDPOINT = functionUrl('ai_search');
+const AI_ENDPOINT = functionUrl('app_11941c8fec_ai_search');
+
+interface AISearchResult { type: string; title: string; description: string; icon: string; }
+
+// Same keys each screen already reads/writes (grepped each one's own
+// storage call before using it here) - no new storage format invented.
+async function gatherLocalData(userId: string | null) {
+  const readJson = async (key: string, fallback: unknown) => {
+    try {
+      const raw = await getUserItem(key, userId);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const [tasks, goals, transactions, adhkarToday, quranBookmarks, quranLastRead] = await Promise.all([
+    readJson('amanah_tasks', []),
+    readJson('amanah-goals', []),
+    readJson('amanah_finance', []),
+    readJson(`adhkar_progress_${new Date().toDateString()}`, null),
+    readJson('quran_bookmarks', []),
+    readJson('quran_last_read', null),
+  ]);
+
+  return {
+    tasks: (tasks as unknown[]).slice(0, 30),
+    goals: (goals as unknown[]).slice(0, 20),
+    transactions: (transactions as unknown[]).slice(-30),
+    adhkarToday,
+    quranBookmarks: (quranBookmarks as unknown[]).slice(0, 20),
+    quranLastRead,
+  };
+}
+
+function formatResults(results: AISearchResult[], isAr: boolean): string {
+  if (results.length === 0) {
+    return isAr ? 'لم يتم العثور على نتائج مطابقة في بياناتك.' : "I couldn't find anything matching that in your data.";
+  }
+  return results.map((r) => `${r.icon} ${r.title}${r.description ? `\n   ${r.description}` : ''}`).join('\n\n');
+}
 
 // ── Local fallback knowledge base ──────────────────────────────────────────────
 const KB: { keywords: string[]; answer: { en: string; ar: string } }[] = [
@@ -103,26 +155,29 @@ export default function AISearch() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        const localData = await gatherLocalData(user?.id ?? null);
         const res = await fetch(AI_ENDPOINT, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ query: q, language }),
+          body: JSON.stringify({ query: q, language, data: localData }),
         });
         if (res.ok) {
-          const data = await res.json();
-          const answer = data.answer || data.response || data.text;
-          if (answer) {
-            setMessages(prev => [...prev, { role: 'ai', text: answer }]);
+          const resJson = await res.json();
+          if (!resJson.error) {
+            const text = formatResults(resJson.results || [], isAr);
+            setMessages(prev => [...prev, { role: 'ai', text }]);
             setLoading(false);
             setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
             return;
           }
         }
       }
-      // Fallback to local KB
+      // Backend unavailable (no session, non-2xx, or an error field) - only
+      // now fall back to the local KB. A successful call with a real but
+      // empty results array is handled above via formatResults, not here.
       const fallback = localAnswer(q, isAr);
       setMessages(prev => [...prev, { role: 'ai', text: fallback }]);
     } catch {
