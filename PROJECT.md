@@ -714,6 +714,30 @@ Found on the same preview APK: the search sheet (opened from `BottomNav`'s Searc
 
 ---
 
+## 0h-8. RN Bug 3: Receipt Scanner unreachable from the UI + orphan audit (2026-08-07)
+
+Found on the same preview APK: Receipt Scanner (built for real in Phase I) had no way to reach it from anywhere in the app.
+
+**Root cause, confirmed**: `src/lib/dashboardNav.ts` (Phase G's single source for the category selector + landing screens) never listed it. This isn't a Phase G bug in itself - at the time Phase G built the 24-item list, Receipt Scanner was still an unbuilt Phase D item and was deliberately left out, correctly, matching that pass's own scope note. The gap is that Phase I later built the real screen but never revisited `dashboardNav.ts` to add it back in - two different passes touching related surfaces without the second one closing the loop the first one explicitly flagged as pending.
+
+**Confirmed step 2 (screen itself is fine)**: `app/(tabs)/receipt-scanner.tsx` still exists, unchanged since Phase I (26KB, real camera/upload flow, real edge-function call) - grepped the entire app for any `router.push`/`navigate` reference to `receipt-scanner` and found zero, in `dashboardNav.ts` or anywhere else. The screen was never broken, just never linked from anything.
+
+**Fix**: added it to `dashboardNav.ts`'s `finance` category (matching where it lives on web):
+```
+{ icon: '📸', title: 'Receipt Scanner' / 'ماسح الإيصالات', description: 'Scan & categorize' / 'مسح وتصنيف', path: '/(tabs)/receipt-scanner', category: 'finance' }
+```
+**Now reachable at**: Dashboard → Finance category card → Receipt Scanner (last card in that category's grid). Same path in Arabic with the category/card labels flipped to Arabic and the grid RTL-aligned (per the Bug 1 fix above).
+
+**Full orphan audit, as requested (report only for items below - not fixed this pass)**:
+- **Family Dashboard** - **same confirmed orphan**, same root cause and same missing-piece pattern as Receipt Scanner: real screen (`app/(tabs)/family-dashboard.tsx`, built in the Family Dashboard pass), zero references anywhere in the app, absent from `dashboardNav.ts`. Not fixed in this commit since only Receipt Scanner was asked for - flagging for an explicit go-ahead. Trivial one-line fix identical in shape to the Receipt Scanner one above (would go in the `finance` category, matching web's placement, or could reasonably go in a different category - your call).
+- **AI Search** - **not an orphan**, reachable via a path outside `dashboardNav.ts` entirely: `BottomNav`'s Search tab opens a sheet with "Classic Search" / "AI Smart Search" options, and the second one already routes to `/(tabs)/ai-search`. This path predates Phase G and was never part of the category-grid system, so Phase G's restructure didn't affect it.
+- **Bonus finding, unrelated to navigation, flagging since I was already in this code**: `app/(tabs)/ai-search.tsx` itself pre-dates this entire session (present in the repo's very first commit) and is a real, working chat-style screen with a local knowledge-base fallback - but its edge-function call uses `functionUrl('ai_search')`, which resolves to a nonexistent endpoint slug (the real, deployed function from Phase J is `app_11941c8fec_ai_search`). Every query on RN's AI Search screen silently falls through to its hardcoded local-answer fallback and never actually reaches the real AI backend. This is a pre-existing bug I did not introduce and have not fixed - separate issue, separate decision, flagging rather than silently touching it.
+- **Web side** (checked since the audit said "both platforms"): `dashboardNav.ts` on web also excludes Receipt Scanner and Family Dashboard, same as RN originally did - but web's `Index.tsx` still keeps its own full, separate `navItems` array (28 items, used for the search box's results) that includes both, deliberately kept intact during Phase G specifically so search wouldn't regress. So on web they're not zero-reachability orphans like RN was - they're reachable by typing a matching term into the home screen's search field, just not shown as a card by default. Worth knowing, not necessarily worth fixing on its own.
+
+**Verification**: `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean. Not verified: an actual tap-through to the new Finance → Receipt Scanner card on a device (none available this session).
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```

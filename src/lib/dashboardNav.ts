@@ -44,6 +44,7 @@ export function getNavItems(language: string): NavItem[] {
     { icon: '📊', title: ar ? 'اللوحة المالية' : 'Financial Dashboard', description: ar ? 'مؤشرات مالية' : 'Lifestyle KPIs', path: '/(tabs)/financial-dashboard', category: 'finance' },
     { icon: '📈', title: ar ? 'الاستثمار الحلال' : 'Halal Investment', description: ar ? 'التمويل الأخلاقي' : 'Ethical finance', path: '/(tabs)/halal-investment', category: 'finance' },
     { icon: '🏆', title: ar ? 'تحديات الادخار' : 'Savings Challenges', description: ar ? 'تحديات ممتعة' : 'Gamified saving', path: '/(tabs)/savings-challenges', category: 'finance' },
+    { icon: '📸', title: ar ? 'ماسح الإيصالات' : 'Receipt Scanner', description: ar ? 'مسح وتصنيف' : 'Scan & categorize', path: '/(tabs)/receipt-scanner', category: 'finance' },
 
     { icon: '✅', title: ar ? 'المهام' : 'Tasks', description: ar ? 'إدارة المهام' : 'Manage tasks', path: '/(tabs)/tasks', category: 'planning' },
     { icon: '🌅', title: ar ? 'الروتين اليومي' : 'Daily Routine', description: ar ? 'العادات اليومية' : 'Daily habits', path: '/(tabs)/daily-routine', category: 'planning' },
