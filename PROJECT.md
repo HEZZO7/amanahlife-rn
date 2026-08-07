@@ -738,6 +738,44 @@ Found on the same preview APK: Receipt Scanner (built for real in Phase I) had n
 
 ---
 
+## 0h-9. RN Bug 4: AI Search wrong edge-function slug + Family Dashboard nav gap (2026-08-07)
+
+Two follow-ups from the orphan audit above, each its own commit.
+
+### Fix 1 — AI Search now calls the real Phase J backend
+
+`app/(tabs)/ai-search.tsx` called `functionUrl('ai_search')` - a slug that was never deployed. Fixed to `functionUrl('app_11941c8fec_ai_search')`, the real function built in Phase J.
+
+Fixing the URL alone wasn't enough to make this actually work end-to-end, so two more things came with it:
+- **Request shape**: the real function expects `{ query, language, data }` where `data` is the caller's own local tasks/goals/transactions/adhkar/Quran state (Phase J's design - there's no server-side table to query instead). The RN screen was only ever sending `{ query, language }`. Added a `gatherLocalData()` helper (mirrors web's `AISearch.tsx` one) that reads the same AsyncStorage keys each real screen already uses - `amanah_tasks`, `amanah-goals`, `amanah_finance`, `adhkar_progress_<today>`, `quran_bookmarks`, `quran_last_read` - confirmed via grep against each screen's own storage calls before using them here, not guessed.
+- **Response shape**: the real function returns `{ results: [{type,title,description,icon}] }`, not the `{answer}` single-string shape this chat-style screen was written to expect. Added `formatResults()` to render the results list into this screen's existing chat-bubble text format, rather than rebuilding the UI into web's card-list layout (bigger change than asked for). A successful call that legitimately finds nothing now shows an honest "no results" message; the local KB fallback is now reserved for genuine backend-unavailable cases (no session, network error, non-2xx) - not reused for "the real answer was an empty list," which would have quietly misrepresented a real empty result as a canned generic answer.
+
+**Real end-to-end verification performed, not just code review**: created a throwaway Supabase auth account (`@amanahlife-test.invalid`, matching the established test-account convention), called the deployed `app_11941c8fec_ai_search` function directly with synthetic tasks/goals/transactions matching a realistic query ("what tasks do I have and how much did I spend on groceries"). Real response, HTTP 200:
+```json
+{"results":[
+  {"type":"Tasks","title":"Buy groceries for Eid dinner","description":"High priority errand due 2026-08-10","icon":"✅"},
+  {"type":"Tasks","title":"Call plumber about kitchen sink","description":"Medium priority home task due 2026-08-09","icon":"✅"},
+  {"type":"Tasks","title":"Finish quarterly report","description":"High priority work task completed on 2026-08-05","icon":"✅"},
+  {"type":"Finance","title":"Whole Foods groceries","description":"Expense of $87.42 on 2026-08-03","icon":"💰"},
+  {"type":"Finance","title":"Grocery run - Trader Joes","description":"Expense of $34.10 on 2026-08-06","icon":"💰"}
+]}
+```
+Correctly returned all 3 supplied tasks, correctly identified only the 2 grocery-related transactions as relevant to "how much did I spend on groceries" (excluded the unrelated salary income row and the Hajj savings goal that were also in the supplied data) - genuine relevance filtering by Claude, not a keyword dump of everything supplied. This is the first real confirmation that Phase J's backend design (client-supplied data, Claude interprets and filters) actually works, since it was never reachable through a correct URL until this fix. Test account deleted immediately after via the app's own `app_11941c8fec_delete_account` function; deletion verified by a `count(*)` query against `auth.users` (0, both throwaway accounts gone).
+
+**Still not verified**: an actual query typed into the screen on a running device (none available this session) - the verification above hit the real backend directly with the same request shape the fixed screen now sends, which confirms the backend and the fix are correct together, but isn't the same as watching the chat UI render it.
+
+### Fix 2 — Family Dashboard added to dashboardNav.ts
+
+Same one-line fix as Receipt Scanner, flagged in the previous entry and now applied on request:
+```
+{ icon: '👨‍👩‍👧', title: 'Family Dashboard' / 'لوحة العائلة', description: 'Shared family' / 'مشاركة عائلية', path: '/(tabs)/family-dashboard', category: 'finance' }
+```
+**Now reachable at**: Dashboard → Finance category card → Family Dashboard.
+
+**Verification (both fixes)**: `tsc --noEmit` 26 baseline (zero new), `expo export --platform android` clean.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
