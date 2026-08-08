@@ -1,7 +1,9 @@
 /**
  * Islamic Calendar — migrated from app/frontend/src/pages/IslamicCalendar.tsx
- * Hijri date via aladhan timingsByCity (Makkah) with a dynamic approximation
- * fallback. Grouped upcoming events, browse-by-month, gradient banner. Bilingual.
+ * Hijri date computed locally via src/lib/hijriDate.ts (same offline
+ * calculator the Phase A dashboard badge fix introduced) - no network fetch,
+ * no fallback-vs-fetched distinction. Grouped upcoming events, browse-by-month,
+ * gradient banner. Bilingual, now shows Gregorian alongside Hijri.
  */
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
@@ -11,6 +13,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { PageHeader, Card } from '../../src/components/ui';
+import { gregorianToHijri, formatGregorian } from '../../src/lib/hijriDate';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK, FONT_ARABIC_BOLD } from '../../src/theme/fonts';
 
 interface IslamicEvent {
@@ -45,18 +48,6 @@ const ISLAMIC_EVENTS: IslamicEvent[] = [
 const HIJRI_MONTHS_EN = ['Muharram', 'Safar', "Rabi' al-Awwal", "Rabi' al-Thani", 'Jumada al-Ula', 'Jumada al-Thani', 'Rajab', "Sha'ban", 'Ramadan', 'Shawwal', "Dhul Qi'dah", 'Dhul Hijjah'];
 const HIJRI_MONTHS_AR = ['محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني', 'جمادى الأولى', 'جمادى الثانية', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'];
 
-function approximateHijriDate(): { day: number; month: number; year: number } {
-  const anchorGregorian = new Date(2025, 6, 7);
-  const diffDays = Math.floor((Date.now() - anchorGregorian.getTime()) / 86400000);
-  const hijriDayLength = 29.5306;
-  const totalHijriDays = Math.floor(diffDays * (354.36667 / 365.25));
-  const hijriMonthsSinceAnchor = Math.floor(totalHijriDays / hijriDayLength);
-  const hijriDayInMonth = Math.floor(totalHijriDays - hijriMonthsSinceAnchor * hijriDayLength) + 1;
-  const yearOffset = Math.floor(hijriMonthsSinceAnchor / 12);
-  const monthIndex = hijriMonthsSinceAnchor % 12;
-  return { day: Math.min(Math.max(hijriDayInMonth, 1), 30), month: monthIndex + 1, year: 1447 + yearOffset };
-}
-
 export default function IslamicCalendar() {
   const { user, loading: authLoading } = useAuth();
   const { language, isRTL } = useLanguage();
@@ -64,31 +55,15 @@ export default function IslamicCalendar() {
   const router = useRouter();
   const isAr = language === 'ar';
 
-  const fallback = approximateHijriDate();
-  const [selectedMonth, setSelectedMonth] = useState(fallback.month);
-  const [hijriDay, setHijriDay] = useState(fallback.day);
-  const [hijriMonth, setHijriMonth] = useState(fallback.month);
-  const [hijriYear, setHijriYear] = useState(fallback.year);
-  const [loading, setLoading] = useState(true);
+  // Computed once per mount, same as the previous fallback did - the
+  // calculation is local/synchronous (src/lib/hijriDate.ts), so there's no
+  // fetched-vs-fallback distinction left to reconcile.
+  const today = gregorianToHijri(new Date());
+  const { day: hijriDay, month: hijriMonth, year: hijriYear } = today;
+  const [selectedMonth, setSelectedMonth] = useState(today.month);
   const hijriMonths = isAr ? HIJRI_MONTHS_AR : HIJRI_MONTHS_EN;
 
   useEffect(() => { if (!authLoading && !user) router.replace('/(auth)/landing'); }, [user, authLoading]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('https://api.aladhan.com/v1/timingsByCity?city=Makkah&country=Saudi+Arabia&method=4');
-        const data = await res.json();
-        if (data?.data?.date?.hijri) {
-          const hijri = data.data.date.hijri;
-          setHijriDay(parseInt(hijri.day, 10));
-          setHijriMonth(hijri.month.number);
-          setHijriYear(parseInt(hijri.year, 10));
-          setSelectedMonth(hijri.month.number);
-        }
-      } catch {} finally { setLoading(false); }
-    })();
-  }, []);
 
   const getUpcomingEvents = () => {
     const upcoming: (IslamicEvent & { sortKey: number })[] = [];
@@ -124,7 +99,7 @@ export default function IslamicCalendar() {
 
   const getEventsForMonth = (month: number) => ISLAMIC_EVENTS.filter((e) => e.hijriMonth === month);
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return <View style={[styles.center, { backgroundColor: colors.bg }]}><ActivityIndicator color={colors.teal} size="large" /></View>;
   }
 
@@ -140,6 +115,7 @@ export default function IslamicCalendar() {
           <Text style={styles.bannerLabel}>{isAr ? 'الشهر الحالي' : 'CURRENT MONTH'}</Text>
           <Text style={[styles.bannerMonth, isAr && { fontFamily: FONT_ARABIC_BOLD }]}>{isAr ? HIJRI_MONTHS_AR[hijriMonth - 1] : HIJRI_MONTHS_EN[hijriMonth - 1]}</Text>
           <Text style={styles.bannerYear}>{isAr ? `${hijriYear} هـ` : `${hijriYear} AH`}</Text>
+          <Text style={styles.bannerGregorian}>{formatGregorian(new Date(), isAr)}</Text>
           <View style={styles.bannerPill}>
             <Text style={styles.bannerPillText}>🗓️ {isAr ? `اليوم: ${hijriDay} ${HIJRI_MONTHS_AR[hijriMonth - 1]}` : `Today: ${hijriDay} ${HIJRI_MONTHS_EN[hijriMonth - 1]}`}</Text>
           </View>
@@ -255,6 +231,7 @@ const styles = StyleSheet.create({
   bannerLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontFamily: FONT_UI_MEDIUM, letterSpacing: 1 },
   bannerMonth: { color: '#fff', fontSize: 40, fontFamily: FONT_UI_BLACK, marginTop: 6 },
   bannerYear: { color: 'rgba(255,255,255,0.9)', fontSize: 20, fontFamily: FONT_UI_MEDIUM, marginTop: 4 },
+  bannerGregorian: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontFamily: FONT_UI_MEDIUM, marginTop: 3 },
   bannerPill: { marginTop: 14, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
   bannerPillText: { color: '#fff', fontSize: 13, fontFamily: FONT_UI_MEDIUM },
   groupDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
