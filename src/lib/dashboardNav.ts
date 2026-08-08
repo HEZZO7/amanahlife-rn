@@ -55,7 +55,7 @@ export function getNavItems(language: string): NavItem[] {
     { icon: '🎯', title: ar ? 'الأهداف' : 'Goals', description: ar ? 'تتبع الأهداف' : 'Track goals', path: '/(tabs)/goals', category: 'planning' },
 
     { icon: '💚', title: ar ? 'العافية' : 'Wellness', description: ar ? 'تتبع الصحة' : 'Health tracking', path: '/(tabs)/wellness', category: 'growth' },
-    { icon: '🤖', title: ar ? 'المدرب الذكي' : 'AI Coach', description: ar ? 'نصائح مخصصة' : 'Personalized coaching', path: '/(tabs)/ai-life-coach', category: 'growth' },
+    { icon: '✨', title: ar ? 'المدرب الذكي' : 'AI Coach', description: ar ? 'نصائح مخصصة' : 'Personalized coaching', path: '/(tabs)/ai-life-coach', category: 'growth' },
     { icon: '💯', title: ar ? 'مؤشر الحياة' : 'Life Score', description: ar ? 'تقييم أسبوعي' : 'Weekly assessment', path: '/(tabs)/weekly-life-score', category: 'growth' },
     { icon: '📊', title: ar ? 'التحليلات' : 'Analytics', description: ar ? 'تتبع وتحليل' : 'Track & analyze', path: '/(tabs)/progress-analytics', category: 'growth' },
   ];

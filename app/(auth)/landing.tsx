@@ -19,7 +19,7 @@ const FEATURES = [
   { icon: '💰', en: 'Halal Finance Tracker', ar: 'تتبع المالية الحلال' },
   { icon: '🎯', en: 'Goals & Wellness', ar: 'الأهداف والعافية' },
   { icon: '🌙', en: 'Ramadan Planner', ar: 'مخطط رمضان' },
-  { icon: '🤖', en: 'AI Life Coach', ar: 'المدرب الذكي' },
+  { icon: '✨', en: 'AI Life Coach', ar: 'المدرب الذكي' },
 ];
 
 export default function LandingScreen() {

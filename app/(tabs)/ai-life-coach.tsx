@@ -140,9 +140,9 @@ export default function AILifeCoach() {
   const randomQuote = wisdom[Math.floor(Math.random() * wisdom.length)];
 
   return (
-    <PremiumGate requiredTier="balanced" screenIcon="🤖" screenTitle="AI Life Coach" screenTitleAr="المدرب الذكي">
+    <PremiumGate requiredTier="balanced" screenIcon="✨" screenTitle="AI Life Coach" screenTitleAr="المدرب الذكي">
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <PageHeader icon="🤖" title={isAr ? 'المدرب الذكي' : 'AI Life Coach'} />
+      <PageHeader icon="✨" title={isAr ? 'المدرب الذكي' : 'AI Life Coach'} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Welcome */}
@@ -189,7 +189,7 @@ export default function AILifeCoach() {
                 >
                   {msg.type === 'coach' && (
                     <Text style={{ color: gold, fontSize: 11, fontFamily: FONT_UI_MEDIUM, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
-                      {isAr ? `المدرب 🤖` : `🤖 Coach`}
+                      {isAr ? `المدرب ✨` : `✨ Coach`}
                     </Text>
                   )}
                   <Text style={{ color: colors.text, fontSize: 13, fontFamily: FONT_UI, lineHeight: 19, textAlign: isRTL ? 'right' : 'left' }}>{msg.text}</Text>
