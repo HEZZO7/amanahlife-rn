@@ -866,6 +866,33 @@ RN commit `2f0c728`, web commit `30b15af`.
 
 ---
 
+## 0h-15. Payment consolidation onto Lemon Squeezy only, Steps 3-4 of 4 - Stripe fully removed (2026-08-08)
+
+**Step 3 (user-run)**: real checkout via the homepage banner confirmed AMANAH30's 30% discount applied correctly through the Step 2 wiring - order #3845411, $2.10 off $6.99, verified by email confirmation. This is the evidence Step 4 was gated on.
+
+**Step 4 - Stripe removed entirely**, only after Step 3 confirmed the replacement works:
+
+1. **Checked before touching anything**: queried `app_11941c8fec_subscriptions` grouped by `payment_provider` - zero rows had `payment_provider = 'stripe'` or a populated `stripe_customer_id`/`stripe_subscription_id`. The only row in the table is the real Lemon Squeezy subscription from Step 3's own test. Nothing live depended on Stripe.
+2. **Edge functions removed** - all 4, both deployed and local source: `app_11941c8fec_stripe_checkout`, `app_11941c8fec_stripe_webhook`, `app_11941c8fec_stripe_portal`, `app_11941c8fec_stripe_coupon_checkout`. No MCP tool exists to delete a deployed edge function, so this went through the Supabase CLI (`npx supabase functions delete <slug> --project-ref nyhsnvjdgifphwkqzwel`, already authenticated) - confirmed gone afterward via `list_edge_functions`. Local `supabase/functions/` source directories for all 4 also deleted from the web repo.
+3. **Schema** - migration `drop_stripe_columns_from_subscriptions` dropped `stripe_customer_id`/`stripe_subscription_id` (confirmed unused by the query in point 1 first) and changed `payment_provider`'s column DEFAULT from `'stripe'` to `'lemonsqueezy'` (was stale from when Stripe was the original default provider; both real webhooks always set this explicitly, but the column-level default itself needed updating). Paddle's `paddle_customer_id`/`paddle_subscription_id` columns are untouched - out of scope, Paddle was never part of this consolidation.
+4. **Client-side references removed**: web `SubscriptionContext.tsx` - `'stripe'` dropped from the `PaymentProvider` union type (now `'lemonsqueezy' | 'paddle'`), every fallback/default that read `'stripe'` (9 occurrences: initial state, the no-user branch, the no-data branch, the fetched-row fallback, the catch branch, `defaultSubscription`) now reads `'lemonsqueezy'`. `PricingPage.tsx`'s billing FAQ dropped the now-false "...via Lemon Squeezy, Paddle, and Stripe" claim (now just Lemon Squeezy and Paddle). RN's `SubscriptionContext.tsx` never tracked `payment_provider` client-side at all - its only Stripe reference was one now-stale comment, updated. Confirmed via repo-wide grep (both repos) that no other Stripe reference remains except three harmless historical comments explaining *why* code changed (`PromoBanner.tsx`, `lemonSqueezyCheckout.ts`, `lemonsqueezy_webhook/index.ts`) - left in place as accurate history, not active dependencies. No `stripe` npm package dependency existed in either repo's `package.json` to begin with (the Deno edge functions used `npm:stripe@12.0.0` as a function-local specifier, not a client package).
+
+**Now-unused Supabase secrets** (safe to remove from the dashboard - extracted from the 4 deleted functions' source before deletion):
+- `STRIPE_SECRET_KEY` (used by all 4)
+- `APP_11941c8fec_STRIPE_WEBHOOK_SECRET` (webhook only)
+- `APP_11941c8fec_STRIPE_BALANCED_MONTHLY_PRICE_ID`
+- `APP_11941c8fec_STRIPE_BALANCED_YEARLY_PRICE_ID`
+- `APP_11941c8fec_STRIPE_FAMILY_MONTHLY_PRICE_ID`
+- `APP_11941c8fec_STRIPE_FAMILY_YEARLY_PRICE_ID`
+
+`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` were also read by these functions but are shared platform secrets every other function still uses - not safe to remove.
+
+**Verification**: web `tsc --noEmit` 0 errors, `npm run build` clean. RN `tsc --noEmit` still 26 baseline/zero new, `expo export --platform android` clean. Live-checked in the dev server: `/subscription` and `/pricing` both render correctly post-change with no console errors.
+
+Web commit `f68da68`, RN commit `2ea1fe5`.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
