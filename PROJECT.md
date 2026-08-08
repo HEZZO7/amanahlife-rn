@@ -937,6 +937,22 @@ Web commit `b4eb067`.
 
 ---
 
+## 0h-19. AI Life Coach icon swap: 🤖 → ✨, both repos (2026-08-08)
+
+Requested: the robot-face emoji looked dated/plain; wanted a more modern AI/coaching icon.
+
+**Investigated first**: confirmed neither repo uses an SVG/vector icon library for dashboard nav entries - all 28 items in `dashboardNav.ts` on both platforms are plain Unicode emoji. This determined the fix stayed within the emoji system rather than introducing a mismatched SVG icon for just one card.
+
+**Chosen icon: ✨ (sparkles)** - the closest thing to a de facto "AI" visual shorthand across current products (ChatGPT, Copilot, Gemini, Notion AI all use a sparkle/star glyph, not a robot). Considered 🧭 (compass - fits "guidance" but not "AI") and 💡 (lightbulb - more generic "idea" symbol). Confirmed no collision with any other `dashboardNav.ts` entry on either platform before choosing.
+
+**Scope**: only the AI Life Coach feature's own icon, wherever it appears in its own UI - not the broader icon-system unification (already deferred separately as low priority) and not any other card. Updated: `dashboardNav.ts` nav entry (both repos - feeds the dashboard card, Quick Access card, search results, and Growth category sub-grid, all from one source), each platform's own screen header (RN `ai-life-coach.tsx`'s `PageHeader`/`PremiumGate screenIcon`, web `AILifeCoach.tsx`'s `PageHeader`), the inline "Coach" chat-message-sender prefix on both platforms, web's separate local `navItems` copy in `Index.tsx` (kept in sync so the Quick Access card and search results don't show the old icon while the category grid shows the new one), and web's static pre-auth marketing page `public/landing.html` (6 occurrences across the phone mockup, feature card, and EN/AR showcase-tile text, including a JS-escaped Arabic surrogate pair). Left `app/(tabs)/ai-search.tsx`'s 🤖 untouched on both platforms - that's the genuinely different "AI Smart Search" feature, out of scope.
+
+**Verification**: RN `tsc --noEmit` - 26 baseline errors, zero new. `expo export --platform android` - clean. Web `tsc --noEmit` - 0 errors. `npm run build` - clean.
+
+RN commit `a4f8663`, web commit `bb87994`.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
