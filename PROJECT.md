@@ -848,6 +848,24 @@ Four-step plan to remove Stripe entirely and fix AMANAH30 (0h-priority-3 finding
 
 ---
 
+## 0h-14. Finance "Add Transaction" button silently doing nothing, both repos (2026-08-08)
+
+Reported symptom: tapping "Add Transaction" with the form open produced no response - nothing added, no error shown.
+
+**Diagnosis, per the requested checklist, both repos (identical logic, RN ported from web originally):**
+1. **Handler wired?** Yes - `submitTransaction` is a real function, not a stub, called from the sheet's submit button (RN `app/(tabs)/finance.tsx`, web `src/pages/Finance.tsx`).
+2. **Silent validation gate?** Confirmed, and this is the actual root cause: the only guard, `if (!amount || parseFloat(amount) <= 0) return;`, blocked an empty/zero/negative amount with a bare `return` and zero user-facing feedback - no toast, no inline error, nothing. Description and category both had safe fallbacks already, so amount alone could produce the reported symptom. Also found, while reading this logic closely: the same check let *non-numeric* input straight through undetected - `parseFloat('abc')` is `NaN`, and `NaN <= 0` evaluates to `false` (all comparisons with NaN are false), so `!amount || parseFloat(amount) <= 0` was `false` for a non-numeric string, silently creating a transaction with `amount: NaN` instead of rejecting it.
+3. **Silent async failure?** Both platforms persist locally (RN: AsyncStorage via `setUserItem`/`userStorage.ts`; web: `localStorage` directly), not Supabase. Neither had a try/catch - RN's write was unawaited (fire-and-forget), web's was an uncaught synchronous call. A write failure (AsyncStorage rejection, localStorage quota/private-mode exception) had no user-facing error path, though this wasn't the primary/reproducible cause.
+4. **Isolated with a live test** (web dev server, since the browser tooling in this environment can drive it directly - RN's native UI could not be exercised the same way): reproduced the exact reported bug first (empty amount -> literally nothing happened, pre-fix), then confirmed the fix live post-change.
+
+**Fix** (both repos, mirrored): explicit `Number.isNaN(parsedAmount)` check catches the NaN-slips-through case that the old `<= 0` check missed. `toast.error` surfaces the validation failure instead of a silent no-op. `saveTransactions` now writes to storage *before* updating React state (was reversed), wrapped in try/catch with `toast.error` on failure, so a rejected write can never leave a transaction visible in the list that didn't actually persist. `toast.success` confirms when it works. `deleteTransaction` got the same try/catch treatment since it shares `saveTransactions`. Web: new translation keys added to `LanguageContext.tsx` (`pleaseEnterValidAmount`, `transactionAdded`, `transactionUpdated`, `transactionSaveFailed`, `transactionDeleteFailed`) matching the file's existing `t(key)` convention rather than inlining strings. RN: inline `tr()` bilingual strings, matching that file's own established convention.
+
+**Verification**: web `tsc --noEmit` 0 errors, `npm run build` clean, **and live-verified in the dev server**: empty-amount submit now shows "Please enter a valid amount" (confirmed reproducing the exact pre-fix bug first, then confirming the fix), a valid amount shows "Transaction added" with the transaction appearing correctly (income/totals/savings-rate all updated), delete still works. RN: `tsc --noEmit` still 26 baseline/zero new, `expo export --platform android` clean - could not be live-tested on-device in this environment (disclosed rather than claimed), but the change mirrors web's independently-verified fix exactly.
+
+RN commit `2f0c728`, web commit `30b15af`.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
