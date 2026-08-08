@@ -921,6 +921,22 @@ RN commit `533be8f`, web commit `c32cd93`.
 
 ---
 
+## 0h-18. Disabled notification toggles rendering as active teal, web only (2026-08-08)
+
+Reported: the 5 "Coming soon" notification-type toggles in Settings (Bill/Habit/Fasting/Savings/General) visually render as ON/enabled (teal, matching the working "Notifications enabled" indicator above), contradicting their own "Coming soon - available on Android" labels.
+
+**Investigated first, confirmed live in the browser** (real authenticated session via a throwaway `@amanahlife-test.invalid` account, DOM inspection): the toggles ARE genuinely non-interactive - `disabled="true"`, `aria-disabled="true"`, native browser blocks all clicks, no `onClick` handler exists in the code at all. But `NotificationSettings.tsx`'s styling was `preferences[type.key] ? 'bg-primary/40' : 'bg-secondary'`, and `useNotifications.ts`'s `DEFAULT_PREFERENCES` defaults all 5 keys to `true` with no way to ever change them (the control is disabled) - so every toggle always rendered `backgroundColor: rgba(51, 204, 191, 0.4)` (the app's real teal primary color, at reduced opacity) with the knob at the right/"on" position. Confirmed via direct DOM computed-style inspection, not assumed.
+
+**Fix**: the toggle's visual state no longer depends on `preferences[type.key]` at all - always renders as a plain `bg-muted` switch with the knob at a fixed neutral (left) position, regardless of the stored value. The stored preference itself is untouched (still saved/loaded normally for when real infrastructure lands) - only the disabled visual is decoupled from it. Pure styling fix, no functionality changed, per instruction - the server-side push infrastructure (pg_cron, real VAPID keys, protocol-correct Web Push) still doesn't exist and enabling these for real remains out of scope.
+
+**Verified live post-fix**, same DOM-inspection method as the earlier premium-lock-modal fix: `backgroundColor` is now `rgb(23, 54, 39)` (bg-muted's dark-theme value) on all 5 toggles, no trace of the teal primary color, knob uniformly at `left: 3px`. RN has no equivalent component (these toggles are web-only) - confirmed by the original investigation that led into this fix, no RN changes needed.
+
+Web `tsc --noEmit`: 0 errors. `npm run build`: clean. Test account (`notif-toggle-verify-20260808@amanahlife-test.invalid`) created via the live signup UI (session-injection was tried and failed to pass the auth guard in the prior fix, so this time went through the real form), deleted immediately after, verified gone via `count = 0`.
+
+Web commit `b4eb067`.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
