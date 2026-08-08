@@ -14,6 +14,7 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { useNavBarHeight } from '../../src/contexts/NavBarHeightContext';
 import { useBackToClose } from '../../src/lib/useBackToClose';
 import { useSheetAnimation } from '../../src/lib/useSheetAnimation';
+import { toast } from '../../src/lib/toast';
 import { PageHeader, Card, ProgressBar } from '../../src/components/ui';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
 
@@ -79,9 +80,11 @@ export default function Finance() {
     });
   }, [userId]);
 
-  const saveTransactions = (updated: Transaction[]) => {
+  // Writes to storage BEFORE updating state, so a rejected write never
+  // leaves a transaction visible in the list that didn't actually persist.
+  const saveTransactions = async (updated: Transaction[]) => {
+    await setUserItem('amanah_finance', userId, JSON.stringify(updated));
     setTransactions(updated);
-    setUserItem('amanah_finance', userId, JSON.stringify(updated));
   };
 
   const resetForm = () => {
@@ -97,28 +100,41 @@ export default function Finance() {
   useBackToClose(showForm, resetForm);
   const sheetAnim = useSheetAnimation(showForm);
 
-  const submitTransaction = () => {
-    if (!amount || parseFloat(amount) <= 0) return;
-    if (editingId) {
-      saveTransactions(
-        transactions.map((tx) =>
-          tx.id === editingId
-            ? { ...tx, type, category, amount: parseFloat(amount), description: description.trim() || CATEGORY_LABELS[category][language === 'ar' ? 'ar' : 'en'] }
-            : tx
-        )
-      );
-    } else {
-      const newTx: Transaction = {
-        id: Date.now().toString(),
-        type,
-        category,
-        amount: parseFloat(amount),
-        description: description.trim() || CATEGORY_LABELS[category][language === 'ar' ? 'ar' : 'en'],
-        date: new Date().toISOString(),
-      };
-      saveTransactions([newTx, ...transactions]);
+  const submitTransaction = async () => {
+    const parsedAmount = parseFloat(amount);
+    // Number.isNaN check matters here specifically: parseFloat('abc') is
+    // NaN, and `NaN <= 0` is always false, so the old `!amount ||
+    // parseFloat(amount) <= 0` check let non-numeric input straight through
+    // and silently created a transaction with amount: NaN.
+    if (!amount.trim() || Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast.error(tr('Please enter a valid amount', 'الرجاء إدخال مبلغ صحيح'));
+      return;
     }
-    resetForm();
+    try {
+      if (editingId) {
+        await saveTransactions(
+          transactions.map((tx) =>
+            tx.id === editingId
+              ? { ...tx, type, category, amount: parsedAmount, description: description.trim() || CATEGORY_LABELS[category][language === 'ar' ? 'ar' : 'en'] }
+              : tx
+          )
+        );
+      } else {
+        const newTx: Transaction = {
+          id: Date.now().toString(),
+          type,
+          category,
+          amount: parsedAmount,
+          description: description.trim() || CATEGORY_LABELS[category][language === 'ar' ? 'ar' : 'en'],
+          date: new Date().toISOString(),
+        };
+        await saveTransactions([newTx, ...transactions]);
+      }
+      resetForm();
+      toast.success(editingId ? tr('Transaction updated', 'تم تحديث المعاملة') : tr('Transaction added', 'تمت إضافة المعاملة'));
+    } catch {
+      toast.error(tr('Could not save the transaction. Please try again.', 'تعذر حفظ المعاملة. حاول مرة أخرى.'));
+    }
   };
 
   const openEditForm = (tx: Transaction) => {
@@ -130,7 +146,13 @@ export default function Finance() {
     setShowForm(true);
   };
 
-  const deleteTransaction = (id: string) => saveTransactions(transactions.filter((tx) => tx.id !== id));
+  const deleteTransaction = async (id: string) => {
+    try {
+      await saveTransactions(transactions.filter((tx) => tx.id !== id));
+    } catch {
+      toast.error(tr('Could not delete the transaction. Please try again.', 'تعذر حذف المعاملة. حاول مرة أخرى.'));
+    }
+  };
 
   const now = new Date();
   const monthTransactions = transactions.filter((tx) => {
