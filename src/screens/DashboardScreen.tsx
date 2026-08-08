@@ -440,11 +440,18 @@ export default function DashboardScreen() {
 
   // Category data (Phase G) lives in src/lib/dashboardNav.ts - single
   // source shared with the category landing screen so the two can never
-  // drift out of sync. Blog and Settings are deliberately excluded there:
-  // Settings is already reachable from every screen via BottomNav +
-  // GlobalHeader, and Blog gets a small link on the Growth landing screen.
+  // drift out of sync. Settings is deliberately excluded there: it's
+  // already reachable from every screen via BottomNav + GlobalHeader.
+  //
+  // Blog and AI Life Coach also get their own standalone "Quick Access"
+  // cards below, reachable in one tap from the home screen instead of
+  // needing a category drill-down (or, for Blog, the small in-page link
+  // this replaced - see [category].tsx). AI Life Coach stays listed inside
+  // the Growth category too (unchanged) so full category browsing is still
+  // complete; this is a deliberate duplicate entry point, not a move.
   const NAV_ITEMS = getNavItems(language);
   const CATEGORIES = getCategories(language);
+  const aiCoachItem = NAV_ITEMS.find((i) => i.path === '/(tabs)/ai-life-coach');
 
   const filtered = NAV_ITEMS.filter(i =>
     !searchQuery || i.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -793,6 +800,36 @@ export default function DashboardScreen() {
               description: cat.description,
               onPress: () => router.push(`/(tabs)/dashboard/${cat.id}` as any),
             }))}
+          />
+
+          {/* Blog + AI Life Coach as standalone, one-tap cards - kept
+              outside the 4 category cards above rather than requiring a
+              category drill-down first (or, for Blog, the small in-page
+              link this replaces on Growth's landing screen). */}
+          <View style={{ width: '100%', marginTop: 20 }}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left', width: '100%' }]}>
+              {language === 'ar' ? 'وصول سريع' : 'QUICK ACCESS'}
+            </Text>
+          </View>
+          <FeatureGrid
+            items={[
+              {
+                key: 'blog',
+                icon: '📝',
+                title: language === 'ar' ? 'المدونة' : 'Blog',
+                description: language === 'ar' ? 'مقالات ونصائح' : 'Articles & tips',
+                onPress: () => router.push('/(tabs)/blog' as any),
+              },
+              ...(aiCoachItem
+                ? [{
+                    key: aiCoachItem.path,
+                    icon: aiCoachItem.icon,
+                    title: aiCoachItem.title,
+                    description: aiCoachItem.description,
+                    onPress: () => router.push(aiCoachItem.path as any),
+                  }]
+                : []),
+            ]}
           />
         </>
       )}

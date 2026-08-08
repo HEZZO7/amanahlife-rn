@@ -3,9 +3,11 @@
  * both the home screen's category selector and each category's landing
  * screen, so the two never drift out of sync.
  *
- * Blog and Settings are deliberately excluded: Settings is already
- * reachable from every screen via BottomNav + GlobalHeader, and Blog gets
- * a small link on the Growth landing screen instead of a full grid card.
+ * Settings is deliberately excluded: it's already reachable from every
+ * screen via BottomNav + GlobalHeader. Blog isn't here either (it's
+ * content, not a feature with a category) - it gets its own standalone
+ * "Quick Access" card on the dashboard home screen instead, alongside
+ * AI Life Coach (see src/screens/DashboardScreen.tsx).
  */
 export type CategoryId = 'worship' | 'finance' | 'planning' | 'growth';
 
