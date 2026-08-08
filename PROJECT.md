@@ -907,6 +907,20 @@ Explicitly excluded from this round: the web notification toggles (Bill/Habit/Fa
 
 ---
 
+## 0h-17. Blog + AI Life Coach as standalone dashboard Quick Access cards, both repos (2026-08-08)
+
+Requested: keep Blog and AI Life Coach directly accessible from the dashboard home screen, outside the 4 category cards, rather than nested inside a category (AI Life Coach: Growth) or reduced to a small text link (Blog: a "Read the blog ->" link that only appeared on Growth's landing screen, added during Phase G since Blog was deliberately excluded from the category system entirely).
+
+**Implementation** (RN `src/screens/DashboardScreen.tsx`, web `src/pages/Index.tsx`): added a "QUICK ACCESS" section directly below the 4-category grid on the dashboard home screen, with standalone one-tap cards for Blog and AI Life Coach, reusing the same grid component (`FeatureGrid` on RN, `QuickAction` on web) already used for the category cards immediately above - no new UI component needed. Both platforms look up AI Life Coach's icon/title/description from the existing nav data (RN: `NAV_ITEMS.find()` against `dashboardNav.ts`; web: the same lookup against `Index.tsx`'s own local `navItems` array) rather than duplicating the strings. AI Life Coach **stays listed inside the Growth category too** (unchanged) - a deliberate duplicate entry point, not a move, so browsing Growth in full is still complete. Blog isn't in `dashboardNav.ts` at all (it's content, not a category-scoped feature), so its card is defined directly on the dashboard home screen on both platforms, matching the icon/copy the removed small link used.
+
+Removed the now-redundant "Read the blog ->" link from the Growth category landing screen on both platforms (RN `app/(tabs)/dashboard/[category].tsx`, web `src/pages/CategoryLanding.tsx`) - now that Blog has a real, prominent placement, keeping the old workaround would just be a second, less consistent path to the same destination. Cleaned up now-unused imports/styles left behind by that removal. Updated `dashboardNav.ts`'s header comment on both platforms, which described the old behavior.
+
+**Verification**: RN `tsc --noEmit` - 26 baseline errors, zero new. `expo export --platform android` - clean. Web `tsc --noEmit` - 0 errors. `npm run build` - clean. Attempted live browser verification via a throwaway test account (`dashboard-verify-20260808@amanahlife-test.invalid`) - signed up via the public anon key and tried injecting the resulting session directly into the dev server's `localStorage` to bypass needing to fill in a real login form, but the app's auth guard didn't recognize the injected session (evidently does more than a synchronous localStorage read), so this specific change was **not** visually confirmed in a browser - disclosed rather than claimed. The test account was fully deleted regardless (verified via `SELECT count(*) ... = 0`). Confidence is high from code review alone: both platforms' additions are structurally identical to the category-cards grid immediately above them - same component, same props shape, same conditional-render pattern, already proven working.
+
+RN commit `533be8f`, web commit `c32cd93`.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
