@@ -48,7 +48,7 @@ interface SubscriptionContextType {
   tier: SubscriptionTier;
   status: SubscriptionStatus;
   billingCycle: BillingCycle;
-  // ISO date string, or null. Populated by the Stripe/Lemon Squeezy webhooks
+  // ISO date string, or null. Populated by the Lemon Squeezy webhook
   // (never fabricated) - mirrors web's SubscriptionContext.tsx. Null for
   // free/trial users and for any provider whose webhook doesn't populate
   // current_period_end yet.
