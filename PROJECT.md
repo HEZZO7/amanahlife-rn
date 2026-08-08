@@ -832,6 +832,22 @@ Also confirmed the Android paywall's "Upgrade" button is not dead - `app/(tabs)/
 
 ---
 
+## 0h-13. Payment consolidation onto Lemon Squeezy only, Steps 1-2 of 4 (2026-08-08)
+
+Four-step plan to remove Stripe entirely and fix AMANAH30 (0h-priority-3 finding: partially wired to a disconnected Stripe path). Steps 1-2 done and pushed; Steps 3-4 pending explicit go-ahead per instruction ("do not proceed to Step 4 without my explicit go-ahead").
+
+**Step 1 - Lemon Squeezy discount-code mechanism** (researched via official docs, not assumed): two real mechanisms exist. (a) Hosted checkout ("buy-link") URLs accept `?checkout[discount_code]=CODE` as a query param. (b) API-created checkouts (`POST /v1/checkouts`) accept `checkout_data.discount_code` in the request body. Both only *reference* a discount by its code string - the discount itself must already exist as a real Discount object in the Lemon Squeezy dashboard (or created via their Discounts API) before either param does anything; a nonexistent code does not get created on the fly. Discount codes must be uppercase letters/numbers, 3-256 chars (AMANAH30 already qualifies).
+
+**What to create in the Lemon Squeezy dashboard** (reported to the user, not done by Claude - no dashboard access): a new Discount, code `AMANAH30`, type Percentage, amount 30%, duration "Once" (matches the "off your first month" promise - Lemon Squeezy's default if unspecified), scoped to the Balanced Life monthly variant (or store-wide, business decision left to the user) - optionally with an expiration date / max-redemptions cap if desired.
+
+**Step 2 - Wired into the real checkout path** (web repo, `AmanahLifeapp` commit `cfb4d27`): extracted `BUY_LINKS`/`buildCheckoutUrl`/the checkout endpoint constant out of `Subscription.tsx` into a new shared module `src/lib/lemonSqueezyCheckout.ts` - single source of truth so a discount code flows through the app's one real Lemon Squeezy checkout instead of a second implementation. `buildCheckoutUrl()` now takes an optional `discountCode` param, appended as `checkout[discount_code]`. The `lemonsqueezy_checkout` edge function (redeployed, version 22) now accepts and validates an optional `discountCode` in its request body (same uppercase-alnum, 3-256-char rule LS itself enforces) and forwards it as `checkout_data.discount_code` on the API-based path (used for trial-used accounts, so `skip_trial` still works). `PromoBanner.tsx` no longer calls `app_11941c8fec_stripe_coupon_checkout` (the dead-end Stripe path from the earlier investigation) - it now mirrors `Subscription.tsx`'s `handleUpgrade` branching exactly (trial-used -> API checkout, otherwise -> buy-link), both with `AMANAH30` attached. Regular "Upgrade" button clicks (not via the banner) are unchanged - no discount auto-applies there, matching prior behavior.
+
+**Verification**: web `tsc --noEmit` - 0 errors. `npm run build` - clean. RN untouched (this task is web-only; PromoBanner/AMANAH30 never existed on RN, confirmed in the prior investigation).
+
+**What still needs a live test** (Step 3, next): whether a checkout actually applies 30% off once the discount exists in the Lemon Squeezy dashboard - the code-level wiring can't be verified further without a real checkout attempt, which requires entering payment info and is therefore the user's to run, not Claude's.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
