@@ -818,6 +818,20 @@ Reported symptom: with location correctly set to Qatar, Isha/Maghrib/Asr reminde
 
 ---
 
+## 0h-12. Android-only 14-day free trial (2026-08-08)
+
+Investigated before changing anything, per instruction: the 7-day trial length is a hardcoded client-side constant (`TRIAL_DURATION_DAYS = 7`), independently duplicated in RN's `src/contexts/SubscriptionContext.tsx` and web's own `SubscriptionContext.tsx` - not read from or computed by Supabase. The `subscriptions` table only stores `trial_started_at`/`trial_used` (schema only, no duration math anywhere - no DEFAULT/CHECK/trigger, no edge function does trial-length arithmetic). `trialDaysRemaining`/`isTrialActive` are computed entirely client-side from `trial_started_at - TRIAL_DURATION_DAYS`. **This meant the change touches no server-side logic** - confirmed before implementing, since that's what determines how easily it reverts once Play Billing ships.
+
+Flagged and disclosed (not blocking): `trial_started_at`/`trial_used` are shared per-account server state, not per-platform, so a user active on both Android and web from one account will see each app compute remaining days independently against the same start date - by day 8, web would show the trial expired while Android still shows 6 days left. Inherent to keeping the constants un-shared; only matters for cross-platform account use.
+
+Also confirmed the Android paywall's "Upgrade" button is not dead - `app/(tabs)/subscription.tsx`'s `handleUpgrade` opens a real, working Lemon Squeezy checkout via `WebBrowser.openBrowserAsync` (browser-based, not native Play Billing, but functional) - so no "Coming soon" relabel was needed; that premise didn't hold once checked.
+
+**Implementation** (`src/contexts/SubscriptionContext.tsx`): `TRIAL_DURATION_DAYS` is now `Platform.OS === 'android' ? 14 : 7`, exported so display strings can reference the real value instead of a third hardcoded literal. `app.json`/`eas.json` still declare an iOS config even though only Android ships today, so the `Platform.OS` branch (rather than assuming this RN codebase is Android-only) keeps any future iOS build at 7 days like web, matching the requested "Android only" scope precisely. Updated the two trial CTA strings in `app/(tabs)/subscription.tsx` and the AI Search local-fallback KB answer in `app/(tabs)/ai-search.tsx` (both previously hardcoded "7 days"/"7-day") to interpolate the constant instead. Web's `SubscriptionContext.tsx` and all Supabase migrations/edge functions are untouched.
+
+**Verification**: `tsc --noEmit` - still 26 baseline errors, zero new (all pre-existing, unrelated files, same set as 0h-11). `expo export --platform android` - clean.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```

@@ -12,7 +12,7 @@ import {
 import * as WebBrowser from 'expo-web-browser';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { useSubscription } from '../../src/contexts/SubscriptionContext';
+import { useSubscription, TRIAL_DURATION_DAYS } from '../../src/contexts/SubscriptionContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { PageHeader, Card } from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
@@ -250,10 +250,10 @@ export default function SubscriptionScreen() {
             <Text style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>🎁</Text>
             <Text style={[styles.ctaTitle, { color: colors.text }]}>{tr('Try Premium Free', 'جرّب المميز مجاناً')}</Text>
             <Text style={[styles.ctaSub, { color: colors.textSecondary }]}>
-              {tr('Get all premium features for 7 days, no payment required', 'احصل على جميع المميزات لمدة 7 أيام بدون دفع')}
+              {tr(`Get all premium features for ${TRIAL_DURATION_DAYS} days, no payment required`, `احصل على جميع المميزات لمدة ${TRIAL_DURATION_DAYS} أيام بدون دفع`)}
             </Text>
             <TouchableOpacity style={[styles.ctaBtn, { backgroundColor: colors.gold }]} onPress={handleStartTrial} disabled={trialLoading} activeOpacity={0.85}>
-              <Text style={[styles.ctaBtnText, { color: '#1A1200' }]}>🚀 {tr('Start 7-Day Free Trial', 'ابدأ تجربة 7 أيام مجانية')}</Text>
+              <Text style={[styles.ctaBtnText, { color: '#1A1200' }]}>🚀 {tr(`Start ${TRIAL_DURATION_DAYS}-Day Free Trial`, `ابدأ تجربة ${TRIAL_DURATION_DAYS} أيام مجانية`)}</Text>
             </TouchableOpacity>
           </View>
         )}

@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { TRIAL_DURATION_DAYS } from '../../src/contexts/SubscriptionContext';
 import { useRTL } from '../../src/hooks/useRTL';
 import { supabase } from '../../src/lib/supabase';
 import { functionUrl } from '../../src/lib/config';
@@ -85,7 +86,7 @@ const KB: { keywords: string[]; answer: { en: string; ar: string } }[] = [
   },
   {
     keywords: ['zakat', 'زكاة', 'nisab', 'نصاب', 'giving', 'عطاء', 'charity', 'صدقة'],
-    answer: { en: 'The Zakat & Giving screen calculates your zakat obligation at 2.5% of wealth above nisab. Enter your assets, liabilities, and choose from 12 currencies with live exchange rates. It also shows a 7-day free trial for premium features.', ar: 'تحسب شاشة الزكاة والعطاء التزامك بالزكاة بنسبة 2.5% من الثروة فوق النصاب. أدخل أصولك والتزاماتك واختر من 12 عملة بأسعار صرف حية.' },
+    answer: { en: `The Zakat & Giving screen calculates your zakat obligation at 2.5% of wealth above nisab. Enter your assets, liabilities, and choose from 12 currencies with live exchange rates. It also shows a ${TRIAL_DURATION_DAYS}-day free trial for premium features.`, ar: 'تحسب شاشة الزكاة والعطاء التزامك بالزكاة بنسبة 2.5% من الثروة فوق النصاب. أدخل أصولك والتزاماتك واختر من 12 عملة بأسعار صرف حية.' },
   },
   {
     keywords: ['dhikr', 'ذكر', 'subhanallah', 'سبحان', 'alhamdulillah', 'الحمد', 'counter', 'عداد'],

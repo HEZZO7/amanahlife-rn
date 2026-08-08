@@ -4,6 +4,7 @@
  * Replaces localStorage with AsyncStorage
  */
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
@@ -26,7 +27,15 @@ const ENTITLING_STATUSES: ReadonlySet<SubscriptionStatus> = new Set(['active', '
 // data) reset the trial indefinitely; that's now impossible since
 // startTrial() checks the server before granting anything.
 const TRIAL_CACHE_KEY = 'amanah-trial-start';
-const TRIAL_DURATION_DAYS = 7;
+// Android gets a longer trial (14 days) than the 7-day default, since
+// Play Billing isn't live yet (see PROJECT.md) and Android users have no
+// fast in-app purchase path - the external Lemon Squeezy browser checkout
+// still works, but a longer runway reduces pressure to convert before
+// native billing ships. iOS (not yet shipped, but app.json still declares
+// an iOS config) and web both stay at 7 days, where purchasing already
+// works normally - Platform.OS branch here rather than a second constant
+// so there's nothing to keep in sync if this file is ever shared further.
+export const TRIAL_DURATION_DAYS = Platform.OS === 'android' ? 14 : 7;
 
 function computeTrialState(trialStartedAt: string | null): { isTrialActive: boolean; trialDaysRemaining: number } {
   if (!trialStartedAt) return { isTrialActive: false, trialDaysRemaining: 0 };
