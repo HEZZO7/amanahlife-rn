@@ -803,7 +803,15 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { padding: 16, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  // flexDirection: 'row' is the base - RN's <View> default is 'column'
+  // (unlike web's CSS row default), so without an explicit base here the
+  // English/LTR branch fell through to a column layout (greeting stacked
+  // above the date badge, both centered) while Arabic accidentally looked
+  // correct only because rtlView's flexDirection: 'row-reverse' happened to
+  // supply the missing rowness as a side effect. rtlView (applied after
+  // this style in the array, see the header View below) still overrides
+  // this to 'row-reverse' for RTL.
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   greeting: { fontSize: 13, fontWeight: '500', marginBottom: 2 },
   name: { fontSize: 20, fontWeight: '800' },
   dateBadge: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, alignItems: 'flex-end' },
