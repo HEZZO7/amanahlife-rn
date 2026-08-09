@@ -971,6 +971,33 @@ Requested: confirm end-to-end that a location/method change produces correct, di
 
 ---
 
+## 0h-21. Preview APK + Production v1.0.3/versionCode 3 build (2026-08-09)
+
+Preview APK (for on-device testing before the production cut): build `32881682-6538-4b06-9933-c45fad82014f` (profile `preview`, distribution `internal`), commit `bbefa55` - includes RTL fix, search-sheet dismiss, Add Transaction fix, Stripe removal, Calendar/lock-modal/header fixes, notification-toggle visual fix, and the 0h-20 prayer-accuracy fix. `.apk`: https://expo.dev/artifacts/eas/izZLAnaH2vxfLFBL3765_2KmjPbXxLwGV3aIZh_TGY8.apk
+
+**Production `.aab`, versionCode 2 → 3 (1.0.2 → 1.0.3).** Traced the actual last-uploaded Play Console build (not just app.json's versionCode, which had stayed literal `2` in source since it was first set): commit `5644741`, per this doc's own 2026-08-01 build record. Bumped `app.json` (`version` 1.0.2 → 1.0.3, `android.versionCode` 2 → 3, commit `a484972`) and built from there. `tsc --noEmit` (26 baseline, zero new) and `expo export --platform android` both confirmed clean immediately before this build. Build `b1d79c13-013a-446b-95f6-aa3bbe360b8f` (profile `production`, distribution `store`), commit `a484972`. `.aab`: https://expo.dev/artifacts/eas/dka3jI_ESLEOefp3owlNXLRhE-RMX_m1YsoY_onM2dM.aab. Same signing keystore as prior builds (`rZ4fXyj21G`). **`eas submit` was not run** - Huzaifa uploads to Play Console himself.
+
+**What shipped since versionCode 2, as Play Store release notes:**
+- Prayer times now calculate fully offline - instant, accurate, no network dependency
+- Fixed prayer reminders occasionally firing more than once for the same prayer
+- Prayer reminders now update correctly and immediately when you change your location or calculation method
+- Read the full Quran offline with the Saheeh International translation
+- New: track excused prayer/fasting periods (illness, travel, etc.) with built-in make-up (qada) counters
+- Corrected and expanded Adhkar (morning/evening remembrance) content
+- Suhoor/Iftar reminders now only appear during the actual Ramadan month
+- Redesigned home screen - features organized into clear categories instead of one long list
+- Receipt Scanner now works with real AI-powered scanning
+- AI Search now returns real, AI-powered results
+- Family Dashboard - invite family members and track shared goals together
+- Fixed Arabic (RTL) text and icon alignment on several screens
+- Fixed the Finance "Add Transaction" button silently failing to save
+- Removed Stripe - payments now run entirely through Lemon Squeezy
+- Various smaller fixes: search sheet not closing properly, dark/light theme toggle, calendar day selection, and more
+
+Note: password-reset (commit `612d1f5`) is not listed above - it already shipped in the prior versionCode 2 release (1.0.2), confirmed via this doc's 2026-08-01 record, so it isn't new in this one.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
