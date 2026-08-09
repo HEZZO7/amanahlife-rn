@@ -998,6 +998,25 @@ Note: password-reset (commit `612d1f5`) is not listed above - it already shipped
 
 ---
 
+## 0h-22. Web "Manage Subscription" broken - root cause found, NOT a Step 4 (Stripe removal) regression (2026-08-09)
+
+Reported symptom: web's "Manage Subscription" button always shows "Subscription management is not available yet. Please contact support." for real subscribers, including the AMANAH30 test purchase (order #3845411, referenced in 0h-15).
+
+**Investigated before fixing, per instruction:**
+1. **Traced `handleManageSubscription`** (`Subscription.tsx`) - it does NOT call the deleted `stripe_portal` function and never has since 2026-05-23. It POSTs `action: 'manage'` to `lemonsqueezy_checkout`, which is a real, deployed, live handler. Commit `f68da68` (0h-15, the actual Stripe removal, 2026-08-08) never touched this file or this handler - confirmed via `git show f68da68 -- .../lemonsqueezy_checkout/index.ts` being empty. **So this is not the regression it looked like.**
+2. **Traced the real break to commit `72595b1`** ("Payment provider updated", 2026-05-23) - 2.5 months before the Stripe removal. That commit switched the button from Stripe's portal (`stripe_portal`, keyed by the stored `stripe_customer_id` - an ID lookup) to Lemon Squeezy's `action:'manage'` handler, which does `filter[email]=${user.email}` against Lemon Squeezy's `/v1/customers` API - an EMAIL lookup. The same commit also deleted the provider-branching UI that used to show non-Stripe subscribers a static "check your email for a management link" message instead of a button.
+3. **Root cause: nothing pins the Lemon Squeezy checkout's email to the signed-in app account.** `lemonsqueezy_checkout/index.ts`'s checkout-creation payload (`checkout_data`) never set an `email` field, so Lemon Squeezy's hosted checkout page left its email field open for the customer to fill in freely at time of purchase. Any mismatch between that and the signed-in Supabase account's email makes the "manage" handler's email search return zero customers, which surfaces as the exact "not available yet" message reported.
+4. **Why this wasn't caught until now**: while Stripe was still active (until 0h-15), it was the dominant provider and its portal button used a robust ID-based lookup with no email dependency - this Lemon-Squeezy-only email-search path existed in parallel but was rarely exercised. The Aug 8 Stripe removal made Lemon Squeezy the only path, and the AMANAH30 test purchase - made specifically to validate the post-removal state - was the first real exercise of this pre-existing, 2.5-month-old bug.
+5. **Could not directly confirm the AMANAH30 account's exact email mismatch** - `execute_sql` queries against `app_11941c8fec_subscriptions`/`auth.users` were blocked by this session's auto-mode permission classifier. Not needed for the fix, though: `lemonsqueezy_customer_id` is already reliably populated on `app_11941c8fec_subscriptions` by the webhook (`lemonsqueezy_webhook/index.ts:248`) for every real subscriber, keyed by `user_id` - an ID lookup using that value is correct regardless of what the exact email-mismatch cause turns out to be for any given account.
+
+**Fix** (`lemonsqueezy_checkout/index.ts`, web repo only): the `manage` handler now reads `lemonsqueezy_customer_id` from `app_11941c8fec_subscriptions` (by `user_id`) and calls `GET /v1/customers/{id}` directly, replacing the `filter[email]=` search entirely - mirrors how the old Stripe portal worked and removes the email-matching dependency altogether. Also added `checkout_data.email: user.email` to the checkout-creation payload (defense in depth - keeps Lemon Squeezy's own customer records consistent with the app account going forward, though the manage fix no longer depends on it). Failure branches inside `manage` now log which specific step failed (`subscription_lookup_failed` / `manage_no_customer_id` / `customer_fetch_failed` / `no_portal_url_on_customer`) instead of collapsing into one indistinguishable `no_subscription` log line, which was itself part of why this took investigation to pin down.
+
+**Verification**: web `tsc --noEmit` - 0 errors (edge function is outside `tsconfig.app.json`'s `include: ["src"]` scope, confirmed). `npm run build` - clean. Deployed to Supabase as `app_11941c8fec_lemonsqueezy_checkout` version 23, `status: ACTIVE`. Not verified end-to-end on a real subscriber's browser session (no way to drive a signed-in web session in this environment) - the AMANAH30 account or another real subscriber clicking "Manage Subscription" again is the real confirmation still needed.
+
+Web commit `97505db`.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
