@@ -343,10 +343,15 @@ export default function Settings() {
           </View>
         </Card>
 
-        {/* Regional */}
+        {/* Currency & Display - this is a currency/number-format picker only.
+            It used to be labelled "Country", which reads as if it also
+            controls prayer-time location - it never has. Prayer location is
+            its own independent setting on the Prayer Times screen (manual
+            city or GPS). Relabelled + a one-line note added to make that
+            clear here instead, rather than silently leaving the ambiguity. */}
         <Card style={{ marginBottom: 14 }}>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'الإقليمية' : 'Regional'}</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginBottom: 6, ...rtlText }}>{isAr ? 'الدولة' : 'Country'}</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? 'العملة والعرض' : 'Currency & Display'}</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginBottom: 6, ...rtlText }}>{isAr ? 'منطقة العملة' : 'Currency Region'}</Text>
           <TouchableOpacity style={[styles.countryBtn, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]} onPress={() => setShowCountryPicker(true)}>
             <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI }}>{country?.flag} {isAr ? country?.nameAr : country?.nameEn}</Text>
             <Text style={{ color: colors.textSecondary }}>▾</Text>
@@ -355,6 +360,11 @@ export default function Settings() {
             <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI }}>{isAr ? 'العملة' : 'Currency'}</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: FONT_UI }}>{settings.currency} {country?.symbol || ''}</Text>
           </View>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginTop: 10, ...rtlText }}>
+            {isAr
+              ? 'يحدد هذا العملة وتنسيق الأرقام فقط، ولا يغيّر مواقيت الصلاة. لضبط موقع الصلاة، استخدم إعدادات "مواقيت الصلاة".'
+              : 'This sets currency & number formatting only - it does not change prayer times. Set your prayer location from Prayer Times settings.'}
+          </Text>
         </Card>
 
         {/* Islamic toggles */}
