@@ -221,7 +221,7 @@ export async function scheduleFastingReminders(enabled: boolean, isAr: boolean, 
     return;
   }
 
-  const upcoming = await computeUpcomingTimings(FASTING_DAYS_AHEAD, userId);
+  const { timings: upcoming } = await computeUpcomingTimings(FASTING_DAYS_AHEAD, userId);
 
   const now = new Date();
   for (const [dateKey, timings] of upcoming) {

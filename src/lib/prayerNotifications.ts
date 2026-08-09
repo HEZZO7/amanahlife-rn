@@ -31,11 +31,25 @@
  * silently not receiving them.
  * Re-run schedulePrayerNotifications() whenever settings change or the app
  * opens.
+ *
+ * Phase P6 (accuracy audit, 2026-08-09): schedulePrayerNotifications() takes
+ * an optional pre-resolved `overrideLocation`. Without it, this always
+ * re-reads location/method from storage via resolveActiveLocation() -
+ * correct for the app-launch and Settings reminder-toggle call sites, which
+ * have no fresher in-memory value. But the Prayer Times screen's own
+ * reschedule (right after the user changes city/method) used to rely on
+ * writing the new value to storage and then immediately re-reading it back
+ * un-awaited - structurally fragile, and it also meant the on-screen
+ * display and the scheduled notifications each independently resolved GPS,
+ * so a moving user could get two different fixes for the same reschedule.
+ * That call site now resolves location once and passes it straight through
+ * via overrideLocation, guaranteeing the displayed and scheduled times are
+ * always computed from the exact same coordinates.
  */
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { calculatePrayerTimes } from './prayerCalculation';
-import { resolveActiveLocation } from './prayerLocation';
+import { resolveActiveLocation, ResolvedLocation } from './prayerLocation';
 import { toast } from './toast';
 
 export type PrayerName = 'Fajr' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha';
@@ -86,8 +100,12 @@ const DAYS_AHEAD = 7;
  * *some* coordinates. Exported so other reminder categories (fasting
  * Suhoor/Iftar) reuse the same computation instead of duplicating it.
  */
-export async function computeUpcomingTimings(days: number, userId: string | null): Promise<Map<string, Record<PrayerName, string>>> {
-  const { latitude, longitude, method } = await resolveActiveLocation(userId);
+export async function computeUpcomingTimings(
+  days: number,
+  userId: string | null,
+  overrideLocation?: ResolvedLocation
+): Promise<{ timings: Map<string, Record<PrayerName, string>>; source: ResolvedLocation['source'] }> {
+  const { latitude, longitude, method, source } = overrideLocation ?? await resolveActiveLocation(userId);
   const result = new Map<string, Record<PrayerName, string>>();
   const today = new Date();
   for (let i = 0; i < days; i++) {
@@ -102,7 +120,7 @@ export async function computeUpcomingTimings(days: number, userId: string | null
       Isha: timings.Isha,
     });
   }
-  return result;
+  return { timings: result, source };
 }
 
 /** Cancel any previously scheduled prayer reminders (identified by their content data tag). */
@@ -135,11 +153,12 @@ let inFlight: Promise<boolean> = Promise.resolve(true);
 export function schedulePrayerNotifications(
   settings: PrayerReminderSettings,
   isAr: boolean,
-  userId: string | null
+  userId: string | null,
+  overrideLocation?: ResolvedLocation
 ): Promise<boolean> {
   inFlight = inFlight.then(
-    () => scheduleNow(settings, isAr, userId),
-    () => scheduleNow(settings, isAr, userId)
+    () => scheduleNow(settings, isAr, userId, overrideLocation),
+    () => scheduleNow(settings, isAr, userId, overrideLocation)
   );
   return inFlight;
 }
@@ -147,7 +166,8 @@ export function schedulePrayerNotifications(
 async function scheduleNow(
   settings: PrayerReminderSettings,
   isAr: boolean,
-  userId: string | null
+  userId: string | null,
+  overrideLocation?: ResolvedLocation
 ): Promise<boolean> {
   await cancelAllPrayerNotifications();
   if (!settings.enabled) return true;
@@ -160,7 +180,22 @@ async function scheduleNow(
     return false;
   }
 
-  const upcoming = await computeUpcomingTimings(DAYS_AHEAD, userId);
+  const { timings: upcoming, source } = await computeUpcomingTimings(DAYS_AHEAD, userId, overrideLocation);
+
+  // Surface the same Mecca-fallback warning the Prayer Times screen shows
+  // on-screen - but only when THIS call resolved the location itself (no
+  // fresher value was handed in). The one caller that does hand in a fresh
+  // value (Prayer Times screen, right after a location/method change)
+  // already toasts this exact case via loadByLocation, so warning again
+  // here would just double up the same message. The other two callers
+  // (app-launch reschedule, Settings reminder toggle) had NO warning at all
+  // before this - a GPS failure there silently scheduled notifications
+  // against Mecca's times with zero indication anything was wrong.
+  if (!overrideLocation && source === 'default') {
+    toast.info(isAr
+      ? 'يتم استخدام موقع مكة المكرمة الافتراضي لتذكيرات الصلاة لعدم توفر بيانات الموقع. فعّل خدمة الموقع أو اختر مدينتك من إعدادات مواقيت الصلاة.'
+      : 'Prayer reminders are using the default Mecca location because no location data is available. Enable location services or set your city in Prayer Times settings.');
+  }
 
   const now = new Date();
   const prayerLabels: Record<PrayerName, { en: string; ar: string }> = {

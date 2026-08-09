@@ -29,6 +29,7 @@ import {
 import { CURATED_CITIES, CityOption } from '../../src/data/curatedCities';
 import ExcusedPeriodsModal from '../../src/components/ExcusedPeriodsModal';
 import { getReminderSettings, schedulePrayerNotifications } from '../../src/lib/prayerNotifications';
+import { ResolvedLocation } from '../../src/lib/prayerLocation';
 
 const MECCA_COORDS = { latitude: 21.4225, longitude: 39.8262 };
 const GPS_TIMEOUT_MS = 10000;
@@ -115,10 +116,15 @@ export default function PrayerTimes() {
     }
   }, [updateNextPrayer]);
 
-  const loadByLocation = useCallback(async (method: CalculationMethodKey, mode: 'auto' | 'manual', city: CityOption | null) => {
+  // Returns the resolved coordinates it used, so callers that also need to
+  // reschedule notifications can pass the EXACT same location straight
+  // through (see applyLocationMode/applyCalcMethod below) instead of
+  // triggering a second, independent GPS resolution that could return a
+  // different fix if the device has moved between the two calls.
+  const loadByLocation = useCallback(async (method: CalculationMethodKey, mode: 'auto' | 'manual', city: CityOption | null): Promise<ResolvedLocation> => {
     if (mode === 'manual' && city) {
       computePrayerTimes(city.lat, city.lon, language === 'ar' ? city.nameAr : city.name, method);
-      return;
+      return { latitude: city.lat, longitude: city.lon, method, source: 'manual' };
     }
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -127,10 +133,11 @@ export default function PrayerTimes() {
         toast.info(language === 'ar'
           ? 'يتم استخدام موقع مكة المكرمة. فعّل الموقع لنتائج دقيقة، أو اختر مدينتك يدوياً.'
           : 'Using default location (Mecca). Enable location for accurate times, or set your city manually.');
-        return;
+        return { latitude: MECCA_COORDS.latitude, longitude: MECCA_COORDS.longitude, method, source: 'default' };
       }
       const pos = await withTimeout(Location.getCurrentPositionAsync({}), GPS_TIMEOUT_MS);
       computePrayerTimes(pos.coords.latitude, pos.coords.longitude, language === 'ar' ? 'موقعك الحالي' : 'Your location', method);
+      return { latitude: pos.coords.latitude, longitude: pos.coords.longitude, method, source: 'gps' };
     } catch {
       // GPS hung or failed (no timeout existed here before - a stuck GPS
       // fix used to hang this screen indefinitely). Try the last-known fix
@@ -139,10 +146,11 @@ export default function PrayerTimes() {
         const last = await Location.getLastKnownPositionAsync();
         if (last) {
           computePrayerTimes(last.coords.latitude, last.coords.longitude, language === 'ar' ? 'آخر موقع معروف' : 'Last known location', method);
-          return;
+          return { latitude: last.coords.latitude, longitude: last.coords.longitude, method, source: 'last-known' };
         }
       } catch { /* fall through to Mecca */ }
       computePrayerTimes(MECCA_COORDS.latitude, MECCA_COORDS.longitude, language === 'ar' ? 'مكة المكرمة (افتراضي)' : 'Mecca (default)', method);
+      return { latitude: MECCA_COORDS.latitude, longitude: MECCA_COORDS.longitude, method, source: 'default' };
     }
   }, [computePrayerTimes, language]);
 
@@ -173,29 +181,32 @@ export default function PrayerTimes() {
   // the next app launch or a reminder-toggle touch in Settings happened to
   // trigger a reschedule. No-ops (via schedulePrayerNotifications' own
   // check) if reminders aren't enabled.
-  const rescheduleNotifications = async () => {
+  // overrideLocation, when given, is passed straight through to
+  // schedulePrayerNotifications instead of letting it re-read location/
+  // method from storage itself - see prayerNotifications.ts's Phase P6 note.
+  const rescheduleNotifications = async (overrideLocation?: ResolvedLocation) => {
     const reminderSettings = await getReminderSettings();
     if (reminderSettings.enabled) {
-      await schedulePrayerNotifications(reminderSettings, language === 'ar', userId);
+      await schedulePrayerNotifications(reminderSettings, language === 'ar', userId, overrideLocation);
     }
   };
 
-  const applyLocationMode = (mode: 'auto' | 'manual', city: CityOption | null) => {
+  const applyLocationMode = async (mode: 'auto' | 'manual', city: CityOption | null) => {
     setLocationMode(mode);
     setManualCity(city);
-    setUserItem(LOCATION_MODE_KEY, userId, mode);
-    if (city) setUserItem(MANUAL_CITY_KEY, userId, JSON.stringify(city));
+    await setUserItem(LOCATION_MODE_KEY, userId, mode);
+    if (city) await setUserItem(MANUAL_CITY_KEY, userId, JSON.stringify(city));
     setLoading(true);
-    loadByLocation(calcMethod, mode, city);
-    rescheduleNotifications();
+    const resolved = await loadByLocation(calcMethod, mode, city);
+    rescheduleNotifications(resolved);
   };
 
-  const applyCalcMethod = (method: CalculationMethodKey) => {
+  const applyCalcMethod = async (method: CalculationMethodKey) => {
     setCalcMethod(method);
-    setUserItem(CALC_METHOD_KEY, userId, method);
+    await setUserItem(CALC_METHOD_KEY, userId, method);
     setLoading(true);
-    loadByLocation(method, locationMode, manualCity);
-    rescheduleNotifications();
+    const resolved = await loadByLocation(method, locationMode, manualCity);
+    rescheduleNotifications(resolved);
   };
 
   // Update countdown every minute
