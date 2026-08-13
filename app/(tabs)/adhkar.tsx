@@ -2,6 +2,16 @@
  * Adhkar — migrated from app/frontend/src/pages/Adhkar.tsx
  * Morning/Evening/After-Prayer/Sleep adhkar with per-item tap counters and daily
  * progress (localStorage('adhkar_progress_<date>') → AsyncStorage). Bilingual.
+ *
+ * SHARED CONTENT — mirrored by hand across two repos, not a single source
+ * (see PROJECT.md 0h-24 for why this note exists: web's copy silently
+ * drifted to a shorter, unaudited 24-item version for months before that
+ * was caught). Web's copy: src/pages/Adhkar.tsx in HEZZO7/AmanahLifeapp.
+ * Last synced: web commit 640cef2 (2026-08-13) ported this file's content
+ * verbatim as of RN commit 50709b6 (Priority 5 IslamWeb cross-reference).
+ * If you edit ADHKAR_DATA below, mirror the same change to web's file in
+ * the same session/PR, and update the "last synced" commit hashes in both
+ * files' header comments.
  */
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Vibration } from 'react-native';
