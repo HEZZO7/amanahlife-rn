@@ -1039,6 +1039,24 @@ RN repo: no changes (web-only build, Android already has real parity for these 4
 
 ---
 
+## 0h-24. Web Adhkar: ported RN's verified 53-item dataset + fixed RTL alignment bug (2026-08-13)
+
+**Investigated twice before touching anything, per instruction - first pass corrected an assumption.** Initial report (root cause + counts) was interrupted by Huzaifa with a correction: he stated he had personally fed the fuller adhkar sources into WEB, not RN, and that web should be the source of truth. Re-investigated from scratch on that premise - exhaustive search of the web repo (every adhkar-related file, a check for a Blog-style content/CMS file that might hold fuller content, full git history of `Adhkar.tsx` on every commit, and the one other existing branch) found **no trace anywhere** of the fuller web content he described (his numbers - "54 items/3 categories/no Sleep" for web, "347 items" for RN - matched neither file's actual content on any commit). Reported this plainly rather than guessing; Huzaifa then confirmed the original direction was correct: RN's content (Stage 4 audit, commit `7dcf0bd`, plus Priority 5 cross-reference, commit `50709b6`) is the verified one, web's 24-item array had no audit trail.
+
+**Ported, not re-derived**: web's `ADHKAR_DATA` (`src/pages/Adhkar.tsx`) replaced 24 items -> 53 items across the same 4 categories (Morning 8->22, After Prayer unchanged 5, Evening 6->21, Sleep unchanged 5 - Sleep already existed on web, just as shallow content, not literally missing as first assumed). Verified live in the running app: Morning's on-screen "X/347 Completed" counter matches exactly the figure Huzaifa originally cited as RN's item count - confirming that number was always the repetition total shown for one category, not an item count, which is likely the source of the whole original mix-up.
+
+**RTL bug** (same file): transliteration/translation lines had no alignment override, so they inherited the page's `dir="rtl"` in Arabic mode and right-aligned - wrong for Latin-script content. Fixed with `text-left` (a physical value, doesn't flip with `dir`) + explicit `dir="ltr"` on both lines, leaving only the Arabic line right-aligned. No existing "pin Latin content left" pattern existed anywhere in this repo to reuse - confirmed by search, and the identical unfixed pattern was found (not fixed, out of scope) in web's `DuasCollection.tsx` and in RN's own `adhkar.tsx`.
+
+**Verified live via computed styles** (not just visually) in both languages: Arabic text `align: right` (unchanged), transliteration/translation `align: left, dir: ltr` in both English and Arabic mode. Also worth noting: the local web repo checkout (a temp-directory clone) was found completely wiped mid-task - `.git` itself was empty, apparently cleaned up by the OS during the multi-day gap in this session. Re-cloned from GitHub; confirmed HEAD matched the last pushed commit, so nothing was lost - everything from this session had already been pushed per the standing "push immediately" instruction.
+
+**Verification**: web `tsc --noEmit` - 0 errors. `npm run build` - clean. Two separate commits per Huzaifa's instruction: content port (`640cef2`) and RTL fix (`ad4ff51`).
+
+**Point 4 (shared data source across platforms) - reported, not implemented, per instruction.** Two options: (a) extract adhkar content into a shared JSON/data file both a Node build step (web) and a script (RN, since it's a bundled TS import) could consume from one canonical source, checked into one repo and synced/copied at build time to the other - closest to eliminating divergence entirely, but is new build tooling neither repo has today (no shared-package infra exists between these two repos anywhere in this session's work). (b) Keep two files but add a lightweight CI/lint check (or just a documented convention) that any adhkar content change must be manually mirrored to the other repo in the same PR/session - much cheaper, no new tooling, but relies on discipline rather than structure, which is exactly what let this divergence happen unnoticed for months. Leaning toward (b) given how rarely this content actually changes (a handful of times all session) versus the cost of (a)'s tooling, but this is Huzaifa's call to make, not decided here.
+
+RN commit: none (content already lived there, verified, unchanged) - this entry documents the web-side port.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
