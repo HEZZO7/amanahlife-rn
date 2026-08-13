@@ -1055,6 +1055,8 @@ RN repo: no changes (web-only build, Android already has real parity for these 4
 
 RN commit: none (content already lived there, verified, unchanged) - this entry documents the web-side port.
 
+**Follow-up decision (2026-08-13): option (b) chosen** for the "prevent this recurring" question above - a documented mirror convention, not new shared-data tooling, plus one concrete addition to close the actual gap that let it drift unnoticed: a header comment at the top of both `ADHKAR_DATA` files stating the other platform's file path and the last-synced commit hash on each side, so an edit to one file is now visibly incomplete without updating the other's header too. Added to `app/(tabs)/adhkar.tsx` (this repo, top of file) and `src/pages/Adhkar.tsx` (web repo, above the imports). RN commit `71050c3`, web commit `e8035b8`.
+
 ---
 
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
