@@ -1059,6 +1059,30 @@ RN commit: none (content already lived there, verified, unchanged) - this entry 
 
 ---
 
+## 0h-25. Full web/Android parity sweep - audit only, no fixes yet (2026-08-13)
+
+Fresh, direct comparison of current source on both platforms (not prior stale audits, per instruction). Two research passes: (1) full 26-item nav feature inventory, (2) deep-dive on recent RTL fixes, push-notification-scheduler trigger-rule parity, and billing/subscription/discount parity.
+
+**Feature inventory (26 nav-listed features, both platforms): no true single-platform gaps, no stub-vs-real asymmetries found.** Every feature in `dashboardNav.ts` exists and is real on both sides - Prayer Times, Quran, Duas, Dhikr, Adhkar, Fasting, Qibla, Calendar, Ramadan Planner, Finance, Zakat, Family Budget, Bill Reminders, Financial Dashboard, Halal Investment, Savings Challenges, Receipt Scanner, Family Dashboard, Tasks, Daily Routine, Planner, Goals, Wellness, AI Coach, Life Score, Analytics. Content-driven features spot-checked for count divergence (the exact failure mode that caused 0h-24's Adhkar gap): Duas (12/12), Dhikr (7/7), Zakat nisab constants (identical), Adhkar (53/53, confirmed via `grep -c` on both files post-0h-24 fix) - all in sync. Two "not implemented" strings found in RN (`family-dashboard.tsx`, `receipt-scanner.tsx`) are historical comments describing an already-replaced prior stub, not live gaps.
+
+**Gap table** (only genuine mismatches/risks; everything else above is a confirmed match):
+
+| # | Area | Web | RN/Android | Status | Severity |
+|---|---|---|---|---|---|
+| 1 | Adhkar RTL (transliteration/translation alignment) | Fixed (0h-24) | **Unfixed** - `app/(tabs)/adhkar.tsx:201-202`, identical `textAlign: isRTL ? 'right' : 'left'` bug | Mismatch | Low (cosmetic) |
+| 2 | Duas RTL (transliteration/translation/reference/hint alignment) | **Also unfixed** - same pattern in web's `DuasCollection.tsx`, flagged but out of scope in the 0h-24 commit message | **Unfixed** - `app/(tabs)/duas.tsx:57,60-61,66` | Both unfixed, no mirror needed either direction | Low (cosmetic) |
+| 3 | Push scheduler trigger rules (bill 9am+day-before, goal 10am+3-day, fasting Suhoor/Iftar+Ramadan-gate, savings event-triggered) | Ported to mirror RN (0h-23) | Source of truth | **Match** - confirmed rule-by-rule against current code on both sides | - |
+| 4 | Push scheduler timezone default | **Real bug, web-only.** `push_notify`'s `subscribe` action does seed a default `notification_preferences` row (all reminder types enabled) - but that upsert never sets `timezone`, so it lands on the column default (`'UTC'`) unless the user *separately* visits Prayer Times (the only place that syncs the real browser timezone). Any user who enables notifications via Settings without ever touching Prayer Times gets bill/goal reminders firing at the wrong wall-clock hour indefinitely. | N/A - RN always uses the device's real local clock | Web-only bug, introduced in 0h-23 | **Medium** - silently wrong, not silently absent |
+| 5 | Manage Subscription portal fix (0h-22) | Fixed | Uses the identical shared `lemonsqueezy_checkout` edge function (`subscription.tsx:177-193`, `handleManage`) | **Match** - the web-side fix already covers RN, no RN change needed | - |
+| 6 | AMANAH30 discount code | Wired into checkout (commit `cfb4d27`) | **Not wired** - zero references to `AMANAH30`/`discountCode` anywhere in `subscription.tsx`, despite RN using the exact same Lemon Squeezy checkout endpoint that already supports it server-side | Mismatch, portable gap | Medium (promo/revenue feature gap) |
+| 7 | Google Play Billing | N/A (web is Lemon Squeezy by design) | **Still not implemented** - RN uses the same Lemon Squeezy hosted-checkout-via-in-app-browser as web (`subscription.tsx:5,23-46`), confirmed against current code, not stale memory. RN's own `PROJECT.md` already lists this as a hard blocker before Play Store production release. | Known blocker, reconfirmed still true | **Critical** (pre-existing, blocks production Play release - not new) |
+| 8 | Premium-gate modal close-X vs lock icon (RTL) | Fixed (commit `875cc5e`) | No equivalent bug - RN's `LockedFeatureModal.tsx` has no close-X (tap-outside/plan-button dismiss only) | N/A, no mirror needed | - |
+| 9 | Dashboard FeatureGrid / header RTL-adjacent layout bugs | N/A - web's CSS grid/row defaults don't have this failure mode | Fixed (RN-specific React Native box-model bugs, `flexDirection`/`alignItems` defaults) | N/A, platform-specific, no mirror needed | - |
+
+**Not implemented - awaiting review.** Per instruction, this is audit-only; fixes for #1, #2, #4, #6 are proposed but withheld until reviewed. #7 is pre-existing and separately tracked (task list item, hard blocker).
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
