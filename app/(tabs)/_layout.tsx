@@ -4,7 +4,6 @@ import { Slot, usePathname, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import BottomNav from '../../src/components/navigation/BottomNav';
-import { Toaster } from '../../src/lib/toast';
 import GlobalHeader from '../../src/components/GlobalHeader';
 
 export default function TabsLayout() {
@@ -65,7 +64,6 @@ export default function TabsLayout() {
       <View style={{ flex: 1 }}>
         <Slot />
         <BottomNav showSearchModal={showSearchModal} setShowSearchModal={setShowSearchModal} />
-        <Toaster />
       </View>
     </SafeAreaView>
   );

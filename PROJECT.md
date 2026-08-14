@@ -1083,6 +1083,23 @@ Fresh, direct comparison of current source on both platforms (not prior stale au
 
 ---
 
+## 0h-26. Android Google Sign-In "silent failure" - root cause found, two independent bugs (2026-08-14)
+
+Reported: on Android, tapping "Sign in with Google" shows the account picker, an account is selected, then the app just returns to the login screen with no error. Web's Google Sign-In (browser-redirect OAuth) is unaffected. Investigated per instruction before any fix; both bugs confirmed pre-existing (via full git history on every relevant file), not a regression from anything touched this session (Stripe removal, prayer-notification fix, versionCode 1.0.3/3 bump).
+
+**Bug 1 - Android has no registered Google OAuth client (likely cause of the actual sign-in failure, not yet fixed).** `google-services.json`'s `oauth_client` array is completely empty (`"oauth_client": []`), despite the package name (`com.linkoranet.amanahlife`) matching `app.json` exactly, and has been empty since the initial commit (`948aad9`) - confirmed via `git log --follow` showing zero subsequent commits to this file. `src/lib/googleAuth.ts`'s own header comment documents the expected setup: the Android-type OAuth client must be created in Google Cloud Console from package+SHA-1(keystore), matched automatically with no client ID to configure client-side - an empty array means no such client has ever been registered (or `google-services.json` was never re-downloaded after one was). Web is unaffected because it authenticates through the separately-configured **web** OAuth client (`GOOGLE_WEB_CLIENT_ID`) via browser redirect - structurally unrelated to Android's native-SDK flow (`GoogleSignin.signIn()` in `AuthContext.tsx:72`, not deep-link/intent-filter based - confirmed via `app.json`'s plugin config having no inline object, i.e. no custom URI scheme handling). This matches the reported symptom exactly: the picker is shown by Google Play Services itself (doesn't require the app's own OAuth client), but the subsequent ID-token exchange (which does) fails. **Could not directly confirm against Google Cloud Console (no tool access) or the live EAS keystore SHA-1** - `eas credentials` is a destructive-capable interactive menu (keystore remove/regenerate options) with no non-interactive/read-only flag, so it wasn't blind-navigated. Walkthrough for the user to check/fix this in Console given directly in chat; not yet applied here since it requires Console access this environment doesn't have.
+
+**Bug 2 - errors on the login screen were never visible on Android (root cause of "silent"), fixed this commit.** `<Toaster />` (RN's toast renderer, `src/lib/toast.tsx`) was mounted only in `app/(tabs)/_layout.tsx:68` - the post-login tab shell. `app/(auth)/_layout.tsx` (wrapping `login.tsx`/`signup.tsx`/`landing.tsx`/`reset-password.tsx`) had no `Toaster` of its own, nor did the root `app/_layout.tsx`. So `toast.error(error.message)` calls from `login.tsx` on a failed Google sign-in (line 70) - or a failed email/password sign-in (line 62, same gap) - emitted into an empty listener set and rendered nothing. Confirmed pre-existing since the `(auth)` layout's earliest commit, untouched this session. Fixed by moving `<Toaster />` from `(tabs)/_layout.tsx` into the root `app/_layout.tsx` (inside a new wrapping `<View style={{flex:1}}>` alongside the `<Stack>`, since `Toaster`'s own internal styling is `position: 'absolute'` + `pointerEvents="none"`), so it now overlays every screen including `(auth)`. Typecheck: 26 errors (unchanged baseline). `expo export --platform android`: clean.
+
+**Combined, these two bugs fully explain the reported behavior**: the native token exchange fails (Bug 1), the resulting error is correctly returned up through `AuthContext.signInWithGoogle()` and `login.tsx`'s `handleGoogle()`, but was never visibly rendered (Bug 2) - so the user only ever saw "back to login, nothing happened."
+
+Device-verification checklist for the user once Bug 1 is also resolved and a fresh build is installed:
+1. Tap "Sign in with Google," select an account.
+2. If it still fails: a red toast should now appear (Bug 2's fix) with the actual error message - report that exact text, it will pinpoint whatever's left.
+3. If it succeeds: should land on the dashboard as the signed-in account, same as web.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```

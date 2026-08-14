@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { getReminderSettings, schedulePrayerNotifications } from '../src/lib/prayerNotifications';
@@ -28,6 +29,7 @@ import { TimeFormatProvider } from '../src/contexts/TimeFormatContext';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { SubscriptionProvider } from '../src/contexts/SubscriptionContext';
 import { NavBarHeightProvider } from '../src/contexts/NavBarHeightContext';
+import { Toaster } from '../src/lib/toast';
 
 const queryClient = new QueryClient();
 
@@ -49,10 +51,13 @@ function AppShell() {
   }, [language, userId]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(auth)" />
-    </Stack>
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+      </Stack>
+      <Toaster />
+    </View>
   );
 }
 
