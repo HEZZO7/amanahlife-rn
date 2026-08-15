@@ -61,25 +61,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    console.log('[GoogleSignIn] start, isGoogleConfigured=', isGoogleConfigured());
     if (!isGoogleConfigured()) {
+      console.log('[GoogleSignIn] not configured, aborting');
       return { error: new Error('Google Sign-In is not configured yet.') };
     }
     try {
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      console.log('[GoogleSignIn] calling hasPlayServices...');
+      const hasPlay = await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      console.log('[GoogleSignIn] hasPlayServices resolved:', hasPlay);
+
       // Always sign out of Google first so the account picker always appears
       // and repeated sign-ins don't silently fail with a stale session.
-      try { await GoogleSignin.signOut(); } catch {}
+      console.log('[GoogleSignIn] calling pre-signOut...');
+      try {
+        await GoogleSignin.signOut();
+        console.log('[GoogleSignIn] pre-signOut resolved');
+      } catch (signOutErr) {
+        console.log('[GoogleSignIn] pre-signOut threw (ignored):', signOutErr);
+      }
+
+      console.log('[GoogleSignIn] calling signIn()...');
       const signInResult = await GoogleSignin.signIn();
+      console.log('[GoogleSignIn] signIn() resolved, result=', JSON.stringify(signInResult));
+
       const idToken = signInResult.data?.idToken;
-      if (!idToken) return { error: new Error('No ID token from Google') };
+      console.log('[GoogleSignIn] type=', signInResult.type, 'idToken present?', !!idToken);
+      if (!idToken) {
+        console.log('[GoogleSignIn] no idToken, returning error');
+        return { error: new Error('No ID token from Google') };
+      }
+
+      console.log('[GoogleSignIn] calling supabase signInWithIdToken...');
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
+      console.log('[GoogleSignIn] signInWithIdToken resolved, error=', error ? error.message : null);
       return { error: error as Error | null };
     } catch (e: any) {
-      if (e.code === statusCodes.SIGN_IN_CANCELLED) return { error: null };
-      if (e.code === statusCodes.IN_PROGRESS) return { error: null };
+      console.log('[GoogleSignIn] CAUGHT ERROR code=', e?.code, 'message=', e?.message, 'name=', e?.name);
+      if (e.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log('[GoogleSignIn] treated as SIGN_IN_CANCELLED, swallowing');
+        return { error: null };
+      }
+      if (e.code === statusCodes.IN_PROGRESS) {
+        console.log('[GoogleSignIn] treated as IN_PROGRESS, swallowing');
+        return { error: null };
+      }
       return { error: e as Error };
     }
   };

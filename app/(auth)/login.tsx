@@ -64,11 +64,17 @@ export default function LoginScreen() {
   };
 
   const handleGoogle = async () => {
+    console.log('[GoogleSignIn][UI] handleGoogle pressed');
     setGoogleLoading(true);
     const { error } = await signInWithGoogle();
+    console.log('[GoogleSignIn][UI] signInWithGoogle() returned, error=', error ? error.message : null);
     setGoogleLoading(false);
-    if (error) toast.error(error.message);
-    // Auth state listener in AuthContext handles redirect on success
+    if (error) {
+      console.log('[GoogleSignIn][UI] showing error toast');
+      toast.error(error.message);
+      return;
+    }
+    console.log('[GoogleSignIn][UI] no error - this is the last line handleGoogle runs on success; nothing here navigates to (tabs)');
   };
 
   const handleForgotPassword = async () => {
