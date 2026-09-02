@@ -1119,6 +1119,34 @@ Two candidate explanations remain open, neither confirmed nor ruled out - **reco
 
 ---
 
+## 0h-27. Web `/blog` "too many redirects" for unauthenticated/external requests - root cause found and fixed (2026-09-02)
+
+Reported: `app.amanahlife.com/blog` infinite-redirect-looped when hit from a browser with no session or an external fetch tool, but worked fine when signed in. User's own hypothesis was an auth guard wrongly applied to `/blog`. Investigated per instruction, in order, before any fix - **the auth-guard hypothesis was wrong**; this was a pure infra bug.
+
+**Step 1 - auth guard audit (web repo, `app/frontend`).** No `ProtectedRoute`/`RequireAuth` wrapper exists anywhere (`App.tsx`'s `AppRoutes` mounts every route flat, no wrapping component). Each page implements its own guard inline (same per-screen pattern as RN), e.g. `if (!authLoading && !user) navigate('/login')` in `PrayerTimes.tsx:91`, `QuranReader.tsx:128`, `DhikrCounter.tsx:38`, etc. Read `BlogIndexPage.tsx` and `BlogPostPage.tsx` in full: neither imports `useAuth` nor calls `navigate` at all. `Onboarding.tsx` (mounted globally alongside every route) already lists `/blog` in its own `PUBLIC_PATHS` and only ever shows/hides a modal via local state - it never navigates. **Conclusion: `/blog` was never misclassified as protected. No auth-guard code path touches it.**
+
+**Step 2/3 - server-level config vs React Router.** `nginx.conf`'s only relevant rule is the standard SPA fallback `try_files $uri $uri/ /index.html;` - no explicit blog-specific redirect. `vite.config.ts` wires `vite-prerender-plugin` with `additionalPrerenderRoutes` from `getBlogRoutes()` (`prerender/blog-routes.js`), which returns canonical routes **with a trailing slash** (`/blog/`, `/blog/<slug>/` - `prerender/utils.js:17`). Confirmed via `npm run build`: this produces real directories, `dist/blog/index.html`, `dist/blog/<slug>/index.html` - not flat files. `Dockerfile` confirms `nginx.conf` is exactly what's copied to `/etc/nginx/conf.d/default.conf` in the deployed image, and `dist/` is exactly what's copied to nginx's web root - this is the live config, not a stale/unused one.
+
+**Step 4 - traced the actual live redirect chain (not assumed) via `curl`, unauthenticated, `--max-redirs 0` per hop:**
+```
+https://app.amanahlife.com/blog   -> 301 Location: http://app.amanahlife.com/blog/    (nginx - wrong scheme)
+http://app.amanahlife.com/blog/   -> 301 Location: https://app.amanahlife.com/blog/   (Cloudflare edge re-upgrade)
+https://app.amanahlife.com/blog/  -> 200 OK                                            (nginx serves dist/blog/index.html)
+```
+The first redirect's response headers (`x-content-type-options`, `x-frame-options`, `referrer-policy`, `strict-transport-security`) match `nginx.conf`'s `add_header` directives exactly, confirming it's nginx's own implicit "directory requested without trailing slash" redirect (triggered because `dist/blog/` is now a real directory, per Step 2/3) - not something from Cloudflare or React Router. The second redirect's headers do NOT match nginx's, confirming it's Cloudflare's edge-level HTTP->HTTPS enforcement, separate from the app.
+
+**Root cause**: this container's nginx (`listen 80;`, no `ssl`) never terminates TLS itself - Cloudflare/Coolify terminate it upstream - so nginx's `$scheme` is always `http` from its own point of view. Its implicit directory-redirect for `/blog` therefore emits an **absolute** `Location: http://...` even for an original `https://` request, silently downgrading the scheme mid-chain. A real browser with this domain's HSTS policy already cached (the response literally carries `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`) silently upgrades that middle hop client-side and never visibly sees 3 hops - which is why it "worked" for normal signed-in browsing (an established session implies prior visits, implies cached HSTS). Non-browser HTTP clients - bots, link-preview crawlers, simple fetch libraries - mostly don't implement HSTS at all, and several explicitly treat a scheme-downgrading redirect as unsafe/loop-like and fail outright with "too many redirects" - exactly matching what was reported for unauthenticated browsers and external fetch tools. Confirmed via `git log --follow` this was not something to isolate by session/regression (single nginx.conf, not previously touched for this).
+
+**Fix (`AmanahLifeapp` commit `06d4ed5`)**: added `absolute_redirect off;` to `nginx.conf`. This makes nginx emit a *relative* `Location: /blog/` instead of an absolute URL with a hardcoded scheme, so the client always resolves it against whatever scheme it's already using - no downgrade is possible, collapsing the chain to one same-scheme redirect + 200. Verified: `npm run build` still produces the same `dist/blog/` directory structure (12 pages prerendered, unchanged). Typecheck: 0 errors. Build: clean.
+
+**Disclosed limitation**: could not spin up nginx or Docker in this environment (neither installed) to test the config change against a live server before pushing - `absolute_redirect` is a standard, well-documented nginx core directive with unambiguous behavior, but this specific change has not been verified end-to-end here. Verify post-deploy with the same trace method used to find this:
+```bash
+curl -sS -D - -o /dev/null --max-redirs 0 https://app.amanahlife.com/blog
+```
+Should now show exactly one 301 with a relative (`/blog/`) or same-scheme `https://` Location, never `http://`.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
