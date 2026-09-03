@@ -1,11 +1,11 @@
 /**
  * About — full-page mirror of app/frontend/src/pages/About.tsx (web).
- * Three blocks: product, founder (placeholder photo + bio), company.
- * Task 2c of the StartFleet/Mercury pre-launch prompt — identical wording
- * to web across landing section, /about page, and this native screen.
+ * Two blocks: product, company. The founder block (name/photo/bio) was
+ * removed from both this screen and its web counterpart to stop
+ * publishing the founder's personal information.
  */
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useLanguage } from '../../src/contexts/LanguageContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useRTL } from '../../src/hooks/useRTL';
@@ -39,31 +39,7 @@ export default function About() {
           </Text>
         </Card>
 
-        {/* Block 2 — Founder */}
-        <Card style={{ marginBottom: 16 }}>
-          <Text style={[styles.sectionLabel, { color: colors.teal, ...rtlText }]}>
-            {isAr ? 'تعرّف على المؤسس' : 'Meet the Founder'}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 14, marginBottom: 12 }}>
-            <Image
-              source={require('../../assets/founder-photo.jpg')}
-              style={[styles.avatar, { borderColor: colors.teal }]}
-            />
-            <View style={{ flex: 1, justifyContent: 'center' }}>
-              <Text style={{ color: colors.text, fontSize: 16, fontFamily: FONT_UI_BOLD }}>Huzaifa Al Ezzo</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: FONT_UI }}>
-                {isAr ? 'المؤسس والرئيس التنفيذي، LinkoraNet LLC' : 'Founder & CEO, LinkoraNet LLC'}
-              </Text>
-            </View>
-          </View>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: FONT_UI, lineHeight: 20, marginBottom: 12, ...rtlText }}>
-            {isAr
-              ? 'حذيفة العزو متخصص ثنائي اللغة يمتلك أكثر من عشر سنوات من الخبرة في الإدارة والموارد البشرية والتعليم والبحث العلمي. يحمل ماجستير في الإدارة العامة وبكالوريوس في اللغة الإنجليزية والترجمة، وقد أسس أمانة لايف انطلاقاً من رغبة حقيقية في مساعدة الناس على تنظيم حياتهم وتتبع تقدمهم والنمو بهدف. رؤيته أن يكون أمانة لايف شريكاً حقيقياً في الحياة — أداة ترافق الإنسان في رحلته نحو حياة أكثر وعياً وتحقيقاً.'
-              : "Huzaifa Al Ezzo is a bilingual professional with over ten years of experience in administration, human resources, education, and research. Holding a Master of Public Administration and a Bachelor's in English Language and Translation, he built AmanahLife out of a genuine desire to help people organize their lives, track their progress, and grow with purpose. His vision is to make AmanahLife a trusted life partner — a tool that walks alongside people on their journey toward a more intentional and fulfilling life."}
-          </Text>
-        </Card>
-
-        {/* Block 3 — Company */}
+        {/* Block 2 — Company */}
         <Card style={{ marginBottom: 16 }}>
           <Text style={[styles.sectionLabel, { color: colors.teal, ...rtlText }]}>
             {isAr ? 'الشركة' : 'The Company'}
@@ -83,7 +59,4 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   title: { fontSize: 17, fontFamily: FONT_UI_BOLD, marginBottom: 8 },
   sectionLabel: { fontSize: 11, fontFamily: FONT_UI_BOLD, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
-  avatar: {
-    width: 64, height: 64, borderRadius: 32, borderWidth: 2,
-  },
 });

@@ -1147,6 +1147,34 @@ Should now show exactly one 301 with a relative (`/blog/`) or same-scheme `https
 
 ---
 
+## 0h-28. Removed founder's personal information from "About" everywhere it appeared - 3 locations found, not 1 (2026-09-03)
+
+Requested: strip the founder's name/photo/bio from the "About AmanahLife and the founder" page reachable from Settings → About, keep only app/company info, and check whether Android needs the same fix separately from web.
+
+**Investigated first, per instruction, before touching anything:**
+
+**Is Android's link a WebView, a deep link, or separate native code?** Checked `app/(tabs)/settings.tsx:502` - `onPress={() => router.push('/(tabs)/about' as any)}`. This is a **fully native Expo Router screen** (`app/(tabs)/about.tsx`), not a WebView and not a deep link to the browser - it has always been an independent RN file that mirrors web's content by hand (its own header comment already said so: "full-page mirror of app/frontend/src/pages/About.tsx"). **Confirms a web-only fix would not remove the founder's info from the Android app at all** - the native file needed its own separate edit.
+
+**Where the founder's name/photo/bio actually appeared - 3 locations, not the 1 asked about:**
+1. `AmanahLifeapp` (web) `src/pages/About.tsx` / `AboutAr.tsx` - the `/about` and `/about/ar` pages themselves (this is the one explicitly asked about).
+2. `AmanahLifeapp` `public/landing.html` - **found while investigating, not previously known to be in scope**: the marketing landing page (a separate static file, per 0h-27's discovery that `LandingPage.tsx` is just an iframe around it) has its own full "Meet the Founder" section - photo, name, title, bio - completely independent HTML/i18n content, never mentioned in this request. Since it's the single most publicly visible page on the whole site, leaving it untouched would have defeated the purpose of this request entirely, so it was fixed too.
+3. `amanahlife-rn` (this repo) `app/(tabs)/about.tsx` - confirmed via point 1 above to need its own identical fix.
+
+**What was removed, in each of the 3 locations:** the founder's name (Huzaifa Al Ezzo / حذيفة العزو), job title, photo, and full bio paragraph. Web's `About.tsx`/`AboutAr.tsx` also had this founder identity duplicated into JSON-LD structured data (a `Person` schema object, plus a `founder` field on the `Organization` schema) - both removed, keeping only the `Organization` entry with no personal attribution. The actual photo files were deleted outright, not just unreferenced, since a `public/`-served image stays directly fetchable by URL even after removing the `<img>` tag pointing to it: `AmanahLifeapp/public/assets/huzaifa-founder.jpg` and this repo's `assets/founder-photo.jpg` - confirmed via full-repo grep in both repos that nothing else referenced either file before deleting.
+
+**Title/label correction (this request's point 3):** "About & Founder" no longer described the page once the founder content was gone.
+- This repo's Settings link label: `'🕌 عن أمانة لايف والمؤسس' : '🕌 About & Founder'` → `'🕌 عن أمانة لايف' : '🕌 About AmanahLife'` (`settings.tsx:504`).
+- Web's SEO title/description in `src/lib/legalPages.ts` for `/about` and `/about/ar` ("About AmanahLife — Meet the Founder & Company" / mentioning "founder Huzaifa Al Ezzo" by name) → "About AmanahLife" plain, with a founder-free description.
+- Web's and this repo's own visible on-page `<h1>`/`PageHeader` titles were already just "About AmanahLife" / "عن أمانة لايف" (never said "& Founder") - no change needed there; only the Settings link label and the SEO meta title needed correcting.
+
+**Verified, both repos:**
+- `amanahlife-rn`: `tsc --noEmit` - 26 errors (baseline, unchanged), no new errors in either edited file. `expo export --platform android` - clean, `founder-photo.jpg` confirmed absent from the exported asset list.
+- `AmanahLifeapp`: `tsc --noEmit` - 0 errors. `npm run build` - 31 pages prerendered (unchanged count). Grepped every built page for "Huzaifa"/"founder" - zero matches on `/about`, `/about/ar`, and `dist/landing.html` (one harmless leftover: an unused CSS selector `.about-founder-grid` with no personal content in it, left in place - flagged, not removed, since it poses no privacy exposure and removing it wasn't asked for).
+
+**Not yet pushed** - held for review before any actual publish, per instruction, since this is public-facing content. `AmanahLifeapp`'s `/wealth/` launch and the 6 legal pages (0h-26's Google Sign-In section already covers a different topic; the `/wealth/` and legal-pages work itself was never separately logged here as its own numbered entry - noted as a gap, not backfilled in this pass since it wasn't what was asked).
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```

@@ -501,7 +501,7 @@ export default function Settings() {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/about' as any)} style={{ marginBottom: 8 }}>
             <Text style={{ color: colors.teal, fontSize: 13, fontFamily: FONT_UI_MEDIUM, ...rtlText }}>
-              {isAr ? '🕌 عن أمانة لايف والمؤسس' : '🕌 About & Founder'}
+              {isAr ? '🕌 عن أمانة لايف' : '🕌 About AmanahLife'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/more-info' as any)}>
