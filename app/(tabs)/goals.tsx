@@ -227,10 +227,10 @@ export default function Goals() {
                       <Text style={[styles.smallMuted, { color: colors.textSecondary }]}>{tr('Progress', 'التقدم')}</Text>
                       <Text style={{ color: colors.gold, fontSize: 12, fontFamily: FONT_UI_BOLD }}>{goal.progress}%</Text>
                     </View>
-                    <View style={[styles.track, { backgroundColor: colors.bg }]}>
+                    <View style={[styles.track, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                       <LinearGradient
                         colors={['#1FC7C1', '#D4A017']}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        start={isRTL ? { x: 1, y: 0 } : { x: 0, y: 0 }} end={isRTL ? { x: 0, y: 0 } : { x: 1, y: 0 }}
                         style={{ width: `${goal.progress}%`, height: 8, borderRadius: 4 }}
                       />
                     </View>

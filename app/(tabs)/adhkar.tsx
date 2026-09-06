@@ -198,10 +198,19 @@ export default function Adhkar() {
               }]}
             >
               <Text style={[styles.arabic, { color: colors.text, textAlign: 'right' }]}>{item.arabic}</Text>
-              <Text style={[styles.translit, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.transliteration}</Text>
-              <Text style={[styles.translation, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.translation}</Text>
-              {/* In Arabic: +1 on RIGHT, counter on LEFT */}
-              <View style={[styles.itemFooter, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              {/* transliteration/translation are always Latin script, even
+                  in Arabic UI mode - forcing them right-aligned when isRTL
+                  reversed a Latin paragraph's alignment against its own
+                  script direction (inconsistent with dhikr.tsx, which never
+                  applies this override to the same kind of text). */}
+              <Text style={[styles.translit, { color: colors.textSecondary, textAlign: 'left' }]}>{item.transliteration}</Text>
+              <Text style={[styles.translation, { color: colors.textSecondary, textAlign: 'left' }]}>{item.translation}</Text>
+              {/* This row's order is intentionally the same in both languages
+                  (+1 button on the right, counter on the left) - it was
+                  previously `isRTL ? 'row-reverse' : 'row'`, which actually
+                  swapped them for Arabic (counter-right/button-left),
+                  contradicting this very comment. Always 'row' here. */}
+              <View style={[styles.itemFooter, { flexDirection: 'row' }]}>
                 <View style={[styles.progWrap, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <View style={[styles.miniTrack, { backgroundColor: colors.surface }]}>
                     <View style={{ width: `${(current / item.count) * 100}%`, height: 6, borderRadius: 3, backgroundColor: colors.teal }} />

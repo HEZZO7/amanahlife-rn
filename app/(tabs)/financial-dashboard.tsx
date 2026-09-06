@@ -121,7 +121,7 @@ export default function FinancialDashboard() {
                     <Text style={{ color: colors.text, fontSize: 12, fontFamily: FONT_UI }}>{cat}</Text>
                     <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: FONT_UI }}>{amount.toLocaleString()}</Text>
                   </View>
-                  <View style={[styles.barTrack, { backgroundColor: colors.bg }]}>
+                  <View style={[styles.barTrack, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     <View style={{ width: `${(amount / maxCategory) * 100}%`, height: '100%', borderRadius: 6, backgroundColor: colors.gold }} />
                   </View>
                 </View>
@@ -138,10 +138,10 @@ export default function FinancialDashboard() {
               <View key={idx} style={[styles.trendRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, width: 34 }}>{m.month}</Text>
                 <View style={{ flex: 1, gap: 3 }}>
-                  <View style={[styles.thinBar, { backgroundColor: colors.bg }]}>
+                  <View style={[styles.thinBar, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     <View style={{ width: `${(m.income / maxMonthly) * 100}%`, height: '100%', borderRadius: 4, backgroundColor: colors.teal }} />
                   </View>
-                  <View style={[styles.thinBar, { backgroundColor: colors.bg }]}>
+                  <View style={[styles.thinBar, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     <View style={{ width: `${(m.expenses / maxMonthly) * 100}%`, height: '100%', borderRadius: 4, backgroundColor: colors.red }} />
                   </View>
                 </View>
@@ -172,7 +172,7 @@ export default function FinancialDashboard() {
                     <Text style={{ color: colors.text, fontSize: 12, fontFamily: FONT_UI }}>{isAr ? label.ar : label.en}</Text>
                     <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{pct}% ({allocated.toLocaleString()}/{(target as number).toLocaleString()})</Text>
                   </View>
-                  <View style={[styles.barTrack, { backgroundColor: colors.bg, height: 8 }]}>
+                  <View style={[styles.barTrack, { backgroundColor: colors.bg, height: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     <View style={{ width: `${pct}%`, height: '100%', borderRadius: 4, backgroundColor: colors.gold }} />
                   </View>
                 </View>

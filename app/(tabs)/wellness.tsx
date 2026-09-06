@@ -44,6 +44,7 @@ function Stepper({ label, value, min, max, onChange, accent }: {
   label: string; value: number; min: number; max: number; onChange: (v: number) => void; accent: string;
 }) {
   const { colors } = useTheme();
+  const { isRTL } = useLanguage();
   return (
     <View style={{ marginBottom: 16 }}>
       <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
@@ -54,7 +55,7 @@ function Stepper({ label, value, min, max, onChange, accent }: {
         >
           <Text style={[styles.stepBtnText, { color: colors.text }]}>−</Text>
         </TouchableOpacity>
-        <View style={[styles.stepTrack, { backgroundColor: colors.bg }]}>
+        <View style={[styles.stepTrack, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <View style={{ width: `${((value - min) / (max - min)) * 100}%`, height: 8, borderRadius: 4, backgroundColor: accent }} />
         </View>
         <TouchableOpacity

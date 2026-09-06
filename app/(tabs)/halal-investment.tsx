@@ -318,7 +318,7 @@ export default function HalalInvestment() {
                   <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{tr('Equity %', 'نسبة التملك')}</Text>
                   <Text style={{ color: colors.teal, fontSize: 12, fontFamily: FONT_UI_BOLD }}>{equityPct}%</Text>
                 </View>
-                <View style={[styles.barTrack, { backgroundColor: colors.bg }]}>
+                <View style={[styles.barTrack, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <View style={{ width: `${equityPct}%`, height: '100%', borderRadius: 6, backgroundColor: colors.gold }} />
                 </View>
                 <View style={[styles.rowBetween, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>

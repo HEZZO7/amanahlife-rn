@@ -472,7 +472,7 @@ export default function FamilyDashboardScreen() {
               <Text style={{ color: colors.text, fontSize: 13, fontFamily: FONT_UI_MEDIUM }}>{goal.title}</Text>
               <Text style={{ color: colors.teal, fontSize: 10, fontFamily: FONT_UI_MEDIUM }}>{goal.category}</Text>
             </View>
-            <View style={{ height: 6, backgroundColor: colors.bg, borderRadius: 3, overflow: 'hidden' }}>
+            <View style={{ height: 6, backgroundColor: colors.bg, borderRadius: 3, overflow: 'hidden', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <View style={{ height: '100%', width: `${goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0}%`, backgroundColor: colors.teal }} />
             </View>
             <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, marginTop: 4 }}>{goal.current} / {goal.target}</Text>

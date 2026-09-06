@@ -90,7 +90,7 @@ export default function DailyRoutine() {
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: FONT_UI, marginBottom: 8, textAlign: isAr ? 'right' : 'left' }}>
               {completedCount}/{routines.length} {tr('completed', 'مكتمل')}
             </Text>
-            <View style={[styles.progressTrack, { backgroundColor: colors.surface }]}>
+            <View style={[styles.progressTrack, { backgroundColor: colors.surface, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <View style={[styles.progressFill, { backgroundColor: colors.gold, width: `${progress}%` }]} />
             </View>
           </View>

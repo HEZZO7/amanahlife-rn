@@ -132,7 +132,7 @@ export default function DhikrCounter() {
         </TouchableOpacity>
 
         {/* Controls */}
-        <View style={styles.controls}>
+        <View style={[styles.controls, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <Button variant="outline" size="sm" title={tr('Reset', 'إعادة')} onPress={reset} />
           <Button variant="outline" size="sm" title={tr('Change Dhikr', 'تغيير الذكر')} onPress={() => setShowPresets((s) => !s)} />
         </View>

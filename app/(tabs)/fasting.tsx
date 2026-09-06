@@ -101,17 +101,20 @@ export default function FastingTracker() {
 
         {/* Missed vs made-up summary */}
         <Card style={{ marginBottom: 14 }}>
-          <View style={[styles.rowBetween, { flexDirection: 'row' }]}>
+          {/* Column order and the divider side must both flip together for
+              RTL - flexDirection alone would reverse the columns but leave
+              the divider on the wrong edge of each box. */}
+          <View style={[styles.rowBetween, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <View style={{ flex: 1, alignItems: 'center' }}>
               <Text style={[styles.bigNum, { color: colors.teal, fontSize: 22 }]}>{fastedDays}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{tr('Completed', 'أيام مكتملة')}</Text>
             </View>
-            <View style={{ flex: 1, alignItems: 'center', borderLeftWidth: 1, borderLeftColor: colors.border }}>
+            <View style={{ flex: 1, alignItems: 'center', [isRTL ? 'borderRightWidth' : 'borderLeftWidth']: 1, [isRTL ? 'borderRightColor' : 'borderLeftColor']: colors.border } as any}>
               <Text style={[styles.bigNum, { color: colors.red, fontSize: 22 }]}>{missedDays}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, textAlign: 'center' }}>{tr('Missed (need makeup)', 'أيام فائتة (بحاجة للقضاء)')}</Text>
             </View>
             {excusedDays > 0 && (
-              <View style={{ flex: 1, alignItems: 'center', borderLeftWidth: 1, borderLeftColor: colors.border }}>
+              <View style={{ flex: 1, alignItems: 'center', [isRTL ? 'borderRightWidth' : 'borderLeftWidth']: 1, [isRTL ? 'borderRightColor' : 'borderLeftColor']: colors.border } as any}>
                 <Text style={[styles.bigNum, { color: colors.gold, fontSize: 22 }]}>{excusedDays}</Text>
                 <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI, textAlign: 'center' }}>{tr('Excused (qada owed)', 'معذورة (بحاجة للقضاء)')}</Text>
               </View>

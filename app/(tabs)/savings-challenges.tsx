@@ -262,7 +262,7 @@ export default function SavingsChallenges() {
                         <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{Math.min(100, Math.round(progress))}%</Text>
                         <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: FONT_UI }}>{daysLeft} {tr('days left', 'يوم متبقي')}</Text>
                       </View>
-                      <View style={[styles.barTrack, { backgroundColor: colors.bg }]}>
+                      <View style={[styles.barTrack, { backgroundColor: colors.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                         <View style={{ width: `${Math.min(100, progress)}%`, height: '100%', borderRadius: 6, backgroundColor: colors.gold }} />
                       </View>
                     </View>
