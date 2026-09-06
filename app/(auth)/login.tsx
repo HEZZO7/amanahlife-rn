@@ -66,15 +66,34 @@ export default function LoginScreen() {
   const handleGoogle = async () => {
     console.log('[GoogleSignIn][UI] handleGoogle pressed');
     setGoogleLoading(true);
-    const { error } = await signInWithGoogle();
-    console.log('[GoogleSignIn][UI] signInWithGoogle() returned, error=', error ? error.message : null);
+    const { error, cancelled } = await signInWithGoogle();
+    console.log('[GoogleSignIn][UI] signInWithGoogle() returned, error=', error ? error.message : null, 'cancelled=', cancelled);
     setGoogleLoading(false);
     if (error) {
       console.log('[GoogleSignIn][UI] showing error toast');
       toast.error(error.message);
       return;
     }
-    console.log('[GoogleSignIn][UI] no error - this is the last line handleGoogle runs on success; nothing here navigates to (tabs)');
+    if (cancelled) {
+      // User backed out of the account picker, or a sign-in was already in
+      // flight - error is null here too, same as genuine success, so this
+      // check is required: without it, a cancelled attempt would navigate
+      // to (tabs) as if signed in, and DashboardScreen's own "redirect to
+      // landing if not logged in" effect would immediately bounce it back,
+      // producing a jarring flash instead of just staying on this screen.
+      console.log('[GoogleSignIn][UI] cancelled - staying on login screen');
+      return;
+    }
+    // Explicit success navigation - previously this screen relied entirely
+    // on landing.tsx's own "skip landing if already signed in" effect still
+    // being mounted in the background (reached via router.push, not
+    // replace) to react to the auth-state change and navigate away. That
+    // worked but was accidental, not a real success handler - login.tsx
+    // owning its own navigation means it no longer depends on landing.tsx's
+    // internals. landing.tsx's effect stays in place as a defense-in-depth
+    // fallback, not the primary mechanism.
+    console.log('[GoogleSignIn][UI] no error - navigating to (tabs)');
+    router.replace('/(tabs)/' as any);
   };
 
   const handleForgotPassword = async () => {

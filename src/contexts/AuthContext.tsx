@@ -10,13 +10,34 @@ import { supabase } from '../lib/supabase';
 import { router } from 'expo-router';
 import { configureGoogleSignIn, isGoogleConfigured } from '../lib/googleAuth';
 
+const GOOGLE_SIGNIN_TIMEOUT_MS = 18000;
+
+// Neither hasPlayServices() nor signIn() has a built-in timeout - if the
+// native Play Services update dialog is shown and the user backgrounds the
+// app instead of resolving it, the promise can hang indefinitely with no
+// error, freezing the sign-in button forever. This races the given promise
+// against a timer so the caller always gets a settled promise either way.
+function withTimeout<T>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(timeoutMessage)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signInWithGoogle: () => Promise<{ error: Error | null }>;
+  // cancelled: true means the user backed out (or a sign-in was already in
+  // flight) - error is null in both this case and genuine success, so
+  // callers that navigate on success must check `!cancelled` too, or a
+  // cancelled attempt would incorrectly navigate as if it had succeeded.
+  signInWithGoogle: () => Promise<{ error: Error | null; cancelled?: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -68,7 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       console.log('[GoogleSignIn] calling hasPlayServices...');
-      const hasPlay = await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const hasPlay = await withTimeout(
+        GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true }),
+        GOOGLE_SIGNIN_TIMEOUT_MS,
+        'Google Play Services took too long to respond. Please try again.'
+      );
       console.log('[GoogleSignIn] hasPlayServices resolved:', hasPlay);
 
       // Always sign out of Google first so the account picker always appears
@@ -82,7 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.log('[GoogleSignIn] calling signIn()...');
-      const signInResult = await GoogleSignin.signIn();
+      const signInResult = await withTimeout(
+        GoogleSignin.signIn(),
+        GOOGLE_SIGNIN_TIMEOUT_MS,
+        'Google Sign-In timed out. Please try again.'
+      );
       console.log('[GoogleSignIn] signIn() resolved, result=', JSON.stringify(signInResult));
 
       const idToken = signInResult.data?.idToken;
@@ -103,11 +132,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[GoogleSignIn] CAUGHT ERROR code=', e?.code, 'message=', e?.message, 'name=', e?.name);
       if (e.code === statusCodes.SIGN_IN_CANCELLED) {
         console.log('[GoogleSignIn] treated as SIGN_IN_CANCELLED, swallowing');
-        return { error: null };
+        return { error: null, cancelled: true };
       }
       if (e.code === statusCodes.IN_PROGRESS) {
         console.log('[GoogleSignIn] treated as IN_PROGRESS, swallowing');
-        return { error: null };
+        return { error: null, cancelled: true };
       }
       return { error: e as Error };
     }
@@ -151,7 +180,7 @@ export function useAuth() {
       user: null, session: null, loading: false,
       signUp: async () => ({ error: null }),
       signIn: async () => ({ error: null }),
-      signInWithGoogle: async () => ({ error: null }),
+      signInWithGoogle: async () => ({ error: null, cancelled: false }),
       signOut: async () => {},
     };
   }
