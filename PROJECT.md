@@ -1175,6 +1175,32 @@ Requested: strip the founder's name/photo/bio from the "About AmanahLife and the
 
 ---
 
+## 0h-29. Google Sign-In freeze on some new-user sign-ins — real root cause finally isolated, fixed (2026-09-06)
+
+Reopens 0h-26, which closed "resolved, root cause never definitively isolated" after `adb` was unavailable to capture the planned logcat trace. New report: some brand-new Google accounts/devices freeze after tapping sign-in, screen frozen with no visible error. Investigated from scratch per instruction, not assuming the prior "Bug 3" hypothesis (no `router.replace()` after Google success in `login.tsx`) was the full story.
+
+**Confirmed at the code level**: `login.tsx`'s `handleGoogle()` and `AuthContext.tsx`'s `signInWithGoogle()` genuinely have no navigation call on success - matches 0h-26's Bug 3 finding exactly.
+
+**But this doesn't fully explain why most sign-ins were already working.** Grepped every `router.replace`/`push`/`<Redirect>` in `app/`: the only one that gets a Google-signed-in user into `(tabs)` is `landing.tsx:34`'s `useEffect(() => { if (!authLoading && user) router.replace('/(tabs)/'); }, [user, authLoading])` - a "skip landing if already signed in" guard on a *different* screen. `landing.tsx`'s own CTAs reach `login.tsx` via `router.push` (`landing.tsx:114,133`), not `replace`, so `landing.tsx` stays mounted underneath `login.tsx` and its effect keeps listening for the `user` state change even while invisible. **This is the real mechanism that was getting most users into `(tabs)` all along** - an accidental side effect of a different screen's guard, not a real success handler for Google Sign-In. It has no reason to depend on new-vs-returning user status, so it doesn't by itself explain "new users specifically" - but it is fragile: anything that ever changes `landing.tsx`'s push to a replace, or otherwise unmounts it, would silently break Google Sign-In with zero warning.
+
+**Investigated and ruled out, with direct evidence, not assumption:**
+- **New-user-specific slow/failing account creation** (the user's own hypothesis): queried the live Supabase project (`nyhsnvjdgifphwkqzwel`) directly - zero triggers on `auth.users`, zero custom functions matching `%hook%`/`%new_user%`. No server-side new-user code path exists that could explain a hang.
+- **Different code path for new vs. returning users in the RN app itself**: none exists - `signup.tsx` has no Google button at all, so *every* Google sign-in (new or returning) goes through the identical `landing → push → login` route.
+- **Crash reports / device logs**: no Sentry/Crashlytics/Bugsnag or any crash-reporting SDK exists anywhere in this app - nothing to query. The only instrumentation is the `console.log` calls from 0h-26's diagnostic commit (`1bd45db`), which only surface with a live-attached debugger, never captured to date.
+
+**Remaining plausible candidate, not confirmable from code alone**: `GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })` has no built-in timeout. If Play Services needs updating (more likely on a device/account that's never run the app before) and the user backgrounds the app instead of resolving the native update dialog, the promise can hang indefinitely with no rejection - matching "frozen, no visible error" more precisely than the missing-navigation theory alone. Could not confirm this against a real device (no crash telemetry, `adb` unavailable per 0h-26).
+
+**Fixes applied** (`login.tsx`, `src/contexts/AuthContext.tsx`):
+1. **Explicit success navigation**: `handleGoogle()` now calls `router.replace('/(tabs)/')` directly after a successful sign-in, instead of relying on `landing.tsx`'s side effect. `landing.tsx`'s effect is left in place unchanged as a defense-in-depth fallback, not removed.
+2. **Explicit 18s timeout** around both `GoogleSignin.hasPlayServices()` and `GoogleSignin.signIn()` independently (`withTimeout()` helper, races the SDK call against a timer), each rejecting with a distinct, user-facing message via the existing `toast.error()` path instead of hanging forever.
+3. **Bug found while reasoning through the cancellation scenario, not requested but necessary**: `signInWithGoogle()` returns `{error: null}` for both a genuine success *and* a user-cancelled sign-in (`SIGN_IN_CANCELLED`/`IN_PROGRESS`), so navigating on "no error" alone would have sent a cancelled sign-in to `(tabs)` as if authenticated, immediately bounced back to `landing` by `DashboardScreen`'s own not-logged-in guard - a jarring flash on every cancel. Added a `cancelled?: boolean` field to the return type, set only in the two swallowed-error branches (their existing behavior otherwise untouched, exactly as instructed), and `handleGoogle()` now checks `!error && !cancelled` before navigating.
+
+**Verified**: `tsc --noEmit` - 26 errors (baseline, unchanged, zero in either edited file, confirmed after each of the two rounds of edits). `expo export --platform android` - clean both times.
+
+**Not verified on a real device** - no Android device or emulator available in this environment, and this is a login-flow change, so it needs a field confirmation (fresh Google account, or Play Services intentionally left outdated, to exercise the timeout path) at the next Android build/release before being considered fully closed. Fix commit: `8af678e`.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
