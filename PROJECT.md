@@ -1201,6 +1201,32 @@ Reopens 0h-26, which closed "resolved, root cause never definitively isolated" a
 
 ---
 
+## 0h-30. App-wide RTL audit (adhkar + progress bars + stat rows), version bump, production AAB (2026-09-06)
+
+Requested: audit the whole app (not just adhkar) for the same class of RTL bugs already fixed on web - missing `row-reverse`/`textAlign`, unmirrored directional icons, adhkar counter ordering, progress-bar fill direction, and any hardcoded-LTR assumption despite `isRTL`/`I18nManager` being available. Each bug documented (code + description) before fixing, per instruction.
+
+**Architecture note found while auditing** (not a bug, but explains why manual per-screen checks are the only defense here): `LanguageContext.tsx`'s own header comment is stale - it describes an old `I18nManager.forceRTL(true)`-at-startup design, but the actual code (`I18nManager.allowRTL(false); I18nManager.forceRTL(false);`) permanently locks the native layer to LTR and hand-rolls **all** RTL via the `isRTL` flag (matches `useRTL.ts`'s own comment, which is accurate). There is no automatic native mirroring anywhere in this app - every screen is individually responsible for its own `flexDirection`/`textAlign`/icon-direction, which is exactly the kind of thing that goes unnoticed screen-by-screen.
+
+**Bugs found and fixed:**
+
+1. **`adhkar.tsx` - the per-item counter footer contradicted its own comment.** The comment read *"In Arabic: +1 on RIGHT, counter on LEFT"*, but the code was `flexDirection: isRTL ? 'row-reverse' : 'row'` with DOM order `[counter, +1 button]`. `row-reverse` doesn't swap which element is "first" - it just moves the main-axis start to the right - so with this DOM order, `row-reverse` actually placed the counter on the RIGHT and the button on the LEFT, the opposite of the stated intent. Fixed to always `'row'` (the desired order is identical in both languages here, so no conditional was ever needed).
+2. **`adhkar.tsx` - transliteration/translation forced right-aligned in Arabic mode.** These fields are always Latin script (e.g. "SubhanAllah", "Glory be to Allah") regardless of UI language; `textAlign: isRTL ? 'right' : 'left'` was right-aligning a Latin paragraph against its own script direction, and was inconsistent with `dhikr.tsx`, which never applies this override to the same kind of text. Changed to a fixed `'left'`.
+3. **`ProgressBar.tsx` (shared component) - fill always anchored left, all languages.** The fill is a `width: X%` child with no explicit position, so it anchors to the track's flex main-start - always the physical left edge, since nothing set `flexDirection`. This one component backs `adhkar.tsx`, `family-budget.tsx`, `finance.tsx`, `prayer-times.tsx`, and `ramadan-planner.tsx` - all fixed by one change: `flexDirection: isRTL ? 'row-reverse' : 'row'` on the track.
+4. **Same bug, independently reimplemented in 6 more screens** that don't use the shared component: `daily-routine.tsx`, `family-dashboard.tsx`, `financial-dashboard.tsx` (3 separate bars), `halal-investment.tsx`, `savings-challenges.tsx`, `wellness.tsx`. Each track got the same `flexDirection` fix. `wellness.tsx`'s bar lives inside a locally-scoped `Stepper` sub-component that doesn't receive `isRTL` as a prop - fixing it required adding `useLanguage()` inside `Stepper` itself (caught by `tsc`, not missed).
+5. **`goals.tsx` - same fill-direction bug, plus a `LinearGradient` with a hardcoded left-to-right color direction.** Fixed the track's `flexDirection` and flipped the gradient's `start`/`end` coordinates for `isRTL` so the teal-to-gold sweep reads from the correct edge.
+6. **`fasting.tsx` - the completed/missed/excused stat row.** Both the column order (`flexDirection: 'row'`, hardcoded) and the divider (`borderLeftWidth`/`borderLeftColor`, hardcoded) ignored `isRTL`. Fixing only the flexDirection would have left the divider on the wrong edge after the columns reversed, so both were made conditional together (`borderRightWidth`/`borderRightColor` for RTL).
+7. **`dhikr.tsx` - minor consistency fix** on the Reset/Change-Dhikr button row's `flexDirection` (low visual impact - two symmetric buttons - but brought in line with the rest of the file's convention).
+
+**Checked and confirmed already correct (no bug, kept as reference/positive examples):** `PageHeader.tsx` (back-arrow direction, row order, title alignment, subtitle margin side - all correctly `isRTL`-conditional, with an accurate doc comment), `BottomNav.tsx` (tab row and search-sheet rows all mirror correctly), `login.tsx`/`signup.tsx` (back-arrow character flips correctly), `FeatureGrid.tsx` (already has its own fixed-bug doc comment from a prior pass), `weekly-life-score.tsx` (uses `alignSelf: isRTL ? 'flex-end' : 'flex-start'` on its fill instead of `flexDirection` - a different but equally valid mechanism, left unchanged). Noted in passing, not fixed (out of scope): `BottomNav.tsx` imports `I18nManager` but never uses it - a dead import, not a functional bug.
+
+**Verified**: `tsc --noEmit` - 26 errors (baseline, unchanged, zero across all 11 edited files). `expo export --platform android` - clean. Fix commit: `82f3c98`.
+
+**Version bump** (commit `41410c4`): `version` 1.0.3 → **1.0.4**, `android.versionCode` 3 → **8**. Last documented build in this file (0h-21, 2026-08-09) was versionCode 3, matching `app.json` exactly - but since `eas submit` has never been run here (Huzaifa uploads to Play Console himself), there's no way to cross-check that against what's actually live, so a +5 margin was used instead of +1 to avoid any possible collision with an undocumented manual upload.
+
+**Production AAB - built successfully**: `eas build --platform android --profile production`, using the existing remote EAS login and the same signing keystore as every prior production build (`rZ4fXyj21G`). Build: https://expo.dev/accounts/linkoranet/projects/amanahlife/builds/6066eaf3-1fc4-4d07-8e91-176e485f7fdb. Artifact: https://expo.dev/artifacts/eas/L9-Dhv-Y4YzvU9YwLNFNeBz1SYiT-B95I-ofbjbWDno.aab. `eas submit` was not run, matching the existing convention - Huzaifa uploads to Play Console himself.
+
+---
+
 ## 0i. File Structure Overview (Android repo — `amanahlife-rn`)
 
 ```
