@@ -56,7 +56,7 @@ export function getPreferenceClient(userId: string | null): PreferenceClient {
     client = createPreferenceClient(userId, {
       url: PUSH_NOTIFY_URL,
       getSession: async () => (await supabase.auth.getSession()).data.session,
-      request: (...args) => fetch(...args),
+      request: (input, init) => fetch(input, init),
       readCache: () => getUserItem(PREFS_KEY, userId),
       writeCache: value => setUserItem(PREFS_KEY, userId, value),
     });
