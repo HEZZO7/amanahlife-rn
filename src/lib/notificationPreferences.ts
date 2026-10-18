@@ -26,9 +26,8 @@
  *
  * Preferences themselves sync through the same app_11941c8fec_push_notify
  * Edge Function + app_11941c8fec_notification_preferences table web
- * already uses (get_preferences/update_preferences actions are generic on
- * a user_id + JSON blob - confirmed by reading the function source, no
- * server changes needed). RN never calls that function's subscribe/
+ * already uses. Authenticated preference actions derive ownership from
+ * the verified JWT and accept only six boolean flags. RN never calls that function's subscribe/
  * unsubscribe/send_notification actions - those are Web Push specific
  * (VAPID/PushSubscription), not applicable to local expo-notifications
  * scheduling.
@@ -39,68 +38,67 @@ import { functionUrl } from './config';
 import { requestNotificationPermission, computeUpcomingTimings } from './prayerNotifications';
 import { isRamadan } from './hijriDate';
 import { toast } from './toast';
-
-export interface NotificationPreferences {
-  prayer_reminders: boolean;
-  bill_reminders: boolean;
-  habit_reminders: boolean;
-  fasting_reminders: boolean;
-  savings_reminders: boolean;
-  general_activity: boolean;
-}
-
-export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
-  prayer_reminders: true,
-  bill_reminders: true,
-  habit_reminders: true,
-  fasting_reminders: true,
-  savings_reminders: true,
-  general_activity: true,
-};
+import { supabase } from './supabase';
+import { createPreferenceClient, sanitizePreferences } from './notificationPreferenceClient';
+import type { NotificationPreferences, PreferenceClient } from './notificationPreferenceClient';
+export { DEFAULT_NOTIFICATION_PREFERENCES } from './notificationPreferenceClient';
+export type { NotificationPreferences } from './notificationPreferenceClient';
 
 const PREFS_KEY = 'amanah-notification-preferences';
 const PUSH_NOTIFY_URL = functionUrl('app_11941c8fec_push_notify');
+const clients = new Map<string | null, PreferenceClient>();
 
+// Cache and trusted SDK session are scoped to the same account. No user_id
+// is sent to the server; its verified JWT remains the authorization boundary.
+export function getPreferenceClient(userId: string | null): PreferenceClient {
+  let client = clients.get(userId);
+  if (!client) {
+    client = createPreferenceClient(userId, {
+      url: PUSH_NOTIFY_URL,
+      getSession: async () => (await supabase.auth.getSession()).data.session,
+      request: (input, init) => fetch(input, init),
+      readCache: () => getUserItem(PREFS_KEY, userId),
+      writeCache: value => setUserItem(PREFS_KEY, userId, value),
+    });
+    clients.set(userId, client);
+  }
+  return client;
+}
 export async function getLocalPreferences(userId: string | null): Promise<NotificationPreferences> {
+  let prefs = sanitizePreferences(null);
   try {
     const raw = await getUserItem(PREFS_KEY, userId);
-    if (!raw) return DEFAULT_NOTIFICATION_PREFERENCES;
-    return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_NOTIFICATION_PREFERENCES;
-  }
+    prefs = sanitizePreferences(raw ? JSON.parse(raw) : null);
+    // Return only the six flags; client.load() persists cleanup in its serialized queue.
+  } catch { /* Reading is still usable when cache cleanup cannot be persisted. */ }
+  return prefs;
 }
-
-async function saveLocalPreferences(userId: string | null, prefs: NotificationPreferences): Promise<void> {
-  await setUserItem(PREFS_KEY, userId, JSON.stringify(prefs));
-}
-
-/**
- * Pulls the server's copy so preferences stay consistent across
- * devices/platforms for the same account. Falls back to the local cache on
- * any failure (offline, not signed in, etc.) rather than resetting to
- * defaults.
- */
 export async function syncPreferencesFromServer(accessToken: string | null, userId: string | null): Promise<NotificationPreferences> {
   if (!accessToken) return getLocalPreferences(userId);
-  try {
-    const response = await fetch(PUSH_NOTIFY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ action: 'get_preferences' }),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data.preferences) {
-        const merged = { ...DEFAULT_NOTIFICATION_PREFERENCES, ...data.preferences };
-        await saveLocalPreferences(userId, merged);
-        return merged;
+  return (await getPreferenceClient(userId).load()).preferences;
+}
+
+// Scheduling follows a confirmed save; scheduling failure never pretends that
+// the server reverted the preference. No changes to reminder generation itself.
+export function getScheduledPreferenceClient(userId: string | null, isAr: boolean): PreferenceClient {
+  const client = getPreferenceClient(userId);
+  return {
+    load: client.load,
+    save: async input => {
+      const result = await client.save(input);
+      try {
+        // Check account again before touching this device's reminder schedule.
+        const session = (await supabase.auth.getSession()).data.session;
+        if (!userId || session?.user.id !== userId) return result;
+        if (Object.prototype.hasOwnProperty.call(input, 'bill_reminders')) await scheduleBillReminders(userId, result.preferences.bill_reminders, isAr);
+        if (Object.prototype.hasOwnProperty.call(input, 'habit_reminders')) await scheduleGoalReminders(userId, result.preferences.habit_reminders, isAr);
+        if (Object.prototype.hasOwnProperty.call(input, 'fasting_reminders')) await scheduleFastingReminders(result.preferences.fasting_reminders, isAr, userId);
+      } catch {
+        toast.error(isAr ? 'حُفظ التفضيل، لكن تعذّر تحديث تذكيرات الجهاز. أعد فتح التطبيق للمحاولة.' : 'Preference saved, but device reminders could not be refreshed. Reopen the app to retry.');
       }
-    }
-  } catch {
-    // Network failed - fall through to local cache.
-  }
-  return getLocalPreferences(userId);
+      return result;
+    },
+  };
 }
 
 async function cancelTagged(tag: string): Promise<void> {
@@ -266,43 +264,13 @@ export async function scheduleFastingReminders(enabled: boolean, isAr: boolean, 
   }
 }
 
-/**
- * Updates one category preference: writes the local cache, best-effort
- * syncs it to the server, then re-runs that category's own real
- * scheduling function immediately so the change takes effect right away
- * rather than waiting for the next app launch.
- */
+/** Compatibility wrapper for existing consumers; never confirms a local-only save. */
 export async function updatePreference(
-  accessToken: string | null,
-  userId: string | null,
-  key: keyof NotificationPreferences,
-  value: boolean,
-  isAr: boolean
+  accessToken: string | null, userId: string | null,
+  key: keyof NotificationPreferences, value: boolean, isAr: boolean
 ): Promise<NotificationPreferences> {
-  const current = await getLocalPreferences(userId);
-  const updated = { ...current, [key]: value };
-  await saveLocalPreferences(userId, updated);
-
-  if (accessToken) {
-    try {
-      await fetch(PUSH_NOTIFY_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ action: 'update_preferences', preferences: updated }),
-      });
-    } catch {
-      // Best-effort - local state already updated, server will resync next load.
-    }
-  }
-
-  if (key === 'bill_reminders') await scheduleBillReminders(userId, value, isAr);
-  else if (key === 'habit_reminders') await scheduleGoalReminders(userId, value, isAr);
-  else if (key === 'fasting_reminders') await scheduleFastingReminders(value, isAr, userId);
-  // prayer_reminders: owned by the separate PrayerReminderSettings section.
-  // savings_reminders: event-triggered live in savings-challenges.tsx, not scheduled ahead.
-  // general_activity: no dedicated content on either platform.
-
-  return updated;
+  if (!accessToken || !userId) throw new Error('Authentication required');
+  return (await getScheduledPreferenceClient(userId, isAr).save({ [key]: value })).preferences;
 }
 
 /** Re-run every category's real scheduling on app start, mirroring prayerNotifications.ts's own "call on app start and whenever settings change" rule - keeps the rolling reminder windows current even if the user never revisits Settings. */
@@ -313,3 +281,4 @@ export async function refreshAllCategoryReminders(userId: string | null, prefs: 
     scheduleFastingReminders(prefs.fasting_reminders, isAr, userId),
   ]);
 }
+

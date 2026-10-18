@@ -1,0 +1,35 @@
+name: Notification preference compatibility
+on:
+  pull_request:
+    branches: [master]
+permissions:
+  contents: read
+jobs:
+  isolated-preferences:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Isolated cache, transport and identity tests
+        run: node --experimental-strip-types --import ./tests/deny-network.mjs tests/notification-preference-client.test.mjs
+      - name: Native adapter with fake storage, auth and notification APIs
+        run: node --experimental-strip-types --loader ./tests/preference-test-loader.mjs --import ./tests/deny-network.mjs tests/notification-preference-native.test.mjs
+      - name: Install dependencies without build scripts
+        run: npm ci --ignore-scripts
+      - name: Install matching React test renderer (test runtime only)
+        run: npm install --no-save --package-lock=false --ignore-scripts react-test-renderer@19.1.0
+      - name: Isolated React state and account-switch tests
+        run: node --experimental-strip-types --loader ./tests/preference-test-loader.mjs --import ./tests/deny-network.mjs tests/notification-preference-state.test.mjs
+      - name: Read-only baseline checkout for existing TypeScript diagnostics
+        uses: actions/checkout@v4
+        with:
+          ref: 74673f4e2bea8ebbcee54a4dd0a53692d227ba26
+          path: .preference-baseline
+          persist-credentials: false
+      - name: Compare full TypeScript diagnostics against reviewed baseline
+        run: |
+          mv .preference-baseline "$RUNNER_TEMP/preferences-baseline"
+          ln -s "$GITHUB_WORKSPACE/node_modules" "$RUNNER_TEMP/preferences-baseline/node_modules"
+          node tests/check-preference-type-baseline.mjs "$RUNNER_TEMP/preferences-baseline"

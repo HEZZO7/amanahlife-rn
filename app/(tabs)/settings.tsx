@@ -5,7 +5,7 @@
  * Share), delete-account flow (Supabase edge fn) + confirm modal, sign out.
  * localStorage('amanah-settings') → AsyncStorage. sonner → src/lib/toast.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Modal, Pressable, TextInput, Share, ActivityIndicator, Alert,
 } from 'react-native';
@@ -30,9 +30,9 @@ import {
   getReminderSettings, saveReminderSettings, schedulePrayerNotifications,
 } from '../../src/lib/prayerNotifications';
 import {
-  NotificationPreferences, DEFAULT_NOTIFICATION_PREFERENCES,
-  getLocalPreferences, syncPreferencesFromServer, updatePreference,
+  NotificationPreferences, getScheduledPreferenceClient,
 } from '../../src/lib/notificationPreferences';
+import { usePreferenceState } from '../../src/lib/usePreferenceState';
 import { PageHeader, Card } from '../../src/components/ui';
 import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD } from '../../src/theme/fonts';
@@ -85,20 +85,15 @@ export default function Settings() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [reminders, setReminders] = useState<PrayerReminderSettings>(DEFAULT_REMINDER_SETTINGS);
-  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
   const userId = user?.id ?? null;
+  const preferenceClient = useMemo(() => getScheduledPreferenceClient(userId, isAr), [userId, isAr]);
+  const { preferences: notifPrefs, preferencesLoading, savingPreferences, preferenceError, updatePreferences } = usePreferenceState(preferenceClient);
 
   useEffect(() => {
     migrateLegacyKeyIfNeeded('amanah-settings', userId).then(() => {
       getUserItem('amanah-settings', userId).then((s) => { if (s) { try { setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(s) }); } catch {} } setReady(true); });
     });
     getReminderSettings().then(setReminders);
-    // Instant local cache first, then reconcile with the server's copy so
-    // preferences stay consistent across devices for the same account.
-    getLocalPreferences(userId).then(setNotifPrefs);
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      syncPreferencesFromServer(session?.access_token ?? null, userId).then(setNotifPrefs);
-    });
   }, [userId]);
   useEffect(() => { if (ready) setUserItem('amanah-settings', userId, JSON.stringify(settings)); }, [settings, ready, userId]);
 
@@ -110,13 +105,8 @@ export default function Settings() {
   const togglePrayerReminder = (prayer: PrayerName) =>
     updateReminders({ ...reminders, perPrayer: { ...reminders.perPrayer, [prayer]: !reminders.perPrayer[prayer] } });
 
-  const toggleNotifPref = async (key: keyof NotificationPreferences) => {
-    const nextValue = !notifPrefs[key];
-    setNotifPrefs((p) => ({ ...p, [key]: nextValue }));
-    const { data: { session } } = await supabase.auth.getSession();
-    const updated = await updatePreference(session?.access_token ?? null, userId, key, nextValue, isAr);
-    setNotifPrefs(updated);
-  };
+  const toggleNotifPref = (key: keyof NotificationPreferences) =>
+    updatePreferences({ [key]: !notifPrefs[key] });
 
   const updateSetting = (key: keyof AppSettings, value: boolean | string) => setSettings((p) => ({ ...p, [key]: value }));
   const handleCountryChange = (code: string) => {
@@ -425,12 +415,13 @@ export default function Settings() {
             PrayerReminderSettings). */}
         <Card style={{ marginBottom: 14, gap: 12 }}>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary, ...rtlText }]}>{isAr ? '🔔 الإشعارات' : '🔔 Notifications'}</Text>
-          <ToggleRow icon="🕌" label={isAr ? 'تذكير الصلاة' : 'Prayer Reminders'} value={notifPrefs.prayer_reminders} onChange={() => toggleNotifPref('prayer_reminders')} colors={colors} isAr={isAr} />
-          <ToggleRow icon="💳" label={isAr ? 'تذكير دفع الفواتير' : 'Bill Payment Reminders'} value={notifPrefs.bill_reminders} onChange={() => toggleNotifPref('bill_reminders')} colors={colors} isAr={isAr} />
-          <ToggleRow icon="🎯" label={isAr ? 'تذكير العادات والأهداف' : 'Habit & Goal Reminders'} value={notifPrefs.habit_reminders} onChange={() => toggleNotifPref('habit_reminders')} colors={colors} isAr={isAr} />
-          <ToggleRow icon="🌙" label={isAr ? 'تذكير الصيام' : 'Fasting Reminders'} value={notifPrefs.fasting_reminders} onChange={() => toggleNotifPref('fasting_reminders')} colors={colors} isAr={isAr} />
-          <ToggleRow icon="💰" label={isAr ? 'تذكير تحديات الادخار' : 'Savings Challenge Reminders'} value={notifPrefs.savings_reminders} onChange={() => toggleNotifPref('savings_reminders')} colors={colors} isAr={isAr} />
-          <ToggleRow icon="📱" label={isAr ? 'النشاط العام' : 'General Activity'} value={notifPrefs.general_activity} onChange={() => toggleNotifPref('general_activity')} colors={colors} isAr={isAr} />
+          {preferenceError && <Text accessibilityRole="alert" style={{ color: colors.text }}>{isAr ? (preferenceError === 'save' ? 'تعذّر تأكيد الحفظ. القيمة السابقة باقية؛ اضغط مجددًا للمحاولة.' : 'تعذّر تحديث التفضيلات. أعد فتح الصفحة للمحاولة.') : (preferenceError === 'save' ? 'Save could not be confirmed. Previous values retained; tap again to retry.' : 'Could not refresh preferences. Reopen this page to retry.')}</Text>}
+          <ToggleRow icon="🕌" label={isAr ? 'تذكير الصلاة' : 'Prayer Reminders'} value={notifPrefs.prayer_reminders} onChange={() => toggleNotifPref('prayer_reminders')} disabled={preferencesLoading || savingPreferences} colors={colors} isAr={isAr} />
+          <ToggleRow icon="💳" label={isAr ? 'تذكير دفع الفواتير' : 'Bill Payment Reminders'} value={notifPrefs.bill_reminders} onChange={() => toggleNotifPref('bill_reminders')} disabled={preferencesLoading || savingPreferences} colors={colors} isAr={isAr} />
+          <ToggleRow icon="🎯" label={isAr ? 'تذكير العادات والأهداف' : 'Habit & Goal Reminders'} value={notifPrefs.habit_reminders} onChange={() => toggleNotifPref('habit_reminders')} disabled={preferencesLoading || savingPreferences} colors={colors} isAr={isAr} />
+          <ToggleRow icon="🌙" label={isAr ? 'تذكير الصيام' : 'Fasting Reminders'} value={notifPrefs.fasting_reminders} onChange={() => toggleNotifPref('fasting_reminders')} disabled={preferencesLoading || savingPreferences} colors={colors} isAr={isAr} />
+          <ToggleRow icon="💰" label={isAr ? 'تذكير تحديات الادخار' : 'Savings Challenge Reminders'} value={notifPrefs.savings_reminders} onChange={() => toggleNotifPref('savings_reminders')} disabled={preferencesLoading || savingPreferences} colors={colors} isAr={isAr} />
+          <ToggleRow icon="📱" label={isAr ? 'النشاط العام' : 'General Activity'} value={notifPrefs.general_activity} onChange={() => toggleNotifPref('general_activity')} disabled={preferencesLoading || savingPreferences} colors={colors} isAr={isAr} />
         </Card>
 
         {/* Prayer Reminders */}
@@ -588,14 +579,14 @@ export default function Settings() {
 
 function isRTL(isAr: boolean) { return isAr ? 'right' as const : 'left' as const; }
 
-function ToggleRow({ icon, label, value, onChange, colors, isAr }: { icon: string; label: string; value: boolean; onChange: () => void; colors: any; isAr: boolean }) {
+function ToggleRow({ icon, label, value, onChange, colors, isAr, disabled = false }: { icon: string; label: string; value: boolean; onChange: () => void; colors: any; isAr: boolean; disabled?: boolean }) {
   return (
     <View style={[styles.rowBetween, { flexDirection: isAr ? 'row-reverse' : 'row' }]}>
       <View style={[styles.toggleLabel, { flexDirection: isAr ? 'row-reverse' : 'row' }]}>
         <Text style={{ fontSize: 15, color: '#FFFFFF' }}>{icon}</Text>
         <Text style={{ color: colors.text, fontSize: 14, fontFamily: FONT_UI, textAlign: isAr ? 'right' : 'left' }}>{label}</Text>
       </View>
-      <Switch value={value} onValueChange={onChange} trackColor={{ false: colors.surface, true: colors.teal }} thumbColor="#fff" />
+      <Switch disabled={disabled} value={value} onValueChange={onChange} trackColor={{ false: colors.surface, true: colors.teal }} thumbColor="#fff" />
     </View>
   );
 }
@@ -626,3 +617,4 @@ const styles = StyleSheet.create({
   input: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 11, fontSize: 14, fontFamily: FONT_UI },
   dlgBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 });
+

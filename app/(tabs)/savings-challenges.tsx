@@ -19,7 +19,8 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { usePersistedState } from '../../src/lib/usePersistedState';
 import { getUserItem, setUserItem } from '../../src/lib/userStorage';
 import { requestNotificationPermission } from '../../src/lib/prayerNotifications';
-import { getLocalPreferences, updatePreference } from '../../src/lib/notificationPreferences';
+import { getScheduledPreferenceClient } from '../../src/lib/notificationPreferences';
+import { usePreferenceState } from '../../src/lib/usePreferenceState';
 import { supabase } from '../../src/lib/supabase';
 import { functionUrl } from '../../src/lib/config';
 import { toast } from '../../src/lib/toast';
@@ -68,7 +69,9 @@ export default function SavingsChallenges() {
   // Reads/writes the same shared savings_reminders preference Settings'
   // Notifications panel shows - one source of truth, not a private
   // screen-local duplicate (this used to be its own persisted key).
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const preferenceClient = useMemo(() => getScheduledPreferenceClient(userId, isAr), [userId, isAr]);
+  const { preferences, preferencesLoading, savingPreferences, preferenceError, updatePreferences } = usePreferenceState(preferenceClient);
+  const notificationsEnabled = !preferencesLoading && preferences.savings_reminders;
   const [addAmountId, setAddAmountId] = useState<string | null>(null);
   const [addValue, setAddValue] = useState('');
   const [celebrating, setCelebrating] = useState<{ title: string; milestone: number } | null>(null);
@@ -122,7 +125,10 @@ export default function SavingsChallenges() {
   };
 
   useEffect(() => { fetchTip(); }, [tipChallenges.length, language, userId]);
-  useEffect(() => { getLocalPreferences(userId).then((p) => setNotificationsEnabled(p.savings_reminders)); }, [userId]);
+
+  useEffect(() => {
+    if (preferenceError) toast.error(tr('Preferences could not be confirmed. Previous values retained; tap the bell again to retry.', 'تعذّر تأكيد التفضيلات. القيمة السابقة باقية؛ اضغط الجرس مجددًا للمحاولة.'));
+  }, [preferenceError]);
 
   const toggleNotifications = async () => {
     const next = !notificationsEnabled;
@@ -130,9 +136,7 @@ export default function SavingsChallenges() {
       const granted = await requestNotificationPermission();
       if (!granted) { toast.error(tr('Notification permission denied', 'تم رفض إذن الإشعارات')); return; }
     }
-    setNotificationsEnabled(next);
-    const { data: { session } } = await supabase.auth.getSession();
-    await updatePreference(session?.access_token ?? null, userId, 'savings_reminders', next, isAr);
+    await updatePreferences({ savings_reminders: next });
   };
 
   const joinChallenge = (challengeId: string) => {
@@ -186,9 +190,10 @@ export default function SavingsChallenges() {
         right={
           <TouchableOpacity
             style={[styles.notifBtn, { borderColor: notificationsEnabled ? colors.gold + '50' : colors.border, backgroundColor: notificationsEnabled ? colors.gold + '15' : 'transparent' }]}
+            disabled={preferencesLoading || savingPreferences}
             onPress={toggleNotifications}
           >
-            <Text style={{ fontSize: 16 }}>{notificationsEnabled ? '🔔' : '🔕'}</Text>
+            <Text accessibilityLabel={preferenceError ? tr('Save or refresh failed. Tap to retry.', 'تعذّر الحفظ أو التحديث. اضغط للمحاولة.') : undefined} style={{ fontSize: 16 }}>{preferenceError ? '⚠️' : notificationsEnabled ? '🔔' : '🔕'}</Text>
           </TouchableOpacity>
         }
       />
@@ -352,3 +357,4 @@ const styles = StyleSheet.create({
   celebrateOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   celebrateBox: { borderRadius: 20, borderWidth: 1, padding: 28, alignItems: 'center', maxWidth: 320 },
 });
+
