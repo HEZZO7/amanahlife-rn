@@ -1,0 +1,25 @@
+name: Native entitlement review
+on:
+  push:
+    branches: [review/cross-platform-entitlement-security]
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: npx expo export --platform android --output-dir /tmp/amanahlife-android-review
+        env:
+          EXPO_NO_TELEMETRY: '1'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check supabase/functions/app_11941c8fec_ai_life_coach/index.ts supabase/functions/app_11941c8fec_receipt_scan/index.ts supabase/functions/app_11941c8fec_family_invite/index.ts
