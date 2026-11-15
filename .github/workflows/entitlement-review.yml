@@ -27,3 +27,19 @@ jobs:
         run: |
           npm audit --omit=dev --json > /tmp/amanah-audit.json || true
           node -e 'const a=require("/tmp/amanah-audit.json"); if(a.error || !a.vulnerabilities) throw Error("Audit unavailable"); for(const [name,v] of Object.entries(a.vulnerabilities)) if(["critical","high"].includes(v.severity)) console.log(JSON.stringify({name,severity:v.severity,range:v.range,fixAvailable:v.fixAvailable,via:v.via})); console.log(JSON.stringify(a.metadata.vulnerabilities));'
+      - name: Candidate non-major dependency remediation
+        run: |
+          npm audit fix --package-lock-only --ignore-scripts --omit=dev || true
+          npm ci --ignore-scripts
+          npm audit --omit=dev --json > /tmp/amanah-candidate-audit.json || true
+          node -e 'const a=require("/tmp/amanah-candidate-audit.json"); if(a.error || !a.vulnerabilities) throw Error("Audit unavailable"); console.log(JSON.stringify(a.metadata.vulnerabilities)); for(const [name,v] of Object.entries(a.vulnerabilities)) if(["critical","high"].includes(v.severity)) console.log(JSON.stringify({name,severity:v.severity,fixAvailable:v.fixAvailable}));'
+          git diff --stat -- package.json package-lock.json
+          npx expo export --platform android --output-dir /tmp/amanahlife-android-candidate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-remediation-candidate
+          path: |
+            package.json
+            package-lock.json
+          retention-days: 7
