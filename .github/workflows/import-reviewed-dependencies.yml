@@ -1,0 +1,32 @@
+name: Import reviewed native dependencies
+on:
+  push:
+    branches: [review/cross-platform-entitlement-security]
+    paths: ['.github/workflows/import-reviewed-dependencies.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  import:
+    if: github.ref == 'refs/heads/review/cross-platform-entitlement-security'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: review/cross-platform-entitlement-security
+      - uses: actions/download-artifact@v4
+        with:
+          name: dependency-remediation-candidate
+          run-id: 43750368899
+          github-token: ${{ github.token }}
+          path: /tmp/reviewed-dependencies
+      - name: Verify and commit reviewed files only
+        run: |
+          cmp package.json /tmp/reviewed-dependencies/package.json
+          cp /tmp/reviewed-dependencies/package-lock.json package-lock.json
+          git add -- package-lock.json
+          git diff --cached --stat
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --cached --quiet || git commit -m "Adopt tested native dependency lockfile from run 43750368899"
+          git push origin HEAD:refs/heads/review/cross-platform-entitlement-security
