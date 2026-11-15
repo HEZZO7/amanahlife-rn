@@ -5,7 +5,6 @@
  */
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -18,15 +17,6 @@ type BillingCycle = 'monthly' | 'yearly';
 // mid-retry is hostile. Mirrors the same policy as the web app.
 const ENTITLING_STATUSES: ReadonlySet<SubscriptionStatus> = new Set(['active', 'past_due']);
 
-// Local cache of the trial start date, used only to render an instant,
-// optimistic value while fetchSubscription's network call is in flight.
-// The server's `trial_started_at`/`trial_used` columns (subscriptions
-// table) are the actual source of truth — see supabase/migrations/
-// 20260720000000_add_trial_columns.sql. Trial state used to live ONLY in
-// this AsyncStorage key, which meant uninstalling the app (or clearing app
-// data) reset the trial indefinitely; that's now impossible since
-// startTrial() checks the server before granting anything.
-const TRIAL_CACHE_KEY = 'amanah-trial-start';
 // Android gets a longer trial (14 days) than the 7-day default, since
 // Play Billing isn't live yet (see PROJECT.md) and Android users have no
 // fast in-app purchase path - the external Lemon Squeezy browser checkout
@@ -38,7 +28,7 @@ const TRIAL_CACHE_KEY = 'amanah-trial-start';
 export const TRIAL_DURATION_DAYS = Platform.OS === 'android' ? 14 : 7;
 
 function computeTrialState(trialStartedAt: string | null): { isTrialActive: boolean; trialDaysRemaining: number } {
-  if (!trialStartedAt) return { isTrialActive: false, trialDaysRemaining: 0 };
+  if (!trialStartedAt || !Number.isFinite(Date.parse(trialStartedAt)) || Date.parse(trialStartedAt) > Date.now()) return { isTrialActive: false, trialDaysRemaining: 0 };
   const diffDays = Math.floor((Date.now() - new Date(trialStartedAt).getTime()) / (1000 * 60 * 60 * 24));
   const remaining = TRIAL_DURATION_DAYS - diffDays;
   return { isTrialActive: remaining > 0, trialDaysRemaining: Math.max(0, remaining) };
@@ -75,16 +65,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
   const [trialUsed, setTrialUsed] = useState(false);
 
-  // Fast, optimistic read from the local cache so the UI has a sensible
-  // value immediately on launch — corrected by fetchSubscription's server
-  // read the moment the network responds.
-  const checkLocalTrialCache = useCallback(async () => {
-    const cached = await AsyncStorage.getItem(TRIAL_CACHE_KEY);
-    const computed = computeTrialState(cached);
-    setIsTrialActive(computed.isTrialActive);
-    setTrialDaysRemaining(computed.trialDaysRemaining);
-  }, []);
-
   const fetchSubscription = useCallback(async () => {
     if (!user) {
       setTier('free');
@@ -118,10 +98,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         const computed = computeTrialState(data.trial_started_at ?? null);
         setIsTrialActive(computed.isTrialActive);
         setTrialDaysRemaining(computed.trialDaysRemaining);
-        // Server is authoritative — keep the local cache in sync with it
-        // purely so the next app launch has an instant value to show.
-        if (data.trial_started_at) await AsyncStorage.setItem(TRIAL_CACHE_KEY, data.trial_started_at);
-        else await AsyncStorage.removeItem(TRIAL_CACHE_KEY);
       } else {
         setTier('free');
         setStatus('active');
@@ -132,9 +108,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         setTrialUsed(false);
       }
     } catch {
-      // Network failed — free tier fallback for tier/status, but leave
-      // whatever checkLocalTrialCache already computed for trial state
-      // rather than resetting it to inactive while offline.
+      setIsTrialActive(false);
+      setTrialDaysRemaining(0);
+      setTrialUsed(false);
+      setCurrentPeriodEnd(null);
       setTier('free');
       setStatus('active');
       setBillingCycle('monthly');
@@ -144,38 +121,16 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    checkLocalTrialCache();
     fetchSubscription();
   }, [user]);
 
   const startTrial = async (): Promise<{ error: string | null }> => {
     if (!user) return { error: 'not_signed_in' };
     try {
-      // Check the server fresh — not whatever's currently in local state —
-      // so a stale render can't grant a second trial.
-      const { data: existing } = await supabase
-        .from('app_11941c8fec_subscriptions')
-        .select('trial_used')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existing?.trial_used) {
-        setTrialUsed(true);
-        return { error: 'trial_already_used' };
-      }
-
-      const startedAt = new Date().toISOString();
-      const { error } = await supabase
-        .from('app_11941c8fec_subscriptions')
-        .upsert({ user_id: user.id, trial_started_at: startedAt, trial_used: true }, { onConflict: 'user_id' });
-
+      const { data, error } = await supabase.rpc('amanahlife_start_trial');
       if (error) return { error: error.message };
-
-      await AsyncStorage.setItem(TRIAL_CACHE_KEY, startedAt);
-      setTrialUsed(true);
-      setIsTrialActive(true);
-      setTrialDaysRemaining(TRIAL_DURATION_DAYS);
-      return { error: null };
+      await fetchSubscription();
+      return { error: data === 'ok' ? null : typeof data === 'string' ? data : 'unknown_error' };
     } catch (e) {
       return { error: e instanceof Error ? e.message : 'unknown_error' };
     }
