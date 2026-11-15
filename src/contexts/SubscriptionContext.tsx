@@ -4,7 +4,6 @@
  * Replaces localStorage with AsyncStorage
  */
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -17,21 +16,12 @@ type BillingCycle = 'monthly' | 'yearly';
 // mid-retry is hostile. Mirrors the same policy as the web app.
 const ENTITLING_STATUSES: ReadonlySet<SubscriptionStatus> = new Set(['active', 'past_due']);
 
-// Android gets a longer trial (14 days) than the 7-day default, since
-// Play Billing isn't live yet (see PROJECT.md) and Android users have no
-// fast in-app purchase path - the external Lemon Squeezy browser checkout
-// still works, but a longer runway reduces pressure to convert before
-// native billing ships. iOS (not yet shipped, but app.json still declares
-// an iOS config) and web both stay at 7 days, where purchasing already
-// works normally - Platform.OS branch here rather than a second constant
-// so there's nothing to keep in sync if this file is ever shared further.
-export const TRIAL_DURATION_DAYS = Platform.OS === 'android' ? 14 : 7;
+export const TRIAL_DURATION_DAYS = 7;
 
-function computeTrialState(trialStartedAt: string | null): { isTrialActive: boolean; trialDaysRemaining: number } {
-  if (!trialStartedAt || !Number.isFinite(Date.parse(trialStartedAt)) || Date.parse(trialStartedAt) > Date.now()) return { isTrialActive: false, trialDaysRemaining: 0 };
-  const diffDays = Math.floor((Date.now() - new Date(trialStartedAt).getTime()) / (1000 * 60 * 60 * 24));
-  const remaining = TRIAL_DURATION_DAYS - diffDays;
-  return { isTrialActive: remaining > 0, trialDaysRemaining: Math.max(0, remaining) };
+function computeTrialState(start: string | null, expires: string | null, used: boolean): { isTrialActive: boolean; trialDaysRemaining: number } {
+  const now = Date.now(), a = Date.parse(start ?? ''), b = Date.parse(expires ?? '');
+  if (!used || !Number.isFinite(a) || !Number.isFinite(b) || a > now || b <= now) return { isTrialActive: false, trialDaysRemaining: 0 };
+  return { isTrialActive: true, trialDaysRemaining: Math.ceil((b-now)/86400000) };
 }
 
 interface SubscriptionContextType {
@@ -84,7 +74,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       // leaving whatever tier was last fetched stuck in state.
       const { data } = await supabase
         .from('app_11941c8fec_subscriptions')
-        .select('tier, status, billing_cycle, current_period_end, trial_started_at, trial_used')
+        .select('tier, status, billing_cycle, current_period_end, trial_started_at, trial_used, trial_expires_at')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -95,7 +85,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         setBillingCycle(data.billing_cycle as BillingCycle);
         setCurrentPeriodEnd(data.current_period_end ?? null);
         setTrialUsed(!!data.trial_used);
-        const computed = computeTrialState(data.trial_started_at ?? null);
+        const computed = computeTrialState(data.trial_started_at ?? null, data.trial_expires_at ?? null, !!data.trial_used);
         setIsTrialActive(computed.isTrialActive);
         setTrialDaysRemaining(computed.trialDaysRemaining);
       } else {
