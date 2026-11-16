@@ -43,3 +43,12 @@ jobs:
             package.json
             package-lock.json
           retention-days: 7
+      - name: Inventory live references and export staging Android
+        env:
+          EXPO_PUBLIC_AMANAH_ENV: staging
+          EXPO_PUBLIC_SUPABASE_URL: https://stagingfixture.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: fixture-public-key
+          EXPO_NO_TELEMETRY: 1
+        run: |
+          git grep -l -E 'nyhsnvjdgifphwkqzwel|amanahlife\.lemonsqueezy\.com' -- src app || true
+          npx expo export --platform android --output-dir /tmp/amanahlife-staging-review
