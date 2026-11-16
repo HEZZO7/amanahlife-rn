@@ -1,3 +1,4 @@
+import { stagingFetch } from './stagingFetch';
 /**
  * Supabase client — React Native
  * Migrated from app/frontend/src/lib/supabase.ts
@@ -9,11 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, IS_STAGING } from './config';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  ...(IS_STAGING ? {global: {fetch: (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = new URL(input instanceof Request ? input.url : String(input));
-    if (url.origin !== new URL(SUPABASE_URL).origin) throw new Error('Blocked non-staging Supabase request');
-    return fetch(input, init);
-  }}} : {}),
+  ...(IS_STAGING ? {global: {fetch: stagingFetch(SUPABASE_URL)}} : {}),
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
