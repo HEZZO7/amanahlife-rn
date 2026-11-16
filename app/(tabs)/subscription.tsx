@@ -16,7 +16,7 @@ import { useSubscription, TRIAL_DURATION_DAYS } from '../../src/contexts/Subscri
 import { useAuth } from '../../src/contexts/AuthContext';
 import { PageHeader, Card } from '../../src/components/ui';
 import { supabase } from '../../src/lib/supabase';
-import { functionUrl } from '../../src/lib/config';
+import { functionUrl, IS_STAGING } from '../../src/lib/config';
 import { toast } from '../../src/lib/toast';
 import { FONT_UI, FONT_UI_MEDIUM, FONT_UI_BOLD, FONT_UI_BLACK } from '../../src/theme/fonts';
 
@@ -60,6 +60,7 @@ function buildCheckoutUrl(
   if (!user?.id) {
     throw new Error('buildCheckoutUrl requires an authenticated user');
   }
+  if (IS_STAGING) throw new Error('Hosted live checkout disabled in staging');
   const base = BUY_LINKS[tier][billing];
   const params = new URLSearchParams();
   if (user.email) params.set('checkout[email]', user.email);
@@ -148,7 +149,7 @@ export default function SubscriptionScreen() {
       // independently re-derives trial_used from the database - this
       // branch is purely an optimization, not the source of enforcement.)
       // Mirrors app/frontend/src/pages/Subscription.tsx exactly.
-      if (trialUsed) {
+      if (IS_STAGING || trialUsed) {
         const response = await fetch(CHECKOUT_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
